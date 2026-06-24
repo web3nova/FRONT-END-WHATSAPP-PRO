@@ -1,27 +1,88 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+
+import { AuthProvider } from './context/AuthContext'
+import { RequireAuth, RequireSubscription } from './components/ProtectedRoute'
+
 import AdminLayout from './layouts/AdminLayout'
 import BusinessLayout from './layouts/BusinessLayout'
+
 import AdminOverview from './pages/admin/Overview'
 import AdminTenants from './pages/admin/Tenants'
 import BusinessOverview from './pages/dashboard/Overview'
 import BusinessOrders from './pages/dashboard/Orders'
 import WhatsAppPage from './pages/dashboard/WhatsApp'
 
+import SignUpPage from './pages/auth/SignUpPage'
+import LoginPage from './pages/auth/LoginPage'
+import SubscribePage from './pages/auth/SubscribePage'
+import OnboardingPage from './pages/auth/OnboardingPage'
+
+// SmartRoot redirects first-time visitors to /signup and returning users to /login
+function SmartRoot() {
+  const hasSignedUp = localStorage.getItem('hasSignedUp') === 'true'
+  return <Navigate to={hasSignedUp ? '/login' : '/signup'} replace />
+}
+
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to="/admin" replace />} />
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminOverview />} />
-          <Route path="tenants" element={<AdminTenants />} />
-        </Route>
-        <Route path="/dashboard" element={<BusinessLayout />}>
-          <Route index element={<BusinessOverview />} />
-          <Route path="orders" element={<BusinessOrders />} />
-          <Route path="whatsapp" element={<WhatsAppPage />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* ── Root: smart redirect based on prior signup ── */}
+          <Route path="/" element={<SmartRoot />} />
+
+          {/* ── Auth pages (public) ── */}
+          <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/login" element={<LoginPage />} />
+
+          {/* ── Subscription (requires login, no subscription yet) ── */}
+          <Route
+            path="/subscribe"
+            element={
+              <RequireAuth>
+                <SubscribePage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/onboarding"
+            element={
+              <RequireSubscription>
+                <OnboardingPage />
+              </RequireSubscription>
+            }
+          />
+          {/* ── Business dashboard (requires login + subscription) ── */}
+          <Route
+            path="/dashboard"
+            element={
+              <RequireSubscription>
+                <BusinessLayout />
+              </RequireSubscription>
+            }
+          >
+            <Route index element={<BusinessOverview />} />
+            <Route path="orders" element={<BusinessOrders />} />
+            <Route path="whatsapp" element={<WhatsAppPage />} />
+          </Route>
+
+          {/* ── Admin panel (requires login; add role check here later) ── */}
+          <Route
+            path="/admin"
+            element={
+              <RequireAuth>
+                <AdminLayout />
+              </RequireAuth>
+            }
+          >
+            <Route index element={<AdminOverview />} />
+            <Route path="tenants" element={<AdminTenants />} />
+          </Route>
+
+          {/* ── Catch-all ── */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
