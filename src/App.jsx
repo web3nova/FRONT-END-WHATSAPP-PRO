@@ -6,6 +6,12 @@ import AdminTenants from './pages/admin/Tenants'
 import BusinessOverview from './pages/dashboard/Overview'
 import BusinessOrders from './pages/dashboard/Orders'
 import WhatsAppPage from './pages/dashboard/WhatsApp'
+import Products from './pages/dashboard/Products'
+import Customers from './pages/dashboard/Customers'
+import Website from './pages/dashboard/Website'
+import Analytics from './pages/dashboard/Analytics'
+import Knowledge from './pages/dashboard/Knowledge'
+import Settings from './pages/dashboard/Settings'
 
 export default function App() {
   return (
@@ -19,7 +25,13 @@ export default function App() {
         <Route path="/dashboard" element={<BusinessLayout />}>
           <Route index element={<BusinessOverview />} />
           <Route path="orders" element={<BusinessOrders />} />
+          <Route path="products" element={<Products />} />
+          <Route path="customers" element={<Customers />} />
           <Route path="whatsapp" element={<WhatsAppPage />} />
+          <Route path="website" element={<Website />} />
+          <Route path="analytics" element={<Analytics />} />
+          <Route path="knowledge" element={<Knowledge />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
     </BrowserRouter>
