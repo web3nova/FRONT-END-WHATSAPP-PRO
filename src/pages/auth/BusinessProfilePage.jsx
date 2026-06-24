@@ -45,7 +45,7 @@ export default function BusinessProfilePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10" style={{ background: CREAM }}>
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10" style={{ background: CREAM, fontFamily: "'Inter', sans-serif" }}>
 
       {/* Flow progress indicator */}
       <div className="flex items-center gap-1 mb-8">
@@ -88,8 +88,8 @@ export default function BusinessProfilePage() {
         >
           <Building2 size={22} className="text-white" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">Set up your business profile</h1>
-        <p className="text-sm text-gray-500 mt-1.5 max-w-sm mx-auto">
+        <h1 className="text-gray-900" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 700, fontSize: 'clamp(24px, 4vw, 36px)', lineHeight: 1.2, margin: '0 0 6px' }}>Set up your business profile</h1>
+        <p className="text-gray-500 mt-1.5 max-w-sm mx-auto" style={{ fontSize: 16, lineHeight: 1.6 }}>
           This is how your business appears to customers on your AI-powered website and WhatsApp.
         </p>
       </div>
@@ -208,8 +208,8 @@ export default function BusinessProfilePage() {
           <button
             onClick={handleComplete}
             disabled={saving}
-            className="w-full py-3 text-sm font-semibold text-white rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition disabled:opacity-60 mt-2"
-            style={{ background: PRIMARY }}
+            className="w-full py-3 text-white rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition disabled:opacity-60 mt-2"
+            style={{ background: PRIMARY, fontFamily: "'Manrope', sans-serif", fontWeight: 700, fontSize: 15 }}
           >
             {saving ? 'Saving your profile…' : (
               <>Complete Setup <ArrowRight size={15} /></>
