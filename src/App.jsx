@@ -5,7 +5,6 @@ import { RequireAuth, RequireSubscription } from './components/ProtectedRoute'
 
 import AdminLayout from './layouts/AdminLayout'
 import BusinessLayout from './layouts/BusinessLayout'
-
 import AdminOverview from './pages/admin/Overview'
 import AdminTenants from './pages/admin/Tenants'
 import BusinessOverview from './pages/dashboard/Overview'
@@ -13,7 +12,7 @@ import BusinessOrders from './pages/dashboard/Orders'
 import WhatsAppPage from './pages/dashboard/WhatsApp'
 import Products from './pages/dashboard/Products'
 import Customers from './pages/dashboard/Customers'
-import Website from './pages/dashboard/Website'
+import Website from './layouts/BusinessWebsite'
 import Analytics from './pages/dashboard/Analytics'
 import Knowledge from './pages/dashboard/Knowledge'
 import Settings from './pages/dashboard/Settings'
@@ -23,6 +22,7 @@ import LoginPage from './pages/auth/LoginPage'
 import SubscribePage from './pages/auth/SubscribePage'
 import OnboardingPage from './pages/auth/OnboardingPage'
 import LandingPage from './pages/LandingPage'
+import BusinessProfilePage from './pages/auth/BusinessProfilePage'
 
 // SmartRoot redirects first-time visitors to /signup and returning users to /login
 function SmartRoot() {
@@ -38,11 +38,11 @@ export default function App() {
           {/* ── Root: landing page ── */}
           <Route path="/" element={<LandingPage />} />
 
-          {/* ── Auth pages (public) ── */}
+          {/* Auth pages (public) */}
           <Route path="/signup" element={<SignUpPage />} />
           <Route path="/login" element={<LoginPage />} />
 
-          {/* ── Subscription (requires login, no subscription yet) ── */}
+          {/* Subscription flow */}
           <Route
             path="/subscribe"
             element={
@@ -59,7 +59,16 @@ export default function App() {
               </RequireSubscription>
             }
           />
-          {/* ── Business dashboard (requires login + subscription) ── */}
+          <Route
+            path="/business-profile"
+            element={
+              <RequireSubscription>
+                <BusinessProfilePage />
+              </RequireSubscription>
+            }
+          />
+
+          {/* Business dashboard (requires login + subscription) */}
           <Route
             path="/dashboard"
             element={
@@ -79,7 +88,7 @@ export default function App() {
             <Route path="settings" element={<Settings />} />
           </Route>
 
-          {/* ── Admin panel (requires login; add role check here later) ── */}
+          {/* Admin panel (requires login) */}
           <Route
             path="/admin"
             element={
@@ -92,7 +101,7 @@ export default function App() {
             <Route path="tenants" element={<AdminTenants />} />
           </Route>
 
-          {/* ── Catch-all ── */}
+          {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
