@@ -108,13 +108,13 @@ export default function BusinessOverview() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Welcome back, Perfect Style Edits</h1>
+          <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Welcome back, Perfect Style Edits</h1>
           <p className="text-sm text-gray-400 mt-0.5">Here's what's happening with your business today · June 24, 2026</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="px-4 py-2 text-sm font-medium border border-gray-200 bg-white text-gray-600 rounded-xl hover:bg-gray-50 transition">
+          <button className="hidden sm:block px-4 py-2 text-sm font-medium border border-gray-200 bg-white text-gray-600 rounded-xl hover:bg-gray-50 transition">
             Download Report
           </button>
           <button
@@ -127,7 +127,7 @@ export default function BusinessOverview() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard label="Total Customers" value="3,481" sub="+23 this week" positive icon={Users} />
         <StatCard label="Orders This Month" value="186" sub="+18% vs last month" positive icon={ShoppingBag} />
         <StatCard label="Monthly Revenue" value="₦14.8M" sub="+22% growth" positive icon={DollarSign} />
@@ -136,9 +136,9 @@ export default function BusinessOverview() {
       </div>
 
       {/* Charts row */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Revenue + Orders */}
-        <div className="col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="font-semibold text-gray-900">Revenue & Orders Trend</h2>
@@ -209,7 +209,7 @@ export default function BusinessOverview() {
       </div>
 
       {/* Orders + Chats row */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Recent Orders */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
@@ -298,9 +298,9 @@ export default function BusinessOverview() {
       </div>
 
       {/* Bottom row: Products + Quotes */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Top Products */}
-        <div className="col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+        <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="font-semibold text-gray-900">Top Products by Revenue</h2>
@@ -319,7 +319,7 @@ export default function BusinessOverview() {
               <Bar dataKey="revenue" fill={PRIMARY} radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-          <div className="grid grid-cols-4 gap-3 mt-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
             {topProducts.map(p => (
               <div key={p.name} className="rounded-xl p-3 border border-gray-100 hover:border-blue-100 transition-colors">
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center mb-2" style={{ background: CREAM }}>

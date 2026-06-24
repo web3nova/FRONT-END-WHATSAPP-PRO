@@ -1,7 +1,8 @@
+import { useState } from 'react'
 import { Outlet, NavLink, Link } from 'react-router-dom'
 import {
   LayoutDashboard, ShoppingBag, Package, Users, MessageCircle,
-  Globe, BarChart3, BookOpen, Settings, Bell, Search, Zap, ExternalLink
+  Globe, BarChart3, BookOpen, Settings, Bell, Search, Zap, ExternalLink, Menu, X
 } from 'lucide-react'
 
 const PRIMARY = '#4166F5'
@@ -20,10 +21,26 @@ const navItems = [
 ]
 
 export default function BusinessLayout() {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: CREAM }}>
+      {/* Mobile backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 lg:hidden"
+          style={{ background: 'rgba(0,0,0,0.3)' }}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 flex-shrink-0 flex flex-col border-r border-gray-200" style={{ background: CREAM }}>
+      <aside
+        className={`fixed lg:relative inset-y-0 left-0 z-50 w-64 flex-shrink-0 flex flex-col border-r border-gray-200 transition-transform duration-200 ease-in-out ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
+        style={{ background: CREAM }}
+      >
         {/* Logo */}
         <div className="h-16 flex items-center px-5 border-b border-gray-100">
           <div className="flex items-center gap-3">
@@ -35,6 +52,12 @@ export default function BusinessLayout() {
               <div className="text-xs text-gray-400">Business Dashboard</div>
             </div>
           </div>
+          <button
+            className="ml-auto lg:hidden p-1 text-gray-400 hover:text-gray-600"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <X size={18} />
+          </button>
         </div>
 
         {/* Nav */}
@@ -44,6 +67,7 @@ export default function BusinessLayout() {
               key={item.path}
               to={item.path}
               end={item.end}
+              onClick={() => setSidebarOpen(false)}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
                   isActive
@@ -77,6 +101,7 @@ export default function BusinessLayout() {
         <div className="px-3 pb-3">
           <Link
             to="/admin"
+            onClick={() => setSidebarOpen(false)}
             className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-50 border border-dashed border-gray-200 transition-colors"
           >
             <ExternalLink size={15} />
@@ -99,19 +124,25 @@ export default function BusinessLayout() {
       </aside>
 
       {/* Main */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Topbar */}
-        <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-6 flex-shrink-0">
-          <div className="relative">
+        <header className="h-16 bg-white border-b border-gray-100 flex items-center gap-3 px-4 lg:px-6 flex-shrink-0">
+          <button
+            className="lg:hidden p-2 -ml-1 text-gray-500 hover:text-gray-700 rounded-xl"
+            onClick={() => setSidebarOpen(v => !v)}
+          >
+            <Menu size={20} />
+          </button>
+          <div className="relative hidden sm:block">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
-              className="pl-9 pr-4 py-2 text-sm bg-gray-50 border border-gray-100 rounded-xl w-72 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-200 transition"
+              className="pl-9 pr-4 py-2 text-sm bg-gray-50 border border-gray-100 rounded-xl w-52 lg:w-72 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-200 transition"
               placeholder="Search orders, customers..."
             />
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 ml-auto">
             <button
-              className="px-4 py-2 text-sm font-semibold text-white rounded-xl flex items-center gap-2 shadow-sm transition hover:opacity-90"
+              className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl shadow-sm transition hover:opacity-90"
               style={{ background: PRIMARY }}
             >
               <Zap size={14} />
@@ -125,7 +156,7 @@ export default function BusinessLayout() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
           <Outlet />
         </main>
       </div>
