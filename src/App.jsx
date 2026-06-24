@@ -21,6 +21,7 @@ import SignUpPage from './pages/auth/SignUpPage'
 import LoginPage from './pages/auth/LoginPage'
 import SubscribePage from './pages/auth/SubscribePage'
 import OnboardingPage from './pages/auth/OnboardingPage'
+import BusinessProfilePage from './pages/auth/BusinessProfilePage'
 
 // SmartRoot redirects first-time visitors to /signup and returning users to /login
 function SmartRoot() {
@@ -54,6 +55,14 @@ export default function App() {
             element={
               <RequireSubscription>
                 <OnboardingPage />
+              </RequireSubscription>
+            }
+          />
+          <Route
+            path="/business-profile"
+            element={
+              <RequireSubscription>
+                <BusinessProfilePage />
               </RequireSubscription>
             }
           />

@@ -110,11 +110,11 @@ export default function OnboardingPage() {
     if (!validate()) return
     setSubmitting(true)
 
-    // TODO: Replace with real API call to save business profile
+    // TODO: Replace with real API call to save onboarding data
     await new Promise(r => setTimeout(r, 1000))
 
     setSubmitting(false)
-    navigate('/dashboard')
+    navigate('/business-profile')
   }
 
   const progress = ((step + 1) / STEPS.length) * 100
@@ -414,7 +414,7 @@ export default function OnboardingPage() {
                   onClick={handleSubmit}
                   disabled={submitting}
                 >
-                  {submitting ? 'Saving…' : 'Submit & go to dashboard →'}
+                  {submitting ? 'Saving…' : 'Continue to profile setup →'}
                 </button>
               )}
             </div>
