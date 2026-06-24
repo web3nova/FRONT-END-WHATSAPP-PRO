@@ -99,13 +99,13 @@ export default function AdminOverview() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Platform Overview</h1>
+          <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Platform Overview</h1>
           <p className="text-sm text-gray-400 mt-0.5">Real-time metrics across all tenants · Updated just now</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full" style={{ background: CREAM, color: PRIMARY }}>
+          <div className="hidden sm:flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full" style={{ background: CREAM, color: PRIMARY }}>
             <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: PRIMARY }}></div>
             All systems operational
           </div>
@@ -119,7 +119,7 @@ export default function AdminOverview() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard label="Total Tenants" value="1,247" change="+12% this month" positive icon={Building2} />
         <StatCard label="Active Subscriptions" value="1,089" change="87.3% retention" positive icon={CreditCard} />
         <StatCard label="Monthly Revenue" value="₦48.2M" change="+8% vs last month" positive icon={DollarSign} />
@@ -128,9 +128,9 @@ export default function AdminOverview() {
       </div>
 
       {/* Charts row 1 */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Revenue chart */}
-        <div className="col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="font-semibold text-gray-900">Revenue Growth</h2>
@@ -209,9 +209,9 @@ export default function AdminOverview() {
       </div>
 
       {/* Charts row 2 */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* AI usage bar */}
-        <div className="col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <div className="mb-5">
             <h2 className="font-semibold text-gray-900">AI Token Usage</h2>
             <p className="text-xs text-gray-400 mt-0.5">Top 5 tenants by AI consumption this month (K tokens)</p>

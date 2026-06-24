@@ -49,7 +49,7 @@ export default function Products() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total Products', value: products.length },
           { label: 'Active', value: products.filter(p => p.status === 'active').length },
@@ -64,8 +64,8 @@ export default function Products() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 flex-nowrap">
           {categories.map(c => (
             <button
               key={c}
@@ -104,7 +104,7 @@ export default function Products() {
 
       {/* Grid View */}
       {view === 'grid' ? (
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {filtered.map((p, i) => {
             const s = statusStyle[p.status]
             return (

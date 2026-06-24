@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   Search, Send, Bot, UserCheck, Phone, MoreHorizontal,
-  Zap, CheckCheck, AlertCircle, FileText, ShoppingBag, ChevronRight, X
+  Zap, CheckCheck, AlertCircle, FileText, ShoppingBag, ChevronLeft, X
 } from 'lucide-react'
 
 const PRIMARY = '#4166F5'
@@ -140,6 +140,7 @@ export default function WhatsAppPage() {
   const [inputText, setInputText] = useState('')
   const [aiHandling, setAiHandling] = useState(true)
   const [filter, setFilter] = useState('all')
+  const [mobilePanel, setMobilePanel] = useState('list')
 
   const selected = conversations.find(c => c.id === selectedId)
   const messages = chatHistory[selectedId] || []
@@ -151,11 +152,19 @@ export default function WhatsAppPage() {
     return true
   })
 
+  const handleConvSelect = (id) => {
+    setSelectedId(id)
+    setMobilePanel('chat')
+  }
+
   return (
-    <div className="flex gap-0 h-[calc(100vh-64px-48px)] rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-sm">
+    <div className="flex min-h-[600px] lg:h-[calc(100vh-64px-48px)] rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-sm">
 
       {/* Left — Conversation List */}
-      <div className="w-72 flex flex-col border-r border-gray-100 flex-shrink-0" style={{ background: CREAM }}>
+      <div
+        className={`${mobilePanel === 'list' ? 'flex' : 'hidden'} lg:flex w-full lg:w-72 flex-col border-r border-gray-100 flex-shrink-0`}
+        style={{ background: CREAM }}
+      >
         {/* Header */}
         <div className="px-4 pt-4 pb-3 border-b border-gray-200">
           <div className="flex items-center justify-between mb-3">
@@ -192,7 +201,7 @@ export default function WhatsAppPage() {
           {filteredConvs.map(conv => (
             <button
               key={conv.id}
-              onClick={() => setSelectedId(conv.id)}
+              onClick={() => handleConvSelect(conv.id)}
               className="w-full text-left px-4 py-3.5 border-b border-gray-100 transition-colors"
               style={selectedId === conv.id ? { background: '#dce5fd' } : { background: 'transparent' }}
             >
@@ -236,10 +245,16 @@ export default function WhatsAppPage() {
       </div>
 
       {/* Middle — Chat Window */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className={`${mobilePanel === 'chat' ? 'flex' : 'hidden'} lg:flex flex-1 flex-col min-w-0`}>
         {/* Chat header */}
-        <div className="h-14 flex items-center justify-between px-5 border-b border-gray-100 flex-shrink-0 bg-white">
-          <div className="flex items-center gap-3">
+        <div className="h-14 flex items-center justify-between px-3 lg:px-5 border-b border-gray-100 flex-shrink-0 bg-white">
+          <div className="flex items-center gap-2 lg:gap-3">
+            <button
+              className="lg:hidden p-1.5 text-gray-500 hover:bg-gray-100 rounded-xl"
+              onClick={() => setMobilePanel('list')}
+            >
+              <ChevronLeft size={18} />
+            </button>
             <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: PRIMARY }}>
               {selected?.avatar}
             </div>
@@ -351,7 +366,7 @@ export default function WhatsAppPage() {
       </div>
 
       {/* Right — Customer Context */}
-      <div className="w-72 flex flex-col border-l border-gray-100 flex-shrink-0 overflow-y-auto" style={{ background: '#ffffff' }}>
+      <div className="hidden xl:flex w-72 flex-col border-l border-gray-100 flex-shrink-0 overflow-y-auto" style={{ background: '#ffffff' }}>
         {/* Customer info */}
         <div className="px-4 pt-4 pb-3 border-b border-gray-100">
           <div className="flex items-center gap-3 mb-3">
