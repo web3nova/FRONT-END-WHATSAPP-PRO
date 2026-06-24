@@ -31,18 +31,17 @@ function SmartRoot() {
 
 export default function App() {
   return (
-<<<<<<< HEAD
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* ── Root: smart redirect based on prior signup ── */}
+          {/* Root: smart redirect based on prior signup */}
           <Route path="/" element={<SmartRoot />} />
 
-          {/* ── Auth pages (public) ── */}
+          {/* Auth pages (public) */}
           <Route path="/signup" element={<SignUpPage />} />
           <Route path="/login" element={<LoginPage />} />
 
-          {/* ── Subscription (requires login, no subscription yet) ── */}
+          {/* Subscription flow */}
           <Route
             path="/subscribe"
             element={
@@ -59,7 +58,8 @@ export default function App() {
               </RequireSubscription>
             }
           />
-          {/* ── Business dashboard (requires login + subscription) ── */}
+
+          {/* Business dashboard (requires login + subscription) */}
           <Route
             path="/dashboard"
             element={
@@ -70,10 +70,16 @@ export default function App() {
           >
             <Route index element={<BusinessOverview />} />
             <Route path="orders" element={<BusinessOrders />} />
+            <Route path="products" element={<Products />} />
+            <Route path="customers" element={<Customers />} />
             <Route path="whatsapp" element={<WhatsAppPage />} />
+            <Route path="website" element={<Website />} />
+            <Route path="analytics" element={<Analytics />} />
+            <Route path="knowledge" element={<Knowledge />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
 
-          {/* ── Admin panel (requires login; add role check here later) ── */}
+          {/* Admin panel (requires login) */}
           <Route
             path="/admin"
             element={
@@ -86,32 +92,10 @@ export default function App() {
             <Route path="tenants" element={<AdminTenants />} />
           </Route>
 
-          {/* ── Catch-all ── */}
+          {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
-=======
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to="/admin" replace />} />
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminOverview />} />
-          <Route path="tenants" element={<AdminTenants />} />
-        </Route>
-        <Route path="/dashboard" element={<BusinessLayout />}>
-          <Route index element={<BusinessOverview />} />
-          <Route path="orders" element={<BusinessOrders />} />
-          <Route path="products" element={<Products />} />
-          <Route path="customers" element={<Customers />} />
-          <Route path="whatsapp" element={<WhatsAppPage />} />
-          <Route path="website" element={<Website />} />
-          <Route path="analytics" element={<Analytics />} />
-          <Route path="knowledge" element={<Knowledge />} />
-          <Route path="settings" element={<Settings />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
->>>>>>> e2cc3e505442b162ade079c462e918d805283563
   )
 }
