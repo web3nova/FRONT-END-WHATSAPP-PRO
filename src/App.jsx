@@ -22,6 +22,7 @@ import SignUpPage from './pages/auth/SignUpPage'
 import LoginPage from './pages/auth/LoginPage'
 import SubscribePage from './pages/auth/SubscribePage'
 import OnboardingPage from './pages/auth/OnboardingPage'
+import LandingPage from './pages/LandingPage'
 
 // SmartRoot redirects first-time visitors to /signup and returning users to /login
 function SmartRoot() {
@@ -31,12 +32,11 @@ function SmartRoot() {
 
 export default function App() {
   return (
-<<<<<<< HEAD
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* ── Root: smart redirect based on prior signup ── */}
-          <Route path="/" element={<SmartRoot />} />
+          {/* ── Root: landing page ── */}
+          <Route path="/" element={<LandingPage />} />
 
           {/* ── Auth pages (public) ── */}
           <Route path="/signup" element={<SignUpPage />} />
@@ -70,7 +70,13 @@ export default function App() {
           >
             <Route index element={<BusinessOverview />} />
             <Route path="orders" element={<BusinessOrders />} />
+            <Route path="products" element={<Products />} />
+            <Route path="customers" element={<Customers />} />
             <Route path="whatsapp" element={<WhatsAppPage />} />
+            <Route path="website" element={<Website />} />
+            <Route path="analytics" element={<Analytics />} />
+            <Route path="knowledge" element={<Knowledge />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
 
           {/* ── Admin panel (requires login; add role check here later) ── */}
@@ -91,27 +97,5 @@ export default function App() {
         </Routes>
       </BrowserRouter>
     </AuthProvider>
-=======
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to="/admin" replace />} />
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminOverview />} />
-          <Route path="tenants" element={<AdminTenants />} />
-        </Route>
-        <Route path="/dashboard" element={<BusinessLayout />}>
-          <Route index element={<BusinessOverview />} />
-          <Route path="orders" element={<BusinessOrders />} />
-          <Route path="products" element={<Products />} />
-          <Route path="customers" element={<Customers />} />
-          <Route path="whatsapp" element={<WhatsAppPage />} />
-          <Route path="website" element={<Website />} />
-          <Route path="analytics" element={<Analytics />} />
-          <Route path="knowledge" element={<Knowledge />} />
-          <Route path="settings" element={<Settings />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
->>>>>>> e2cc3e505442b162ade079c462e918d805283563
   )
 }

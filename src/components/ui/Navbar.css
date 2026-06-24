@@ -1,0 +1,180 @@
+.bp-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+  padding: 16px 0;
+  background-color: transparent;
+  font-family: system-ui, -apple-system, sans-serif;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bp-navbar-scrolled {
+  background-color: rgba(243, 241, 233, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 10px 0;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.05);
+}
+
+.bp-navbar-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bp-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+}
+
+.bp-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: #000;
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: -0.5px;
+  transition: transform 0.3s ease;
+}
+
+.bp-logo:hover {
+  transform: scale(1.03);
+}
+
+.bp-nav-links {
+  display: flex;
+  gap: 28px;
+  align-items: center;
+}
+
+.bp-nav-item {
+  color: #333;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  padding-bottom: 2px;
+  transition: color 0.2s ease;
+}
+
+/* Animated underline on hover */
+.bp-nav-item::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #5b75e6, #8b5cf6);
+  border-radius: 2px;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bp-nav-item:hover {
+  color: #000;
+}
+
+.bp-nav-item:hover::after {
+  width: 100%;
+}
+
+.bp-chevron {
+  font-size: 10px;
+  font-weight: bold;
+  transition: transform 0.2s ease;
+}
+
+.bp-nav-item:hover .bp-chevron {
+  transform: rotate(180deg);
+}
+
+.bp-nav-actions {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.bp-nav-login {
+  color: #333;
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  margin-right: 8px;
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.bp-nav-login:hover {
+  color: #000;
+}
+
+.bp-btn {
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  border-radius: 100px;
+  padding: 12px 24px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bp-btn-primary {
+  background-color: #0a0a0a;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+
+.bp-btn-primary::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.5s ease, height 0.5s ease;
+}
+
+.bp-btn-primary:hover::after {
+  width: 300px;
+  height: 300px;
+}
+
+.bp-btn-primary:hover {
+  background-color: #1a1a1a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.bp-btn-outline {
+  background-color: transparent;
+  color: #0a0a0a;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.bp-btn-outline:hover {
+  border-color: rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 1100px) {
+  .bp-nav-links {
+    display: none;
+  }
+}
