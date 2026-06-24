@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import BusinessWebsiteBuilder from "./layouts/BusinessWebsite";
 import AdminLayout from './layouts/AdminLayout'
 import BusinessLayout from './layouts/BusinessLayout'
 import AdminOverview from './pages/admin/Overview'
@@ -17,11 +18,12 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/admin" replace />} />
+        <Route path="/" element={<Navigate to="/dashboard/builder" replace />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminOverview />} />
           <Route path="tenants" element={<AdminTenants />} />
         </Route>
+        <Route path="/dashboard/builder" element={<BusinessWebsiteBuilder />} />
         <Route path="/dashboard" element={<BusinessLayout />}>
           <Route index element={<BusinessOverview />} />
           <Route path="orders" element={<BusinessOrders />} />
