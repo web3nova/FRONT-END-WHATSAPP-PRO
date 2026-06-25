@@ -5,6 +5,7 @@ import { RequireAuth, RequireSubscription } from './components/ProtectedRoute'
 
 import AdminLayout from './layouts/AdminLayout'
 import BusinessLayout from './layouts/BusinessLayout'
+import BusinessWebsiteBuilder from './layouts/BusinessWebsite'
 import AdminOverview from './pages/admin/Overview'
 import AdminTenants from './pages/admin/Tenants'
 import BusinessOverview from './pages/dashboard/Overview'
@@ -63,6 +64,14 @@ export default function App() {
             element={
               <RequireSubscription>
                 <BusinessProfilePage />
+              </RequireSubscription>
+            }
+          />
+          <Route
+            path="/dashboard/builder"
+            element={
+              <RequireSubscription>
+                <BusinessWebsiteBuilder />
               </RequireSubscription>
             }
           />
