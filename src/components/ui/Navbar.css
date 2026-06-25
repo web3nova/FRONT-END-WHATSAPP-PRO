@@ -178,3 +178,23 @@
     display: none;
   }
 }
+
+@media (max-width: 768px) {
+  .bp-navbar-container {
+    padding: 0 16px;
+  }
+  .bp-logo {
+    font-size: 16px;
+  }
+  .bp-nav-actions {
+    gap: 8px;
+  }
+  .bp-nav-login {
+    font-size: 12px;
+    margin-right: 4px;
+  }
+  .bp-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+}
