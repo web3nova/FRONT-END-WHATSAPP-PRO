@@ -5,8 +5,6 @@ import FeaturesSection from '../components/ui/FeaturesSection';
 import ManagementSection from '../components/ui/ManagementSection';
 import PricingSection from '../components/ui/PricingSection';
 import FAQAndFooter from '../components/ui/FAQAndFooter';
-import ManagementSection from '../components/ui/ManagementSection';
-import PricingSection from '../components/ui/PricingSection';
 import './LandingPage.css';
 
 export default function LandingPage() {
@@ -16,6 +14,9 @@ export default function LandingPage() {
       <main>
         <BotpressHero />
         <FeaturesSection />
+        <ManagementSection />
+        <PricingSection />
+        <FAQAndFooter />
       </main>
     </div>
   );
