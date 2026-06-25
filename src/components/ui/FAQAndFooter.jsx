@@ -49,8 +49,8 @@ export default function FAQAndFooter() {
                                 <div
                                     key={index}
                                     className={`rounded-xl overflow-hidden transition-all duration-300 border ${isOpen
-                                            ? 'bg-white border-transparent shadow-xl scale-[1.01]'
-                                            : 'bg-transparent border-white/20 hover:border-white/40'
+                                        ? 'bg-white border-transparent shadow-xl scale-[1.01]'
+                                        : 'bg-transparent border-white/20 hover:border-white/40'
                                         }`}
                                 >
                                     <button
@@ -63,8 +63,8 @@ export default function FAQAndFooter() {
                                         </span>
 
                                         <span className={`ml-4 flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full border transition-all duration-200 ${isOpen
-                                                ? 'rotate-180 bg-[#4166F5] text-white border-transparent'
-                                                : 'border-white/30 text-white bg-transparent'
+                                            ? 'rotate-180 bg-[#4166F5] text-white border-transparent'
+                                            : 'border-white/30 text-white bg-transparent'
                                             }`}>
                                             <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg" className="stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                 <path d="M1 1L6 6L11 1" />

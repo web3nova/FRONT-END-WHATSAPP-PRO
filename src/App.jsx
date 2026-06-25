@@ -30,6 +30,7 @@ import Knowledge from './pages/dashboard/Knowledge';
 import Settings from './pages/dashboard/Settings';
 
 import LandingPage from './pages/LandingPage';
+import DocsPage from './pages/DocsPage';
 
 import SignUpPage from './pages/auth/SignUpPage';
 import LoginPage from './pages/auth/LoginPage';
@@ -42,16 +43,14 @@ import BusinessProfilePage from './pages/auth/BusinessProfilePage';
 export default function App() {
   return (
     <div className="app-bg">
-
       {/* Background effects */}
       <div className="abstract-blob blob1" />
       <div className="abstract-blob blob2" />
       <div className="abstract-blob blob3" />
 
+      {/* Main content layer */}
       <div className="content-layer">
-
         <AuthProvider>
-
           <BrowserRouter>
 
             <Routes>
@@ -60,6 +59,11 @@ export default function App() {
               <Route
                 path="/"
                 element={<LandingPage />}
+              />
+
+              <Route
+                path="/docs"
+                element={<DocsPage />}
               />
 
               {/* Authentication */}

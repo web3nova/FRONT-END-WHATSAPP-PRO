@@ -78,7 +78,7 @@ export default function PricingSection() {
   const [isYearly, setIsYearly] = useState(false);
 
   return (
-    <section className="bg-transparent py-24 px-6 font-inter">
+    <section id="pricing" className="bg-transparent py-24 px-6 font-inter">
       <div className="max-w-7xl mx-auto">
         <motion.div 
           initial={{ opacity: 0, y: -20 }}

@@ -25,11 +25,38 @@ export default function Navbar() {
           </Link>
           
           <div className="bp-nav-links">
-            <div className="bp-nav-item">Features <span className="bp-chevron">▾</span></div>
-            <div className="bp-nav-item">Integrations <span className="bp-chevron">▾</span></div>
-            <div className="bp-nav-item">Pricing</div>
-            <div className="bp-nav-item">Resources <span className="bp-chevron">▾</span></div>
-            <div className="bp-nav-item">Docs</div>
+            <div className="bp-nav-item bp-dropdown">
+              <span>Features <span className="bp-chevron">▾</span></span>
+              <div className="bp-dropdown-content">
+                <a href="#features">Visual Automation</a>
+                <a href="#features">Analytics</a>
+                <a href="#features">Team Management</a>
+              </div>
+            </div>
+            <div className="bp-nav-item bp-dropdown">
+              <span>Integrations <span className="bp-chevron">▾</span></span>
+              <div className="bp-dropdown-content">
+                <a href="#integrations">WhatsApp API</a>
+                <a href="#integrations">Shopify</a>
+                <a href="#integrations">Stripe</a>
+              </div>
+            </div>
+            <a href="#pricing" className="bp-nav-item" onClick={(e) => {
+              const el = document.getElementById('pricing');
+              if (el) {
+                e.preventDefault();
+                el.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}>Pricing</a>
+            <div className="bp-nav-item bp-dropdown">
+              <span>Resources <span className="bp-chevron">▾</span></span>
+              <div className="bp-dropdown-content">
+                <Link to="/blog">Blog</Link>
+                <Link to="/webinars">Webinars</Link>
+                <Link to="/community">Community</Link>
+              </div>
+            </div>
+            <Link to="/docs" className="bp-nav-item">Docs</Link>
           </div>
         </div>
 

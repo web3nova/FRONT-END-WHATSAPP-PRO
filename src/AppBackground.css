@@ -1,7 +1,4 @@
-:root {
-  --off-white: #F8F4E8;
-  --blue: #4166F5;
-}
+
 
 @layer base {
   html,
@@ -12,7 +9,8 @@
 
   body {
     margin: 0;
-    background: var(--off-white);
+    background: #F8F4E8;
+    color: #000;
     overflow-x: hidden;
     font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
   }
@@ -21,8 +19,8 @@
 .app-bg {
   position: relative;
   min-height: 100vh;
-  background: var(--off-white);
-  overflow: hidden;
+  background: #F8F4E8;
+  overflow: clip;
 }
 
 /* Main abstract layer */
