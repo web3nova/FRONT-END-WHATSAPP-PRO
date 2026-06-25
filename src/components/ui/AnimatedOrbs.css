@@ -1,0 +1,61 @@
+.animated-orbs-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.animated-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.5;
+  will-change: transform;
+  transition: none; /* JS handles the movement */
+}
+
+.orb-1 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(255, 200, 60, 0.6) 0%, rgba(255, 160, 60, 0.2) 50%, transparent 70%);
+  top: 10%;
+  left: 20%;
+  animation: orbPulse1 8s ease-in-out infinite;
+}
+
+.orb-2 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(200, 160, 255, 0.5) 0%, rgba(160, 120, 255, 0.15) 50%, transparent 70%);
+  top: 20%;
+  right: 15%;
+  animation: orbPulse2 10s ease-in-out infinite;
+}
+
+.orb-3 {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, rgba(100, 200, 255, 0.4) 0%, rgba(60, 160, 255, 0.1) 50%, transparent 70%);
+  bottom: 10%;
+  left: 40%;
+  animation: orbPulse3 12s ease-in-out infinite;
+}
+
+@keyframes orbPulse1 {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.15); }
+}
+
+@keyframes orbPulse2 {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.1); }
+}
+
+@keyframes orbPulse3 {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(1.2); }
+}

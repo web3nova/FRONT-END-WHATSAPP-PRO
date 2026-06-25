@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { Check, Zap } from 'lucide-react'
 import './Auth.css'
 
 const PLANS = [
@@ -15,7 +16,7 @@ const PLANS = [
       'Basic analytics',
       'Email support',
     ],
-    cta: 'Start with Starter',
+    cta: 'Get started',
   },
   {
     id: 'growth',
@@ -55,58 +56,117 @@ export default function SubscribePage() {
   const navigate = useNavigate()
 
   const handleSelect = (planId) => {
-    // TODO: integrate with Paystack / Flutterwave before navigating
     selectPlan(planId)
     navigate('/onboarding')
   }
 
   return (
-    <div className="auth-page subscribe-page">
-      {/* Progress breadcrumb */}
-      <div className="subscribe-breadcrumb">
-        <span className="subscribe-breadcrumb__step subscribe-breadcrumb__step--done">✓ Account created</span>
-        <span className="subscribe-breadcrumb__line" />
-        <span className="subscribe-breadcrumb__step subscribe-breadcrumb__step--done">✓ Signed in</span>
-        <span className="subscribe-breadcrumb__line" />
-        <span className="subscribe-breadcrumb__step subscribe-breadcrumb__step--active">3. Choose plan</span>
-      </div>
+    <div className="subscribe-page">
 
-      <div className="subscribe-header">
-        <h1 className="auth-heading">Choose your plan</h1>
+      <nav className="subscribe-nav">
+        <div className="subscribe-logo">
+          <div className="subscribe-logo-mark">
+            <Zap size={16} />
+          </div>
+          <span>BizAI</span>
+        </div>
+      </nav>
+
+      <header className="subscribe-header">
+        <div className="subscribe-badge">
+          Simple Pricing
+        </div>
+
+        <h1 className="auth-heading">
+          Choose your plan
+        </h1>
+
         <p className="auth-subheading">
-          Start free for 14 days, no card required. Upgrade or cancel anytime.
+          Start free for 14 days. No card required.
+          Upgrade or cancel anytime.
         </p>
-      </div>
+      </header>
 
-      <div className="plan-grid">
+      <section className="plan-grid">
+
         {PLANS.map((plan) => (
-          <div
+          <article
             key={plan.id}
-            className={`plan-card ${plan.highlighted ? 'plan-card--featured' : ''}`}
+            className={`plan-card ${
+              plan.highlighted
+                ? 'plan-card--featured'
+                : ''
+            }`}
           >
+
             {plan.highlighted && (
-              <span className="plan-badge">Most popular</span>
+              <div className="plan-badge">
+                Most Popular
+              </div>
             )}
-            <h2 className="plan-name">{plan.name}</h2>
-            <div className="plan-price">
-              <span className="plan-amount">{plan.price}</span>
-              <span className="plan-period">{plan.period}</span>
+
+            <div className="plan-header">
+
+              <h3 className="plan-name">
+                {plan.name}
+              </h3>
+
+              <div className="plan-price">
+
+                <span className="plan-amount">
+                  {plan.price}
+                </span>
+
+                {plan.period && (
+                  <span className="plan-period">
+                    {plan.period}
+                  </span>
+                )}
+
+              </div>
+
+              <p className="plan-description">
+                {plan.description}
+              </p>
+
             </div>
-            <p className="plan-description">{plan.description}</p>
+
             <ul className="plan-features">
-              {plan.features.map((f) => (
-                <li key={f}>{f}</li>
+
+              {plan.features.map((feature) => (
+                <li key={feature}>
+
+                  <Check
+                    size={16}
+                    className="plan-check"
+                  />
+
+                  <span>
+                    {feature}
+                  </span>
+
+                </li>
               ))}
+
             </ul>
+
             <button
-              className={plan.highlighted ? 'auth-btn-primary' : 'auth-btn-secondary'}
+              type="button"
               onClick={() => handleSelect(plan.id)}
+              className={
+                plan.highlighted
+                  ? 'auth-btn-primary'
+                  : 'auth-btn-secondary'
+              }
             >
               {plan.cta}
             </button>
-          </div>
+
+          </article>
         ))}
-      </div>
+
+      </section>
+
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { Zap } from 'lucide-react'
 import './Onboarding.css'
 
 const STEPS = [
@@ -110,11 +111,11 @@ export default function OnboardingPage() {
     if (!validate()) return
     setSubmitting(true)
 
-    // TODO: Replace with real API call to save business profile
+    // TODO: Replace with real API call to save onboarding data
     await new Promise(r => setTimeout(r, 1000))
 
     setSubmitting(false)
-    navigate('/dashboard')
+    navigate('/business-profile')
   }
 
   const progress = ((step + 1) / STEPS.length) * 100
@@ -124,11 +125,10 @@ export default function OnboardingPage() {
       {/* ── Left rail ── */}
       <aside className="ob-rail">
         <div className="ob-rail-logo">
-          {/* TODO: Replace with your logo */}
-          YourLogo
+          <div className="ob-rail-logo-mark"><Zap size={16} /></div>
+          Web3Nova
         </div>
         <p className="ob-rail-tagline">
-          {/* TODO: Update with your product tagline */}
           A few details and your business is live on the platform.
         </p>
         <nav className="ob-steps-nav">
@@ -414,7 +414,7 @@ export default function OnboardingPage() {
                   onClick={handleSubmit}
                   disabled={submitting}
                 >
-                  {submitting ? 'Saving…' : 'Submit & go to dashboard →'}
+                  {submitting ? 'Saving…' : 'Continue to profile setup →'}
                 </button>
               )}
             </div>

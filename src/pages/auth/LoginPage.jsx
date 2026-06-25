@@ -26,22 +26,28 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // State passed from SignupPage on first-time registration
+  // State passed from SignupPage
   const fromSignup = location.state?.fromSignup ?? false
   const prefillEmail = location.state?.email ?? ''
   const notice = location.state?.notice ?? ''
 
-  const [form, setForm] = useState({ email: prefillEmail, password: '' })
+  const [form, setForm] = useState({
+    email: prefillEmail,
+    password: '',
+  })
+
   const [error, setError] = useState('')
   const [tIdx, setTIdx] = useState(0)
 
-  // Returning users get sent back where they came from; new users go to /subscribe
   const from = fromSignup
     ? '/subscribe'
-    : (location.state?.from?.pathname || '/dashboard')
+    : location.state?.from?.pathname || '/dashboard'
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value })
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value,
+    })
   }
 
   const handleSubmit = (e) => {
@@ -53,8 +59,13 @@ export default function LoginPage() {
       return
     }
 
-    // TODO: replace with your real authentication call
-    login({ email: form.email, name: 'Returning User', isNewUser: fromSignup })
+    // Replace with actual authentication API later
+    login({
+      email: form.email,
+      name: 'Returning User',
+      isNewUser: fromSignup,
+    })
+
     navigate(from, { replace: true })
   }
 
@@ -62,9 +73,11 @@ export default function LoginPage() {
 
   return (
     <div className="auth-split">
-      {/* ── LEFT PANEL ── */}
+
+      {/* Left Panel */}
       <div className="auth-panel auth-panel--brand">
         <div className="auth-panel__inner">
+
           <div className="auth-logo">
             <span className="auth-logo__mark">B</span>
             <span className="auth-logo__wordmark">BizAI</span>
@@ -72,27 +85,50 @@ export default function LoginPage() {
 
           <div className="auth-panel__copy">
             <p className="auth-panel__eyebrow">Sign in</p>
-            <h1 className="auth-panel__headline">Welcome<br />back.</h1>
+
+            <h1 className="auth-panel__headline">
+              Welcome
+              <br />
+              back.
+            </h1>
+
             <p className="auth-panel__body">
-              Your AI agents have been busy. Sign in to see what
-              they've been up to.
+              Your AI agents have been busy.
+              Sign in to see what they've been up to.
             </p>
           </div>
 
           <div className="auth-testimonial">
-            <p className="auth-testimonial__quote">"{t.quote}"</p>
+            <p className="auth-testimonial__quote">
+              "{t.quote}"
+            </p>
+
             <div className="auth-testimonial__author">
-              <span className="auth-testimonial__avatar">{t.name[0]}</span>
+              <span className="auth-testimonial__avatar">
+                {t.name[0]}
+              </span>
+
               <div>
-                <p className="auth-testimonial__name">{t.name}</p>
-                <p className="auth-testimonial__role">{t.role}</p>
+                <p className="auth-testimonial__name">
+                  {t.name}
+                </p>
+
+                <p className="auth-testimonial__role">
+                  {t.role}
+                </p>
               </div>
             </div>
+
             <div className="auth-testimonial__dots">
               {TESTIMONIALS.map((_, i) => (
                 <button
                   key={i}
-                  className={`auth-testimonial__dot${i === tIdx ? ' auth-testimonial__dot--active' : ''}`}
+                  type="button"
+                  className={`auth-testimonial__dot ${
+                    i === tIdx
+                      ? 'auth-testimonial__dot--active'
+                      : ''
+                  }`}
                   onClick={() => setTIdx(i)}
                   aria-label={`Testimonial ${i + 1}`}
                 />
@@ -109,18 +145,39 @@ export default function LoginPage() {
         <span className="auth-ring auth-ring--br" />
       </div>
 
-      {/* ── RIGHT PANEL ── */}
+      {/* Right Panel */}
       <div className="auth-panel auth-panel--form">
         <div className="auth-form-inner">
-          <h2 className="auth-form__heading">Sign in</h2>
-          <p className="auth-form__sub">Access your business dashboard</p>
 
-          {notice && <p className="auth-success">{notice}</p>}
-          {error && <p className="auth-error">{error}</p>}
+          <h2 className="auth-form__heading">
+            Sign in
+          </h2>
 
-          <form onSubmit={handleSubmit} className="auth-form" noValidate>
+          <p className="auth-form__sub">
+            Access your business dashboard
+          </p>
+
+          {notice && (
+            <p className="auth-success">{notice}</p>
+          )}
+
+          {error && (
+            <p className="auth-error">{error}</p>
+          )}
+
+          <form
+            onSubmit={handleSubmit}
+            className="auth-form"
+            noValidate
+          >
             <div className="auth-field">
-              <label htmlFor="email" className="auth-field__label">Email</label>
+              <label
+                htmlFor="email"
+                className="auth-field__label"
+              >
+                Email
+              </label>
+
               <input
                 id="email"
                 name="email"
@@ -134,7 +191,13 @@ export default function LoginPage() {
             </div>
 
             <div className="auth-field">
-              <label htmlFor="password" className="auth-field__label">Password</label>
+              <label
+                htmlFor="password"
+                className="auth-field__label"
+              >
+                Password
+              </label>
+
               <input
                 id="password"
                 name="password"
@@ -148,34 +211,35 @@ export default function LoginPage() {
             </div>
 
             <div className="auth-field-footer">
-              <Link to="/forgot-password" className="auth-link-muted">
+              <Link
+                to="/forgot-password"
+                className="auth-link-muted"
+              >
                 Forgot password?
               </Link>
             </div>
 
-            <button type="submit" className="auth-btn-primary">
+            <button
+              type="submit"
+              className="auth-btn-primary"
+            >
               Log in
             </button>
           </form>
 
           <p className="auth-switch">
             New here?{' '}
-            <Link to="/signup" className="auth-switch__link">Create an account</Link>
+            <Link
+              to="/signup"
+              className="auth-switch__link"
+            >
+              Create an account
+            </Link>
           </p>
 
-          <div className="auth-divider">
-            <span className="auth-divider__line" />
-            <span className="auth-divider__label">trusted by 500+ businesses</span>
-            <span className="auth-divider__line" />
-          </div>
-
-          <div className="auth-sectors">
-            {['Retail', 'Healthcare', 'Logistics'].map((s) => (
-              <span key={s} className="auth-sector">{s}</span>
-            ))}
-          </div>
         </div>
       </div>
+
     </div>
   )
 }
