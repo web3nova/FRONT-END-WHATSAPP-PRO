@@ -13,7 +13,7 @@ import BusinessOrders from './pages/dashboard/Orders'
 import WhatsAppPage from './pages/dashboard/WhatsApp'
 import Products from './pages/dashboard/Products'
 import Customers from './pages/dashboard/Customers'
-import Website from './pages/dashboard/Website'
+import Website from './layouts/BusinessWebsite'
 import Analytics from './pages/dashboard/Analytics'
 import Knowledge from './pages/dashboard/Knowledge'
 import Settings from './pages/dashboard/Settings'
@@ -22,6 +22,7 @@ import SignUpPage from './pages/auth/SignUpPage'
 import LoginPage from './pages/auth/LoginPage'
 import SubscribePage from './pages/auth/SubscribePage'
 import OnboardingPage from './pages/auth/OnboardingPage'
+import LandingPage from './pages/LandingPage'
 import BusinessProfilePage from './pages/auth/BusinessProfilePage'
 
 // SmartRoot redirects first-time visitors to /signup and returning users to /login
@@ -35,8 +36,8 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Root: smart redirect based on prior signup */}
-          <Route path="/" element={<SmartRoot />} />
+          {/* ── Root: landing page ── */}
+          <Route path="/" element={<LandingPage />} />
 
           {/* Auth pages (public) */}
           <Route path="/signup" element={<SignUpPage />} />

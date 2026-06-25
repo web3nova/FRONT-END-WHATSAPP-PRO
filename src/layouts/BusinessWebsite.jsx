@@ -722,7 +722,7 @@ export default function BusinessWebsiteBuilder() {
   return (
     <div style={{ minHeight: "100vh", background: COLORS.offWhite, fontFamily: "'Inter', 'Segoe UI', sans-serif" }}>
       {/* Top bar */}
-      <div style={{ background: COLORS.white, borderBottom: `1.5px solid ${COLORS.border}`, padding: "0 32px", position: "sticky", top: 0, zIndex: 0 }}>
+      <div style={{ background: COLORS.white, borderBottom: `1.5px solid ${COLORS.border}`, padding: "0 32px", position: "sticky", top: 0, zIndex: 10 }}>
         <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 34, height: 34, background: COLORS.blue, borderRadius: 10 }} />

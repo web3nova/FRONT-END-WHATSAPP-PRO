@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { Check, Zap } from 'lucide-react'
 import './Auth.css'
 
-// TODO: Update plans with your actual pricing and features
 const PLANS = [
   {
     id: 'starter',
@@ -16,7 +16,7 @@ const PLANS = [
       'Basic analytics',
       'Email support',
     ],
-    cta: 'Start with Starter',
+    cta: 'Get started',
   },
   {
     id: 'growth',
@@ -55,24 +55,32 @@ export default function SubscribePage() {
   const { selectPlan } = useAuth()
   const navigate = useNavigate()
 
-const handleSelect = (planId) => {
-  // TODO: Integrate with your payment provider
-  selectPlan(planId)
-
-  // send user to onboarding first
-  navigate('/onboarding')
-}
+  const handleSelect = (planId) => {
+    selectPlan(planId)
+    navigate('/onboarding')
+  }
 
   return (
-    <div className="auth-page subscribe-page">
-      <div className="subscribe-header">
+    <div className="subscribe-page">
+
+      {/* Nav */}
+      <nav className="subscribe-nav">
+        <div className="subscribe-logo">
+          <div className="subscribe-logo-mark"><Zap size={16} /></div>
+          Web3Nova
+        </div>
+      </nav>
+
+      {/* Header */}
+      <header className="subscribe-header">
+        <div className="subscribe-badge">Simple pricing</div>
         <h1 className="auth-heading">Choose your plan</h1>
         <p className="auth-subheading">
-          {/* TODO: Update with your offer details */}
-          Start free for 14 days, no card required. Upgrade or cancel anytime.
+          Start free for 14 days. No card required. Upgrade or cancel anytime.
         </p>
-      </div>
+      </header>
 
+      {/* Plan cards */}
       <div className="plan-grid">
         {PLANS.map((plan) => (
           <div
@@ -82,17 +90,25 @@ const handleSelect = (planId) => {
             {plan.highlighted && (
               <span className="plan-badge">Most popular</span>
             )}
-            <h2 className="plan-name">{plan.name}</h2>
-            <div className="plan-price">
-              <span className="plan-amount">{plan.price}</span>
-              <span className="plan-period">{plan.period}</span>
+
+            <div className="plan-header">
+              <h3 className="plan-name">{plan.name}</h3>
+              <div className="plan-price">
+                <span className="plan-amount">{plan.price}</span>
+                {plan.period && <span className="plan-period">{plan.period}</span>}
+              </div>
+              <p className="plan-description">{plan.description}</p>
             </div>
-            <p className="plan-description">{plan.description}</p>
+
             <ul className="plan-features">
               {plan.features.map((f) => (
-                <li key={f}>{f}</li>
+                <li key={f}>
+                  <Check size={14} className="plan-check" />
+                  <span>{f}</span>
+                </li>
               ))}
             </ul>
+
             <button
               className={plan.highlighted ? 'auth-btn-primary' : 'auth-btn-secondary'}
               onClick={() => handleSelect(plan.id)}
@@ -103,7 +119,6 @@ const handleSelect = (planId) => {
         ))}
       </div>
 
-      {/* TODO: Add FAQ section here once you have common questions */}
     </div>
   )
 }
