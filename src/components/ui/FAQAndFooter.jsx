@@ -1,22 +1,22 @@
 import React, { useState } from 'react';
 
-// FAQ Data tailored to Web3Nova's WhatsApp Automation & Ordering platform
+// FAQ Data tailored to Biz AI's WhatsApp Automation & Ordering platform
 const faqData = [
     {
-        question: "How does Web3Nova automate WhatsApp customer support?",
-        answer: "Web3Nova uses an advanced AI assistant to instantly understand your customers' queries and trigger automated, human-like responses directly on WhatsApp. It handles everything from product FAQs to complex order inquiries without human intervention."
+        question: "How does Biz AI automate WhatsApp customer support?",
+        answer: "Biz AI uses an advanced AI assistant to instantly understand your customers' queries and trigger automated, human-like responses directly on WhatsApp. It handles everything from product FAQs to complex order inquiries without human intervention."
     },
     {
         question: "Can I manage my store's orders directly through WhatsApp?",
-        answer: "Yes! Web3Nova seamlessly integrates order management. When a customer places or requests an order via WhatsApp, it updates on your centralized dashboard in real-time, complete with seamless status tracking and zero hidden messaging fees."
+        answer: "Yes! Biz AI seamlessly integrates order management. When a customer places or requests an order via WhatsApp, it updates on your centralized dashboard in real-time, complete with seamless status tracking and zero hidden messaging fees."
     },
     {
         question: "Do I need a special WhatsApp Business account?",
-        answer: "Web3Nova works seamlessly with standard WhatsApp Business configurations. Our onboarding team will help you connect your number to our Visual Automation Builder smoothly so you can launch your first campaign in minutes."
+        answer: "Biz AI works seamlessly with standard WhatsApp Business configurations. Our onboarding team will help you connect your number to our Visual Automation Builder smoothly so you can launch your first campaign in minutes."
     },
     {
         question: "Are there any hidden messaging fees or extra charges?",
-        answer: "No. Unlike other platforms that add extra costs per message, Web3Nova provides transparent flat-rate pricing based on your chosen plan, ensuring complete control over your operational costs."
+        answer: "No. Unlike other platforms that add extra costs per message, Biz AI provides transparent flat-rate pricing based on your chosen plan, ensuring complete control over your operational costs."
     }
 ];
 
@@ -38,7 +38,7 @@ export default function FAQAndFooter() {
                             Frequently Asked Questions
                         </h2>
                         <p className="font-['Inter'] font-normal text-[16px] text-white/80 leading-[1.6] mt-4 max-w-xl mx-auto">
-                            Got questions about Web3Nova? We've got answers. Explore how our platform transforms your business operations.
+                            Got questions about Biz AI? We've got answers. Explore how our platform transforms your business operations.
                         </p>
                     </div>
 
@@ -98,7 +98,7 @@ export default function FAQAndFooter() {
                                 Ready to automate your operations?
                             </h3>
                             <p className="text-[14px] md:text-[16px] text-[#64748B] mt-1">
-                                Join scaling businesses accelerating client relationships using Web3Nova.
+                                Join scaling businesses accelerating client relationships using Biz AI.
                             </p>
                         </div>
                         <div>
@@ -121,9 +121,12 @@ export default function FAQAndFooter() {
 
                         {/* Branding Block */}
                         <div className="col-span-2">
-                            <span className="font-['Manrope'] font-bold text-[24px] text-[#1E293B] tracking-tight">
-                                Web3Nova
-                            </span>
+                            <div className="flex items-center gap-2">
+                                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#F8F4E8] text-[#4166F5] font-bold text-lg leading-none">B</div>
+                                <span className="font-['Manrope'] font-bold text-[24px] text-[#1E293B] tracking-tight">
+                                    BizAI
+                                </span>
+                            </div>
                             <p className="text-[14px] text-[#64748B] leading-[1.6] mt-4 max-w-xs">
                                 The enterprise-grade Automation agent platform. Elevate your support arrays and order processing systems right through standard WhatsApp communication channels.
                             </p>
@@ -207,7 +210,7 @@ export default function FAQAndFooter() {
                     {/* LOWER META BASE */}
                     <div className="border-t border-[#F1F5F9] pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-[14px] text-[#94A3B8]">
                         <p>
-                            &copy; {new Date().getFullYear()} Web3Nova Platform Inc. All rights reserved.
+                            &copy; {new Date().getFullYear()} Biz AI Platform Inc. All rights reserved.
                         </p>
                         <div className="flex space-x-6">
                             <a href="#privacy" className="hover:text-[#4166F5] font-medium transition-colors">Privacy Policy</a>

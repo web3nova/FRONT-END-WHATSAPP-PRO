@@ -126,7 +126,7 @@ export default function OnboardingPage() {
       <aside className="ob-rail">
         <div className="ob-rail-logo">
           <div className="ob-rail-logo-mark"><Zap size={16} /></div>
-          Web3Nova
+          Biz AI
         </div>
         <p className="ob-rail-tagline">
           A few details and your business is live on the platform.

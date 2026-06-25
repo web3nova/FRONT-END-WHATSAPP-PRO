@@ -22,7 +22,7 @@ export default function FeaturesSection() {
                             variant="soft"
                             className="overflow-hidden p-6">
                             <MessageSquare className="text-[#4166F5] size-6" />
-                            <h3 className="text-foreground mt-5">WhatsApp Automation</h3>
+                            <h3 className="text-foreground mt-5 text-lg font-semibold">WhatsApp Automation</h3>
                             <p className="text-muted-foreground mt-3 text-balance">Our advanced AI bots transform customer inquiries into actionable insights and automated responses directly on WhatsApp.</p>
 
                             <MeetingIllustration />
@@ -32,7 +32,7 @@ export default function FeaturesSection() {
                             variant="soft"
                             className="group overflow-hidden px-6 pt-6">
                             <ShoppingCart className="text-[#4166F5] size-6" />
-                            <h3 className="text-foreground mt-5">Order Management</h3>
+                            <h3 className="text-foreground mt-5 text-lg font-semibold">Order Management</h3>
                             <p className="text-muted-foreground mt-3 text-balance">Manage and track your customer orders seamlessly within your dedicated dashboard with real-time updates.</p>
 
                             <CodeReviewIllustration />
@@ -41,7 +41,7 @@ export default function FeaturesSection() {
                             variant="soft"
                             className="group overflow-hidden px-6 pt-6">
                             <Headset className="text-[#4166F5] size-6" />
-                            <h3 className="text-foreground mt-5">AI-Powered Support</h3>
+                            <h3 className="text-foreground mt-5 text-lg font-semibold">AI-Powered Support</h3>
                             <p className="text-muted-foreground mt-3 text-balance">A personalized AI companion that understands your business context to resolve issues instantly.</p>
 
                             <div className="mask-b-from-50 -mx-2 -mt-2 px-2 pt-2">

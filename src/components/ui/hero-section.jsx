@@ -43,9 +43,9 @@ export default function HeroSection() {
         {/* Semi-transparent overlay to ensure text is readable over the Unsplash image */}
         <div className="w-full min-h-screen bg-white/80 backdrop-blur-sm pb-44">
           <nav className="flex items-center justify-between p-4 md:px-16 lg:px-24 xl:px-32 md:py-6 w-full relative z-10">
-            <Link to="/" aria-label="Web3Nova home" className="flex items-center gap-2">
-              <MessageSquareCode size={32} className="text-[#050040]" />
-              <span className="text-xl font-bold text-[#050040]">Web3Nova AI</span>
+            <Link to="/" aria-label="Biz AI home" className="flex items-center gap-2">
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#F8F4E8] text-[#4166F5] font-bold text-lg leading-none">B</div>
+              <span className="text-xl font-bold text-[#050040] tracking-tight">BizAI</span>
             </Link>
 
             <div
@@ -110,7 +110,7 @@ export default function HeroSection() {
           </h5>
 
           <p className="text-sm md:text-base mx-auto max-w-2xl text-center mt-6 max-md:px-4 text-slate-700 leading-relaxed">
-            Build sleek, consistent conversational experiences without wrestling with complex logic. Our AI handles the heavy lifting so your business can serve Web3Nova customers 24/7.
+            Build sleek, consistent conversational experiences without wrestling with complex logic. Our AI handles the heavy lifting so your business can serve Biz AI customers 24/7.
           </p>
 
           <div className="mx-auto w-full flex items-center justify-center gap-4 mt-8">

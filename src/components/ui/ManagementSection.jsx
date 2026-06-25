@@ -53,7 +53,7 @@ export default function ManagementSection() {
 
           <blockquote className="before:bg-[#4166F5] relative mt-12 max-w-xl pl-6 before:absolute before:inset-y-0 before:left-0 before:w-1 before:rounded-full">
             <p className="text-gray-900 text-lg font-inter">
-              "Web3Nova transformed how we handle WhatsApp. The auto-generated order pages and instant broadcast features are exactly what we didn't know we needed. It's like an AI-native CRM for WhatsApp."
+              "Biz AI transformed how we handle WhatsApp. The auto-generated order pages and instant broadcast features are exactly what we didn't know we needed. It's like an AI-native CRM for WhatsApp."
             </p>
             <footer className="mt-4 flex items-center gap-2">
               <cite className="font-semibold text-gray-900 font-inter not-italic">Chinedu Okafor</cite>

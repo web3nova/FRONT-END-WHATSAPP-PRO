@@ -19,8 +19,9 @@ export default function Navbar() {
       <div className="bp-navbar-container">
         
         <div className="bp-nav-left">
-          <Link to="/" className="bp-logo">
-            <span className="bp-logo-text">Web3Nova</span>
+          <Link to="/" className="bp-logo" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#F8F4E8', color: '#4166F5', fontWeight: 'bold', fontSize: '18px', lineHeight: '1' }}>B</div>
+            <span className="bp-logo-text">BizAI</span>
           </Link>
           
           <div className="bp-nav-links">

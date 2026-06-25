@@ -123,7 +123,7 @@ export default function FeaturesBentoCards() {
             Built for performance. Designed for growth.
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            Web3Nova gives you the tools to build beautiful, high-performing automated businesses with lightning speed.
+            Biz AI gives you the tools to build beautiful, high-performing automated businesses with lightning speed.
             Each feature is thoughtfully designed to be flexible, reusable, and focused on scaling your operations.
           </p>
         </div>

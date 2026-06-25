@@ -92,7 +92,7 @@ export default function BotpressHero() {
     // Bot replies immediately
     setTimeout(() => {
       setMessages(prev => [...prev, {
-        text: "Thanks for your message! I'm an AI bot. How can I help you explore Web3Nova today?",
+        text: "Thanks for your message! I'm an AI bot. How can I help you explore Biz AI today?",
         sender: "bot",
         time: "just now"
       }]);
@@ -179,7 +179,7 @@ export default function BotpressHero() {
               </div>
               <div className="bp-chat-text">
                 <div className="bp-chat-msg">Hi! 👋 Need help?</div>
-                <div className="bp-chat-time">Web3Nova</div>
+                <div className="bp-chat-time">Biz AI</div>
               </div>
             </div>
           </div>
@@ -202,7 +202,7 @@ export default function BotpressHero() {
                 </svg>
               </div>
               <div>
-                <h4 style={{ margin: 0, fontSize: '14px', color: '#111' }}>Web3Nova AI Bot</h4>
+                <h4 style={{ margin: 0, fontSize: '14px', color: '#111' }}>Biz AI AI Bot</h4>
                 <p style={{ margin: 0, fontSize: '12px', color: '#888' }}>Always active</p>
               </div>
             </div>

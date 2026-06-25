@@ -3,17 +3,19 @@
   --blue: #4166F5;
 }
 
-html,
-body,
-#root {
-  min-height: 100%;
-}
+@layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
 
-body {
-  margin: 0;
-  background: var(--off-white);
-  overflow-x: hidden;
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  body {
+    margin: 0;
+    background: var(--off-white);
+    overflow-x: hidden;
+    font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  }
 }
 
 .app-bg {

@@ -47,7 +47,7 @@ export default function AdminLayout() {
               <Shield size={17} className="text-white" />
             </div>
             <div>
-              <div className="font-bold text-gray-900 text-sm leading-tight">Web3Nova</div>
+              <div className="font-bold text-gray-900 text-sm leading-tight">Biz AI</div>
               <div className="text-xs text-gray-400">Super Admin</div>
             </div>
           </div>
@@ -102,7 +102,7 @@ export default function AdminLayout() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-gray-900 truncate">Super Admin</div>
-              <div className="text-xs text-gray-400 truncate">admin@web3nova.com</div>
+              <div className="text-xs text-gray-400 truncate">admin@Biz AI.com</div>
             </div>
           </div>
         </div>
