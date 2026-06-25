@@ -1,90 +1,144 @@
 import { useState } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import {
+  Link,
+  useNavigate,
+  useLocation,
+} from 'react-router-dom'
+
 import { useAuth } from '../../context/AuthContext'
+import { useLogin } from '../../hooks/useLogin'
+
 import './Auth.css'
 
 const TESTIMONIALS = [
   {
-    quote: 'BizAI handles 80% of our customer queries automatically. Game changer.',
+    quote:
+      'BizAI handles 80% of our customer queries automatically. Game changer.',
     name: 'Chioma A.',
     role: 'CEO, SwiftMart Lagos',
   },
   {
-    quote: 'Our WhatsApp response time dropped from 4 hours to instant. Incredible ROI.',
+    quote:
+      'Our WhatsApp response time dropped from 4 hours to instant.',
     name: 'Emeka O.',
     role: 'Founder, TechVault NG',
   },
   {
-    quote: 'Setup was effortless. The bot knows our product catalogue inside out.',
+    quote:
+      'Setup was effortless.',
     name: 'Fatima I.',
     role: 'Head of Sales, Kaira Foods',
   },
 ]
 
 export default function LoginPage() {
-  const { login } = useAuth()
+  const auth = useAuth()
+
+  const {
+    login: loginRequest,
+    loading,
+    error: apiError,
+  } = useLogin()
+
   const navigate = useNavigate()
   const location = useLocation()
 
-  // State passed from SignupPage
-  const fromSignup = location.state?.fromSignup ?? false
-  const prefillEmail = location.state?.email ?? ''
-  const notice = location.state?.notice ?? ''
+  const fromSignup =
+    location.state?.fromSignup ?? false
+
+  const prefillEmail =
+    location.state?.email ?? ''
+
+  const notice =
+    location.state?.notice ?? ''
 
   const [form, setForm] = useState({
     email: prefillEmail,
     password: '',
   })
 
-  const [error, setError] = useState('')
-  const [tIdx, setTIdx] = useState(0)
+  const [error, setError] =
+    useState('')
+
+  const [tIdx, setTIdx] =
+    useState(0)
 
   const from = fromSignup
     ? '/subscribe'
-    : location.state?.from?.pathname || '/dashboard'
+    : location.state?.from
+        ?.pathname ||
+      '/dashboard'
 
   const handleChange = (e) => {
     setForm({
       ...form,
-      [e.target.name]: e.target.value,
+      [e.target.name]:
+        e.target.value,
     })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (
+    e
+  ) => {
     e.preventDefault()
+
     setError('')
 
-    if (!form.email || !form.password) {
-      setError('Email and password are required.')
+    if (
+      !form.email ||
+      !form.password
+    ) {
+      setError(
+        'Email and password are required.'
+      )
       return
     }
 
-    // Replace with actual authentication API later
-    login({
-      email: form.email,
-      name: 'Returning User',
-      isNewUser: fromSignup,
-    })
+    try {
+      const authData =
+        await loginRequest({
+          email: form.email,
+          password:
+            form.password,
+        })
 
-    navigate(from, { replace: true })
+      // Save user in AuthContext
+      auth.login(
+        authData.user
+      )
+
+      navigate(from, {
+        replace: true,
+      })
+    } catch (err) {
+      setError(
+        err.message
+      )
+    }
   }
 
-  const t = TESTIMONIALS[tIdx]
+  const t =
+    TESTIMONIALS[tIdx]
 
   return (
     <div className="auth-split">
-
-      {/* Left Panel */}
+      {/* Left panel */}
       <div className="auth-panel auth-panel--brand">
         <div className="auth-panel__inner">
-
           <div className="auth-logo">
-            <span className="auth-logo__mark">B</span>
-            <span className="auth-logo__wordmark">BizAI</span>
+            <span className="auth-logo__mark">
+              B
+            </span>
+
+            <span className="auth-logo__wordmark">
+              BizAI
+            </span>
           </div>
 
           <div className="auth-panel__copy">
-            <p className="auth-panel__eyebrow">Sign in</p>
+            <p className="auth-panel__eyebrow">
+              Sign in
+            </p>
 
             <h1 className="auth-panel__headline">
               Welcome
@@ -93,8 +147,9 @@ export default function LoginPage() {
             </h1>
 
             <p className="auth-panel__body">
-              Your AI agents have been busy.
-              Sign in to see what they've been up to.
+              Your AI agents have
+              been busy. Sign in to
+              continue.
             </p>
           </div>
 
@@ -120,92 +175,93 @@ export default function LoginPage() {
             </div>
 
             <div className="auth-testimonial__dots">
-              {TESTIMONIALS.map((_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  className={`auth-testimonial__dot ${
-                    i === tIdx
-                      ? 'auth-testimonial__dot--active'
-                      : ''
-                  }`}
-                  onClick={() => setTIdx(i)}
-                  aria-label={`Testimonial ${i + 1}`}
-                />
-              ))}
+              {TESTIMONIALS.map(
+                (_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className={`auth-testimonial__dot ${
+                      i === tIdx
+                        ? 'auth-testimonial__dot--active'
+                        : ''
+                    }`}
+                    onClick={() =>
+                      setTIdx(i)
+                    }
+                  />
+                )
+              )}
             </div>
           </div>
-
-          <p className="auth-panel__footer">
-            © 2026 BizAI · Powering Nigerian businesses with AI
-          </p>
         </div>
-
-        <span className="auth-ring auth-ring--tl" />
-        <span className="auth-ring auth-ring--br" />
       </div>
 
-      {/* Right Panel */}
+      {/* Right panel */}
       <div className="auth-panel auth-panel--form">
         <div className="auth-form-inner">
-
           <h2 className="auth-form__heading">
             Sign in
           </h2>
 
           <p className="auth-form__sub">
-            Access your business dashboard
+            Access your business
+            dashboard
           </p>
 
           {notice && (
-            <p className="auth-success">{notice}</p>
+            <p className="auth-success">
+              {notice}
+            </p>
           )}
 
-          {error && (
-            <p className="auth-error">{error}</p>
+          {(error ||
+            apiError) && (
+            <p className="auth-error">
+              {error ||
+                apiError}
+            </p>
           )}
 
           <form
-            onSubmit={handleSubmit}
+            onSubmit={
+              handleSubmit
+            }
             className="auth-form"
-            noValidate
           >
             <div className="auth-field">
-              <label
-                htmlFor="email"
-                className="auth-field__label"
-              >
+              <label className="auth-field__label">
                 Email
               </label>
 
               <input
-                id="email"
-                name="email"
                 type="email"
-                placeholder="ada@yourbusiness.com"
-                value={form.email}
-                onChange={handleChange}
-                autoComplete="email"
+                name="email"
+                value={
+                  form.email
+                }
+                onChange={
+                  handleChange
+                }
+                placeholder="you@example.com"
                 className="auth-field__input"
               />
             </div>
 
             <div className="auth-field">
-              <label
-                htmlFor="password"
-                className="auth-field__label"
-              >
+              <label className="auth-field__label">
                 Password
               </label>
 
               <input
-                id="password"
-                name="password"
                 type="password"
+                name="password"
+                value={
+                  form.password
+                }
+                onChange={
+                  handleChange
+                }
                 placeholder="Your password"
-                value={form.password}
-                onChange={handleChange}
-                autoComplete="current-password"
                 className="auth-field__input"
               />
             </div>
@@ -221,9 +277,14 @@ export default function LoginPage() {
 
             <button
               type="submit"
+              disabled={
+                loading
+              }
               className="auth-btn-primary"
             >
-              Log in
+              {loading
+                ? 'Signing in...'
+                : 'Log in'}
             </button>
           </form>
 
@@ -233,13 +294,11 @@ export default function LoginPage() {
               to="/signup"
               className="auth-switch__link"
             >
-              Create an account
+              Create account
             </Link>
           </p>
-
         </div>
       </div>
-
     </div>
   )
 }

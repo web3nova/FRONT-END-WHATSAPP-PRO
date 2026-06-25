@@ -28,3 +28,4 @@ dist-ssr
 
 # Cloned repo folder
 FRONT-END-WHATSAPP-PRO
+.env

@@ -1,75 +1,188 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+} from 'react'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [subscription, setSubscription] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [subscription, setSubscription] =
+    useState(null)
+
+  const [loading, setLoading] =
+    useState(true)
 
   useEffect(() => {
-    // Check localStorage for existing session on mount
-    const storedUser = localStorage.getItem('user')
-    const storedSubscription = localStorage.getItem('subscription')
-    if (storedUser) {
-      setUser(JSON.parse(storedUser))
+    try {
+      // Restore user session
+      const storedUser =
+        localStorage.getItem('user')
+
+      const storedSubscription =
+        localStorage.getItem(
+          'subscription'
+        )
+
+      const accessToken =
+        localStorage.getItem(
+          'accessToken'
+        )
+
+      if (
+        storedUser &&
+        accessToken
+      ) {
+        setUser(
+          JSON.parse(
+            storedUser
+          )
+        )
+      }
+
+      if (
+        storedSubscription
+      ) {
+        setSubscription(
+          JSON.parse(
+            storedSubscription
+          )
+        )
+      }
+    } catch (error) {
+      console.error(
+        'Error restoring session:',
+        error
+      )
+
+      // Clear corrupted storage
+      localStorage.removeItem(
+        'user'
+      )
+
+      localStorage.removeItem(
+        'subscription'
+      )
+
+      localStorage.removeItem(
+        'accessToken'
+      )
+
+      localStorage.removeItem(
+        'refreshToken'
+      )
+    } finally {
+      setLoading(false)
     }
-    if (storedSubscription) {
-      setSubscription(JSON.parse(storedSubscription))
-    }
-    setLoading(false)
   }, [])
 
-  const signup = (userData) => {
-    const newUser = { ...userData, id: Date.now(), hasSignedUp: true }
-    setUser(newUser)
-    localStorage.setItem('user', JSON.stringify(newUser))
-    localStorage.setItem('hasSignedUp', 'true')
-  }
-
+  // Store authenticated user
   const login = (userData) => {
-    const loggedInUser = { ...userData, hasSignedUp: true }
-    setUser(loggedInUser)
-    localStorage.setItem('user', JSON.stringify(loggedInUser))
+    setUser(userData)
+
+    localStorage.setItem(
+      'user',
+      JSON.stringify(
+        userData
+      )
+    )
   }
 
+  // Update user data later if needed
+  const updateUser = (
+    updatedData
+  ) => {
+    const updatedUser = {
+      ...user,
+      ...updatedData,
+    }
+
+    setUser(updatedUser)
+
+    localStorage.setItem(
+      'user',
+      JSON.stringify(
+        updatedUser
+      )
+    )
+  }
+
+  // Logout user
   const logout = () => {
     setUser(null)
     setSubscription(null)
-    localStorage.removeItem('user')
-    localStorage.removeItem('subscription')
+
+    localStorage.removeItem(
+      'user'
+    )
+
+    localStorage.removeItem(
+      'subscription'
+    )
+
+    localStorage.removeItem(
+      'accessToken'
+    )
+
+    localStorage.removeItem(
+      'refreshToken'
+    )
   }
 
-  const selectPlan = (plan) => {
-    const sub = { plan, startDate: new Date().toISOString(), status: 'active' }
+  // Subscription management
+  const selectPlan = (
+    plan
+  ) => {
+    const sub = {
+      plan,
+      startDate:
+        new Date().toISOString(),
+      status: 'active',
+    }
+
     setSubscription(sub)
-    localStorage.setItem('subscription', JSON.stringify(sub))
-  }
 
-  const hasSignedUpBefore = () => {
-    return localStorage.getItem('hasSignedUp') === 'true'
+    localStorage.setItem(
+      'subscription',
+      JSON.stringify(sub)
+    )
   }
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      subscription,
-      loading,
-      signup,
-      login,
-      logout,
-      selectPlan,
-      hasSignedUpBefore,
-      isAuthenticated: !!user,
-      hasSubscription: !!subscription,
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        subscription,
+        loading,
+
+        login,
+        logout,
+        updateUser,
+        selectPlan,
+
+        isAuthenticated:
+          !!user,
+
+        hasSubscription:
+          !!subscription,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )
 }
 
 export const useAuth = () => {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
-  return ctx
+  const context =
+    useContext(AuthContext)
+
+  if (!context) {
+    throw new Error(
+      'useAuth must be used within AuthProvider'
+    )
+  }
+
+  return context
 }
