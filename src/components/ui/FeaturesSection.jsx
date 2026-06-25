@@ -14,15 +14,15 @@ export default function FeaturesSection() {
         <section className="bg-white">
             <div className="py-24">
                 <div className="mx-auto w-full max-w-5xl px-6">
-                    <div>
-                        <h2 className="text-foreground max-w-2xl text-balance text-4xl font-semibold">Empowering businesses with AI-driven automation</h2>
+                    <div className="pl-6">
+                        <h2 className="text-[#4166F5] text-[28px] sm:text-[32px] font-bold leading-[1.2] font-manrope">Empowering businesses with AI-driven automation</h2>
                     </div>
                     <div className="mt-16 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                         <Card
                             variant="soft"
                             className="overflow-hidden p-6">
-                            <MessageSquare className="text-primary size-5" />
-                            <h3 className="text-foreground mt-5 text-lg font-semibold">WhatsApp Automation</h3>
+                            <MessageSquare className="text-[#4166F5] size-6" />
+                            <h3 className="text-foreground mt-5">WhatsApp Automation</h3>
                             <p className="text-muted-foreground mt-3 text-balance">Our advanced AI bots transform customer inquiries into actionable insights and automated responses directly on WhatsApp.</p>
 
                             <MeetingIllustration />
@@ -31,8 +31,8 @@ export default function FeaturesSection() {
                         <Card
                             variant="soft"
                             className="group overflow-hidden px-6 pt-6">
-                            <ShoppingCart className="text-primary size-5" />
-                            <h3 className="text-foreground mt-5 text-lg font-semibold">Order Management</h3>
+                            <ShoppingCart className="text-[#4166F5] size-6" />
+                            <h3 className="text-foreground mt-5">Order Management</h3>
                             <p className="text-muted-foreground mt-3 text-balance">Manage and track your customer orders seamlessly within your dedicated dashboard with real-time updates.</p>
 
                             <CodeReviewIllustration />
@@ -40,8 +40,8 @@ export default function FeaturesSection() {
                         <Card
                             variant="soft"
                             className="group overflow-hidden px-6 pt-6">
-                            <Headset className="text-primary size-5" />
-                            <h3 className="text-foreground mt-5 text-lg font-semibold">AI-Powered Support</h3>
+                            <Headset className="text-[#4166F5] size-6" />
+                            <h3 className="text-foreground mt-5">AI-Powered Support</h3>
                             <p className="text-muted-foreground mt-3 text-balance">A personalized AI companion that understands your business context to resolve issues instantly.</p>
 
                             <div className="mask-b-from-50 -mx-2 -mt-2 px-2 pt-2">
@@ -59,7 +59,7 @@ const MeetingIllustration = () => {
     return (
         <Card
             aria-hidden
-            className="mt-9 aspect-video p-4 bg-white">
+            className="mt-9 aspect-video p-4 bg-white border-[#4166F5] shadow-sm shadow-[#4166F5]/20">
             <div className="relative hidden h-fit">
                 <div className="absolute -left-1.5 bottom-1.5 rounded-md border-t border-green-700 bg-green-500 px-1 py-px text-[10px] font-medium text-white shadow-md shadow-green-500/35">MSG</div>
                 <div className="h-10 w-8 rounded-md border bg-gradient-to-b from-zinc-100 to-zinc-200"></div>
@@ -100,7 +100,7 @@ const CodeReviewIllustration = () => {
         <div
             aria-hidden
             className="relative mt-6">
-            <Card className="aspect-video w-4/5 translate-y-4 p-3 transition-transform duration-200 ease-in-out group-hover:-rotate-3 bg-white">
+            <Card className="aspect-video w-4/5 translate-y-4 p-3 transition-transform duration-200 ease-in-out group-hover:-rotate-3 bg-white border-[#4166F5] shadow-sm shadow-[#4166F5]/20">
                 <div className="mb-3 flex items-center gap-2">
                     <div className="bg-background size-6 rounded-full border p-0.5 shadow shadow-zinc-950/5">
                         <img
@@ -124,7 +124,7 @@ const CodeReviewIllustration = () => {
 
                 <Signature className="ml-8 mt-3 size-5" />
             </Card>
-            <Card className="aspect-3/5 absolute -top-4 right-0 flex w-2/5 translate-y-4 p-2 transition-transform duration-200 ease-in-out group-hover:rotate-3 bg-white">
+            <Card className="aspect-3/5 absolute -top-4 right-0 flex w-2/5 translate-y-4 p-2 transition-transform duration-200 ease-in-out group-hover:rotate-3 bg-white border-[#4166F5] shadow-sm shadow-[#4166F5]/20">
                 <div className="bg-foreground/5 m-auto flex size-10 rounded-full">
                     <ShoppingCart className="fill-foreground/50 stroke-foreground/50 m-auto size-4" />
                 </div>
@@ -137,7 +137,7 @@ const AIAssistantIllustration = () => {
     return (
         <Card
             aria-hidden
-            className="mt-6 aspect-video translate-y-4 p-4 pb-6 transition-transform duration-200 group-hover:translate-y-0 bg-white">
+            className="mt-6 aspect-video translate-y-4 p-4 pb-6 transition-transform duration-200 group-hover:translate-y-0 bg-white border-[#4166F5] shadow-sm shadow-[#4166F5]/20">
             <div className="w-fit">
                 <Sparkles className="size-3.5 fill-purple-300 stroke-purple-300" />
                 <p className="mt-2 line-clamp-2 text-sm">How can I track my latest shipment or request a return process?</p>

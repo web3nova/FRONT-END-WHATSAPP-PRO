@@ -72,16 +72,18 @@ const TiltCard = ({
         {/* Shine overlay from tilt */}
         <div style={shineStyle} />
 
+        {/* Abstract Noise/Texture background */}
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+
         <Link to="/signup" className="absolute inset-0 z-20" />
-        <CornerPlusIcons />
 
         {/* Content */}
         <div className="relative z-10 space-y-3 pointer-events-none">
           <div className="text-3xl mb-2 card-icon-bounce">{icon}</div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+          <h3 className="text-gray-900 dark:text-gray-100">
             {title}
           </h3>
-          <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
+          <p className="text-gray-700 dark:text-gray-300 text-sm">
             {description}
           </p>
         </div>
@@ -93,30 +95,6 @@ const TiltCard = ({
   )
 }
 
-const CornerPlusIcons = () => (
-  <>
-    <PlusIcon className="absolute -top-3 -left-3" />
-    <PlusIcon className="absolute -top-3 -right-3" />
-    <PlusIcon className="absolute -bottom-3 -left-3" />
-    <PlusIcon className="absolute -bottom-3 -right-3" />
-  </>
-)
-
-const PlusIcon = ({ className = "" }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    width={24}
-    height={24}
-    strokeWidth="1"
-    stroke="currentColor"
-    className={`dark:text-white text-black size-6 ${className}`}
-  >
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m6-6H6" />
-  </svg>
-)
-
 export default function FeaturesBentoCards() {
   const [sectionRef, sectionVisible] = useScrollReveal({ threshold: 0.05 })
 
@@ -124,11 +102,11 @@ export default function FeaturesBentoCards() {
     <section
       ref={sectionRef}
       className={cn(
-        "bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 my-24 transition-opacity duration-1000",
+        "bg-transparent py-24 transition-opacity duration-1000",
         sectionVisible ? "opacity-100" : "opacity-0"
       )}
     >
-      <div className="mx-auto container border border-gray-200 dark:border-zinc-800 py-16 border-t-0 px-8 relative">
+      <div className="mx-auto container py-8 px-8 relative">
         {/* Responsive Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 auto-rows-auto gap-6 relative z-10">
           <TiltCard {...cardContents[0]} className="lg:col-span-3 lg:row-span-2" delay={0} />
@@ -141,10 +119,10 @@ export default function FeaturesBentoCards() {
 
         {/* Section Footer Heading */}
         <div className="max-w-2xl ml-auto text-right px-4 mt-16 lg:mt-12 relative z-10">
-          <h2 className="text-4xl md:text-6xl font-bold text-black dark:text-white mb-4 tracking-tight">
+          <h2 className="text-black dark:text-white mb-4 tracking-tight">
             Built for performance. Designed for growth.
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 text-lg">
+          <p className="text-gray-600 dark:text-gray-400">
             Web3Nova gives you the tools to build beautiful, high-performing automated businesses with lightning speed.
             Each feature is thoughtfully designed to be flexible, reusable, and focused on scaling your operations.
           </p>
