@@ -1,9 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import GlassPrism from './GlassPrism';
 import Noise from './Noise';
-import AnimatedOrbs from './AnimatedOrbs';
-import FloatingParticles from './FloatingParticles';
 import MagneticButton from './MagneticButton';
 import { useScrollReveal } from '../../hooks/useAnimations';
 import './BotpressHero.css';
@@ -65,6 +62,42 @@ function StaggerReveal({ children, className = '' }) {
 
 export default function BotpressHero() {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  
+  // Chat state
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [messages, setMessages] = useState([
+    { text: "Hi! 👋 Need help?", sender: "bot", time: "just now" }
+  ]);
+  const [inputValue, setInputValue] = useState("");
+  const messagesContainerRef = useRef(null);
+
+  const scrollToBottom = () => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  };
+
+  useEffect(() => {
+    if (isChatOpen) scrollToBottom();
+  }, [messages, isChatOpen]);
+
+  const handleSendMessage = (e) => {
+    e.preventDefault();
+    if (!inputValue.trim()) return;
+
+    // Add user message
+    setMessages(prev => [...prev, { text: inputValue, sender: "user", time: "just now" }]);
+    setInputValue("");
+
+    // Bot replies immediately
+    setTimeout(() => {
+      setMessages(prev => [...prev, {
+        text: "Thanks for your message! I'm an AI bot. How can I help you explore Web3Nova today?",
+        sender: "bot",
+        time: "just now"
+      }]);
+    }, 500);
+  };
 
   useEffect(() => {
     const handler = (e) => {
@@ -81,28 +114,27 @@ export default function BotpressHero() {
   return (
     <section className="bp-hero">
 
-      {/* Layer 0: Animated gradient orbs */}
-      <AnimatedOrbs />
+      {/* Circuit Board Grid Background */}
+      <div
+        className="absolute inset-0 z-0 pointer-events-none"
+        style={{
+          background: '#f8fafc',
+          backgroundImage: `
+            linear-gradient(90deg, #e2e8f0 1px, transparent 1px),
+            linear-gradient(180deg, #e2e8f0 1px, transparent 1px),
+            linear-gradient(90deg, #cbd5e1 1px, transparent 1px),
+            linear-gradient(180deg, #cbd5e1 1px, transparent 1px)
+          `,
+          backgroundSize: '50px 50px, 50px 50px, 10px 10px, 10px 10px',
+        }}
+      />
 
-      {/* Layer 1: Noise grain overlay */}
-      <div className="bp-hero-bg">
+      {/* Noise Grain Overlay */}
+      <div className="absolute inset-0 z-[1] pointer-events-none">
         <Noise patternAlpha={12} patternRefreshInterval={3} />
       </div>
 
-      {/* Layer 2: Floating particles that react to cursor */}
-      <FloatingParticles count={50} color="rgba(0,0,0,0.06)" connectDistance={100} />
-
-      {/* Layer 3: Glass Prism — parallax shifted */}
-      <div
-        className="bp-prism-wrapper"
-        style={{
-          transform: `translate(calc(-50% + ${parallaxX * 0.6}px), calc(-50% + ${parallaxY * 0.6}px))`,
-        }}
-      >
-        <GlassPrism />
-      </div>
-
-      {/* Content */}
+      {/* Minimalistic Hero */}
       <div className="bp-hero-container">
         <StaggerReveal className="bp-hero-content">
           <div className="bp-badge bp-badge-animated">
@@ -116,8 +148,7 @@ export default function BotpressHero() {
           </h1>
 
           <p className="bp-hero-subtitle">
-            Automate your WhatsApp customer support and manage orders directly from your<br />
-            dashboard. Complete business control with zero hidden messaging fees.
+            Automate your WhatsApp customer support and manage orders directly from your dashboard. Complete business control with zero hidden messaging fees.
           </p>
 
           <div className="bp-hero-actions">
@@ -130,32 +161,82 @@ export default function BotpressHero() {
         </StaggerReveal>
       </div>
 
-      {/* Floating Chat Widget Mockup */}
-      <div
-        className="bp-chat-widget bp-float"
-        style={{
-          transform: `translate(${parallaxX * -0.3}px, ${parallaxY * -0.3}px)`,
-        }}
-      >
-        <div className="bp-chat-content">
-          <div className="bp-chat-avatar bp-pulse-ring">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5c-2.48 0-4.5-2.02-4.5-4.5S8.52 7.5 11 7.5s4.5 2.02 4.5 4.5-2.02 4.5-4.5 4.5z" fill="#fff" />
-              <circle cx="11" cy="12" r="2.5" fill="#000" />
+      {/* Chat Bot Section */}
+      {!isChatOpen && (
+        <>
+          <div
+            className="bp-chat-widget bp-float"
+            style={{
+              transform: `translate(${parallaxX * -0.3}px, ${parallaxY * -0.3}px)`,
+            }}
+          >
+            <div className="bp-chat-content">
+              <div className="bp-chat-avatar bp-pulse-ring">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5c-2.48 0-4.5-2.02-4.5-4.5S8.52 7.5 11 7.5s4.5 2.02 4.5 4.5-2.02 4.5-4.5 4.5z" fill="#fff" />
+                  <circle cx="11" cy="12" r="2.5" fill="#000" />
+                </svg>
+              </div>
+              <div className="bp-chat-text">
+                <div className="bp-chat-msg">Hi! 👋 Need help?</div>
+                <div className="bp-chat-time">Web3Nova</div>
+              </div>
+            </div>
+          </div>
+          <div className="bp-chat-button bp-float-delayed" onClick={() => setIsChatOpen(true)}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" fill="#fff" />
             </svg>
           </div>
-          <div className="bp-chat-text">
-            <div className="bp-chat-msg">Hi! 👋 Need help?</div>
-            <div className="bp-chat-time">Web3Nova - a few moments ago</div>
-          </div>
-        </div>
-      </div>
+        </>
+      )}
 
-      <div className="bp-chat-button bp-float-delayed">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" fill="#fff" />
-        </svg>
-      </div>
+      {isChatOpen && (
+        <div className="bp-interactive-chat">
+          <div className="bp-chat-header">
+            <div className="bp-chat-header-info">
+              <div className="bp-chat-avatar">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5c-2.48 0-4.5-2.02-4.5-4.5S8.52 7.5 11 7.5s4.5 2.02 4.5 4.5-2.02 4.5-4.5 4.5z" fill="#fff" />
+                  <circle cx="11" cy="12" r="2.5" fill="#000" />
+                </svg>
+              </div>
+              <div>
+                <h4 style={{ margin: 0, fontSize: '14px', color: '#111' }}>Web3Nova AI Bot</h4>
+                <p style={{ margin: 0, fontSize: '12px', color: '#888' }}>Always active</p>
+              </div>
+            </div>
+            <button className="bp-chat-close" onClick={() => setIsChatOpen(false)}>×</button>
+          </div>
+          <div className="bp-chat-messages" ref={messagesContainerRef}>
+            {messages.map((msg, idx) => (
+              <div key={idx} className={`bp-chat-message-row ${msg.sender === 'user' ? 'bp-chat-row-user' : 'bp-chat-row-bot'}`}>
+                <div className={`bp-chat-bubble ${msg.sender === 'user' ? 'bp-chat-bubble-user' : 'bp-chat-bubble-bot'}`}>
+                  {msg.text}
+                </div>
+              </div>
+            ))}
+          </div>
+          <form className="bp-chat-input-form" onSubmit={handleSendMessage}>
+            <input
+              type="text"
+              placeholder="Ask a question..."
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              className="bp-chat-input"
+            />
+            <button type="submit" className="bp-chat-send-btn" disabled={!inputValue.trim()}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* Smooth Fade Transition to Next Section */}
+      <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-b from-transparent to-white z-[2] pointer-events-none" />
 
     </section>
   );

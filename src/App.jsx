@@ -3,45 +3,47 @@ import {
   Routes,
   Route,
   Navigate,
-} from 'react-router-dom'
+} from 'react-router-dom';
 
-import { AuthProvider } from './context/AuthContext'
+import { AuthProvider } from './context/AuthContext';
+
 import {
   RequireAuth,
   RequireSubscription,
-} from './components/ProtectedRoute'
+} from './components/ProtectedRoute';
 
-import AdminLayout from './layouts/AdminLayout'
-import BusinessLayout from './layouts/BusinessLayout'
-import BusinessWebsiteBuilder from './layouts/BusinessWebsite'
+import AdminLayout from './layouts/AdminLayout';
+import BusinessLayout from './layouts/BusinessLayout';
+import BusinessWebsiteBuilder from './layouts/BusinessWebsite';
 
-import AdminOverview from './pages/admin/Overview'
-import AdminTenants from './pages/admin/Tenants'
+import AdminOverview from './pages/admin/Overview';
+import AdminTenants from './pages/admin/Tenants';
 
-import BusinessOverview from './pages/dashboard/Overview'
-import BusinessOrders from './pages/dashboard/Orders'
-import WhatsAppPage from './pages/dashboard/WhatsApp'
-import Products from './pages/dashboard/Products'
-import Customers from './pages/dashboard/Customers'
-import Website from './layouts/BusinessWebsite'
-import Analytics from './pages/dashboard/Analytics'
-import Knowledge from './pages/dashboard/Knowledge'
-import Settings from './pages/dashboard/Settings'
+import BusinessOverview from './pages/dashboard/Overview';
+import BusinessOrders from './pages/dashboard/Orders';
+import WhatsAppPage from './pages/dashboard/WhatsApp';
+import Products from './pages/dashboard/Products';
+import Customers from './pages/dashboard/Customers';
+import Website from './layouts/BusinessWebsite';
+import Analytics from './pages/dashboard/Analytics';
+import Knowledge from './pages/dashboard/Knowledge';
+import Settings from './pages/dashboard/Settings';
 
-import LandingPage from './pages/LandingPage'
+import LandingPage from './pages/LandingPage';
 
-import SignUpPage from './pages/auth/SignUpPage'
-import LoginPage from './pages/auth/LoginPage'
-import ForgotPasswordPage from './pages/auth/ForgotPassword'
-import ResetPasswordPage from './pages/auth/ResetPasswordPage'
-import SubscribePage from './pages/auth/SubscribePage'
-import OnboardingPage from './pages/auth/OnboardingPage'
-import BusinessProfilePage from './pages/auth/BusinessProfilePage'
+import SignUpPage from './pages/auth/SignUpPage';
+import LoginPage from './pages/auth/LoginPage';
+import ForgotPasswordPage from './pages/auth/ForgotPassword';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import SubscribePage from './pages/auth/SubscribePage';
+import OnboardingPage from './pages/auth/OnboardingPage';
+import BusinessProfilePage from './pages/auth/BusinessProfilePage';
 
 export default function App() {
   return (
     <div className="app-bg">
 
+      {/* Background effects */}
       <div className="abstract-blob blob1" />
       <div className="abstract-blob blob2" />
       <div className="abstract-blob blob3" />
@@ -55,7 +57,6 @@ export default function App() {
             <Routes>
 
               {/* Landing */}
-
               <Route
                 path="/"
                 element={<LandingPage />}
@@ -75,16 +76,12 @@ export default function App() {
 
               <Route
                 path="/forgot-password"
-                element={
-                  <ForgotPasswordPage />
-                }
+                element={<ForgotPasswordPage />}
               />
 
               <Route
                 path="/reset-password"
-                element={
-                  <ResetPasswordPage />
-                }
+                element={<ResetPasswordPage />}
               />
 
               {/* Subscription */}
@@ -183,6 +180,7 @@ export default function App() {
                   path="settings"
                   element={<Settings />}
                 />
+
               </Route>
 
               {/* Admin */}
@@ -204,9 +202,10 @@ export default function App() {
                   path="tenants"
                   element={<AdminTenants />}
                 />
+
               </Route>
 
-              {/* Catch all */}
+              {/* Fallback */}
 
               <Route
                 path="*"
@@ -227,5 +226,5 @@ export default function App() {
       </div>
 
     </div>
-  )
+  );
 }

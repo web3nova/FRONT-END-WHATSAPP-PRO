@@ -24,7 +24,7 @@ const DEFAULT_CUSTOMERS = [
     date: '10/21/2023',
     status: 'Ref',
     statusVariant: 'warning',
-    name: 'Méschac Irung',
+    name: 'Chinedu Okafor',
     avatar: MESCHAC_AVATAR,
     revenue: '$19.99',
   },
