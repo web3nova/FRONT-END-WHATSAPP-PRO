@@ -19,10 +19,10 @@ import Settings from './pages/dashboard/Settings'
 
 import SignUpPage from './pages/auth/SignUpPage'
 import LoginPage from './pages/auth/LoginPage'
-import SubscribePage from './pages/auth/SubscribePage'
 import OnboardingPage from './pages/auth/OnboardingPage'
 import LandingPage from './pages/LandingPage'
 import BusinessProfilePage from './pages/auth/BusinessProfilePage'
+import SubscribePage from './pages/auth/SubscribePage'
 
 // SmartRoot redirects first-time visitors to /signup and returning users to /login
 function SmartRoot() {

@@ -27,7 +27,7 @@ export function RequireSubscription({ children }) {
   }
 
   if (!hasSubscription) {
-    return <Navigate to="/subscribe" state={{ from: location }} replace />
+    return <Navigate to="/onboarding" state={{ from: location }} replace />
   }
 
   return children
