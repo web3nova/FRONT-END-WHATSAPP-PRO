@@ -267,6 +267,11 @@
 }
 
 @media (max-width: 768px) {
+  .bp-navbar {
+    background-color: #ffffff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
   .bp-navbar-container {
     padding: 0 16px;
   }
