@@ -23,7 +23,7 @@ export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: CREAM }}>
+    <div className="flex h-screen overflow-hidden">
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div

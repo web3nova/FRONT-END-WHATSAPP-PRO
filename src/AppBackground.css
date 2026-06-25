@@ -1,0 +1,176 @@
+:root {
+  --off-white: #F8F4E8;
+  --blue: #4166F5;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--off-white);
+  overflow-x: hidden;
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+.app-bg {
+  position: relative;
+  min-height: 100vh;
+  background: var(--off-white);
+  overflow: hidden;
+}
+
+/* Main abstract layer */
+.app-bg::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+
+  background:
+    radial-gradient(
+      circle at 20% 20%,
+      rgba(65,102,245,0.35),
+      transparent 30%
+    ),
+
+    radial-gradient(
+      circle at 85% 15%,
+      rgba(65,102,245,0.20),
+      transparent 25%
+    ),
+
+    radial-gradient(
+      circle at 75% 70%,
+      rgba(65,102,245,0.25),
+      transparent 35%
+    ),
+
+    radial-gradient(
+      circle at 15% 85%,
+      rgba(65,102,245,0.15),
+      transparent 25%
+    );
+
+  filter: blur(80px);
+  animation: drift 16s ease-in-out infinite alternate;
+}
+
+/* Dramatic abstract shapes */
+.app-bg::after {
+  content: "";
+  position: absolute;
+  width: 900px;
+  height: 900px;
+
+  top: -300px;
+  right: -250px;
+
+  background: linear-gradient(
+    135deg,
+    rgba(65,102,245,.9),
+    rgba(65,102,245,.2)
+  );
+
+  border-radius: 41% 59% 70% 30% / 42% 35% 65% 58%;
+  transform: rotate(25deg);
+  opacity: .9;
+  filter: blur(90px);
+  animation: morph 12s ease-in-out infinite;
+}
+
+/* Floating glass blobs */
+.abstract-blob {
+  position: absolute;
+  border-radius: 50%;
+  backdrop-filter: blur(30px);
+
+  background: rgba(65,102,245,.12);
+  border: 1px solid rgba(255,255,255,.25);
+
+  animation: float 9s infinite ease-in-out;
+}
+
+.blob1 {
+  width: 300px;
+  height: 300px;
+  top: 60%;
+  left: -100px;
+}
+
+.blob2 {
+  width: 180px;
+  height: 180px;
+  top: 10%;
+  left: 60%;
+}
+
+.blob3 {
+  width: 120px;
+  height: 120px;
+  bottom: 5%;
+  right: 10%;
+}
+
+/* Content stays above background */
+.content-layer {
+  position: relative;
+  z-index: 2;
+}
+
+/* Animations */
+@keyframes drift {
+  from {
+    transform: translateX(-60px)
+               translateY(-30px)
+               rotate(0deg);
+  }
+
+  to {
+    transform: translateX(50px)
+               translateY(40px)
+               rotate(8deg);
+  }
+}
+
+@keyframes morph {
+  0% {
+    border-radius:
+      41% 59% 70% 30% /
+      42% 35% 65% 58%;
+  }
+
+  50% {
+    border-radius:
+      70% 30% 45% 55% /
+      30% 60% 40% 70%;
+  }
+
+  100% {
+    border-radius:
+      45% 55% 35% 65% /
+      60% 35% 65% 40%;
+  }
+}
+
+@keyframes float {
+  0% {
+    transform:
+      translateY(0px)
+      translateX(0px);
+  }
+
+  50% {
+    transform:
+      translateY(-25px)
+      translateX(15px);
+  }
+
+  100% {
+    transform:
+      translateY(0px)
+      translateX(0px);
+  }
+}

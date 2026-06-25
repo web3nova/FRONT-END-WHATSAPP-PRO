@@ -63,61 +63,109 @@ export default function SubscribePage() {
   return (
     <div className="subscribe-page">
 
-      {/* Nav */}
       <nav className="subscribe-nav">
         <div className="subscribe-logo">
-          <div className="subscribe-logo-mark"><Zap size={16} /></div>
-          Web3Nova
+          <div className="subscribe-logo-mark">
+            <Zap size={16} />
+          </div>
+          <span>BizAI</span>
         </div>
       </nav>
 
-      {/* Header */}
       <header className="subscribe-header">
-        <div className="subscribe-badge">Simple pricing</div>
-        <h1 className="auth-heading">Choose your plan</h1>
+        <div className="subscribe-badge">
+          Simple Pricing
+        </div>
+
+        <h1 className="auth-heading">
+          Choose your plan
+        </h1>
+
         <p className="auth-subheading">
-          Start free for 14 days. No card required. Upgrade or cancel anytime.
+          Start free for 14 days. No card required.
+          Upgrade or cancel anytime.
         </p>
       </header>
 
-      {/* Plan cards */}
-      <div className="plan-grid">
+      <section className="plan-grid">
+
         {PLANS.map((plan) => (
-          <div
+          <article
             key={plan.id}
-            className={`plan-card ${plan.highlighted ? 'plan-card--featured' : ''}`}
+            className={`plan-card ${
+              plan.highlighted
+                ? 'plan-card--featured'
+                : ''
+            }`}
           >
+
             {plan.highlighted && (
-              <span className="plan-badge">Most popular</span>
+              <div className="plan-badge">
+                Most Popular
+              </div>
             )}
 
             <div className="plan-header">
-              <h3 className="plan-name">{plan.name}</h3>
+
+              <h3 className="plan-name">
+                {plan.name}
+              </h3>
+
               <div className="plan-price">
-                <span className="plan-amount">{plan.price}</span>
-                {plan.period && <span className="plan-period">{plan.period}</span>}
+
+                <span className="plan-amount">
+                  {plan.price}
+                </span>
+
+                {plan.period && (
+                  <span className="plan-period">
+                    {plan.period}
+                  </span>
+                )}
+
               </div>
-              <p className="plan-description">{plan.description}</p>
+
+              <p className="plan-description">
+                {plan.description}
+              </p>
+
             </div>
 
             <ul className="plan-features">
-              {plan.features.map((f) => (
-                <li key={f}>
-                  <Check size={14} className="plan-check" />
-                  <span>{f}</span>
+
+              {plan.features.map((feature) => (
+                <li key={feature}>
+
+                  <Check
+                    size={16}
+                    className="plan-check"
+                  />
+
+                  <span>
+                    {feature}
+                  </span>
+
                 </li>
               ))}
+
             </ul>
 
             <button
-              className={plan.highlighted ? 'auth-btn-primary' : 'auth-btn-secondary'}
+              type="button"
               onClick={() => handleSelect(plan.id)}
+              className={
+                plan.highlighted
+                  ? 'auth-btn-primary'
+                  : 'auth-btn-secondary'
+              }
             >
               {plan.cta}
             </button>
-          </div>
+
+          </article>
         ))}
-      </div>
+
+      </section>
 
     </div>
   )
