@@ -22,6 +22,7 @@ import SignUpPage from './pages/auth/SignUpPage'
 import LoginPage from './pages/auth/LoginPage'
 import SubscribePage from './pages/auth/SubscribePage'
 import OnboardingPage from './pages/auth/OnboardingPage'
+import ForgotPasswordPage from './pages/auth/ForgotPassword'
 
 // SmartRoot redirects first-time visitors to /signup and returning users to /login
 function SmartRoot() {
@@ -31,87 +32,79 @@ function SmartRoot() {
 
 export default function App() {
   return (
-<<<<<<< HEAD
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* ── Root: smart redirect based on prior signup ── */}
-          <Route path="/" element={<SmartRoot />} />
+    <div className="app-bg">
+      <div className="abstract-blob blob1" />
+      <div className="abstract-blob blob2" />
+      <div className="abstract-blob blob3" />
 
-          {/* ── Auth pages (public) ── */}
-          <Route path="/signup" element={<SignUpPage />} />
-          <Route path="/login" element={<LoginPage />} />
+      <div className="content-layer">
+        <AuthProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* -- Root: smart redirect based on prior signup -- */}
+              <Route path="/" element={<SmartRoot />} />
 
-          {/* ── Subscription (requires login, no subscription yet) ── */}
-          <Route
-            path="/subscribe"
-            element={
-              <RequireAuth>
-                <SubscribePage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/onboarding"
-            element={
-              <RequireSubscription>
-                <OnboardingPage />
-              </RequireSubscription>
-            }
-          />
-          {/* ── Business dashboard (requires login + subscription) ── */}
-          <Route
-            path="/dashboard"
-            element={
-              <RequireSubscription>
-                <BusinessLayout />
-              </RequireSubscription>
-            }
-          >
-            <Route index element={<BusinessOverview />} />
-            <Route path="orders" element={<BusinessOrders />} />
-            <Route path="whatsapp" element={<WhatsAppPage />} />
-          </Route>
+              {/* -- Auth pages (public) -- */}
+              <Route path="/signup" element={<SignUpPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-          {/* ── Admin panel (requires login; add role check here later) ── */}
-          <Route
-            path="/admin"
-            element={
-              <RequireAuth>
-                <AdminLayout />
-              </RequireAuth>
-            }
-          >
-            <Route index element={<AdminOverview />} />
-            <Route path="tenants" element={<AdminTenants />} />
-          </Route>
+              {/* -- Subscription (requires login, no subscription yet) -- */}
+              <Route
+                path="/subscribe"
+                element={
+                  <RequireAuth>
+                    <SubscribePage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/onboarding"
+                element={
+                  <RequireSubscription>
+                    <OnboardingPage />
+                  </RequireSubscription>
+                }
+              />
+              {/* -- Business dashboard (requires login + subscription) -- */}
+              <Route
+                path="/dashboard"
+                element={
+                  <RequireSubscription>
+                    <BusinessLayout />
+                  </RequireSubscription>
+                }
+              >
+                <Route index element={<BusinessOverview />} />
+                <Route path="orders" element={<BusinessOrders />} />
+                <Route path="products" element={<Products />} />
+                <Route path="customers" element={<Customers />} />
+                <Route path="whatsapp" element={<WhatsAppPage />} />
+                <Route path="website" element={<Website />} />
+                <Route path="analytics" element={<Analytics />} />
+                <Route path="knowledge" element={<Knowledge />} />
+                <Route path="settings" element={<Settings />} />
+              </Route>
 
-          {/* ── Catch-all ── */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
-=======
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to="/admin" replace />} />
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminOverview />} />
-          <Route path="tenants" element={<AdminTenants />} />
-        </Route>
-        <Route path="/dashboard" element={<BusinessLayout />}>
-          <Route index element={<BusinessOverview />} />
-          <Route path="orders" element={<BusinessOrders />} />
-          <Route path="products" element={<Products />} />
-          <Route path="customers" element={<Customers />} />
-          <Route path="whatsapp" element={<WhatsAppPage />} />
-          <Route path="website" element={<Website />} />
-          <Route path="analytics" element={<Analytics />} />
-          <Route path="knowledge" element={<Knowledge />} />
-          <Route path="settings" element={<Settings />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
->>>>>>> e2cc3e505442b162ade079c462e918d805283563
+              {/* -- Admin panel (requires login; add role check here later) -- */}
+              <Route
+                path="/admin"
+                element={
+                  <RequireAuth>
+                    <AdminLayout />
+                  </RequireAuth>
+                }
+              >
+                <Route index element={<AdminOverview />} />
+                <Route path="tenants" element={<AdminTenants />} />
+              </Route>
+
+              {/* -- Catch-all -- */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
+      </div>
+    </div>
   )
 }

@@ -2,7 +2,6 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import './Auth.css'
 
-// TODO: Update plans with your actual pricing and features
 const PLANS = [
   {
     id: 'starter',
@@ -55,20 +54,26 @@ export default function SubscribePage() {
   const { selectPlan } = useAuth()
   const navigate = useNavigate()
 
-const handleSelect = (planId) => {
-  // TODO: Integrate with your payment provider
-  selectPlan(planId)
-
-  // send user to onboarding first
-  navigate('/onboarding')
-}
+  const handleSelect = (planId) => {
+    // TODO: integrate with Paystack / Flutterwave before navigating
+    selectPlan(planId)
+    navigate('/onboarding')
+  }
 
   return (
     <div className="auth-page subscribe-page">
+      {/* Progress breadcrumb */}
+      <div className="subscribe-breadcrumb">
+        <span className="subscribe-breadcrumb__step subscribe-breadcrumb__step--done">✓ Account created</span>
+        <span className="subscribe-breadcrumb__line" />
+        <span className="subscribe-breadcrumb__step subscribe-breadcrumb__step--done">✓ Signed in</span>
+        <span className="subscribe-breadcrumb__line" />
+        <span className="subscribe-breadcrumb__step subscribe-breadcrumb__step--active">3. Choose plan</span>
+      </div>
+
       <div className="subscribe-header">
         <h1 className="auth-heading">Choose your plan</h1>
         <p className="auth-subheading">
-          {/* TODO: Update with your offer details */}
           Start free for 14 days, no card required. Upgrade or cancel anytime.
         </p>
       </div>
@@ -102,8 +107,6 @@ const handleSelect = (planId) => {
           </div>
         ))}
       </div>
-
-      {/* TODO: Add FAQ section here once you have common questions */}
     </div>
   )
 }
