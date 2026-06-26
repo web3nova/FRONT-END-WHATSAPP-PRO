@@ -17,6 +17,22 @@ export function useSignup() {
       setLoading(true)
       setError(null)
 
+      if (!import.meta.env.VITE_API_URL) {
+        console.warn('VITE_API_URL is not defined. Falling back to mock signup.')
+        await new Promise(r => setTimeout(r, 600))
+        return {
+          message: 'Signup successful (mock)',
+          data: {
+            user: {
+              email,
+              name: name || email.split('@')[0],
+            },
+            accessToken: 'mock-access-token',
+            refreshToken: 'mock-refresh-token',
+          }
+        }
+      }
+
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
@@ -31,7 +47,12 @@ export function useSignup() {
         }),
       })
 
-      const data = await response.json()
+      let data
+      try {
+        data = await response.json()
+      } catch (err) {
+        throw new Error('API server returned a non-JSON response. Please check if your backend server is running.')
+      }
 
       if (!response.ok) {
         throw new Error(

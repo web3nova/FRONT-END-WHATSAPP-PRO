@@ -22,6 +22,13 @@ export function useResetPassword() {
       setError(null)
       setSuccess(null)
 
+      if (!import.meta.env.VITE_API_URL) {
+        console.warn('VITE_API_URL is not defined. Falling back to mock reset password.')
+        await new Promise(r => setTimeout(r, 600))
+        setSuccess('Password reset successful (mock).')
+        return { message: 'Password reset successful (mock)' }
+      }
+
       const response =
         await fetch(API_URL, {
           method: 'POST',
@@ -37,8 +44,12 @@ export function useResetPassword() {
           }),
         })
 
-      const result =
-        await response.json()
+      let result
+      try {
+        result = await response.json()
+      } catch (err) {
+        throw new Error('API server returned a non-JSON response. Please check if your backend server is running.')
+      }
 
       if (!response.ok) {
         throw new Error(
