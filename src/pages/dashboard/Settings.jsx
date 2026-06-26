@@ -59,14 +59,14 @@ export default function Settings() {
         <p className="text-sm text-gray-400 mt-0.5">Manage your business profile and preferences</p>
       </div>
 
-      <div className="flex gap-4">
+      <div className="flex flex-col md:flex-row gap-4">
         {/* Sidebar tabs */}
-        <div className="w-52 flex-shrink-0 space-y-0.5">
+        <div className="w-full md:w-52 flex-shrink-0 flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0 scrollbar-none flex-nowrap">
           {tabs.map(t => (
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id)}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition"
+              className="flex-shrink-0 md:w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition"
               style={activeTab === t.id
                 ? { background: PRIMARY, color: '#fff' }
                 : { color: '#6b7280', background: 'transparent' }}
@@ -94,7 +94,7 @@ export default function Settings() {
                   <div className="text-xs text-gray-400 mt-1">PNG or JPG · Max 2MB · Recommended 400×400px</div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
                   { label: 'Business Name', value: 'Perfect Style Edits', full: true },
                   { label: 'Tagline', value: 'Custom Made & Ready To Wear Fashion', full: true },
@@ -103,7 +103,7 @@ export default function Settings() {
                   { label: 'City', value: 'Lagos' },
                   { label: 'Country', value: 'Nigeria' },
                 ].map(f => (
-                  <div key={f.label} className={f.full ? 'col-span-2' : ''}>
+                  <div key={f.label} className={f.full ? 'sm:col-span-2' : ''}>
                     <label className="block text-xs font-semibold text-gray-500 mb-1.5">{f.label}</label>
                     <input
                       defaultValue={f.value}
@@ -112,7 +112,7 @@ export default function Settings() {
                     />
                   </div>
                 ))}
-                <div className="col-span-2">
+                <div className="sm:col-span-2">
                   <label className="block text-xs font-semibold text-gray-500 mb-1.5">Business Description</label>
                   <textarea
                     rows={3}
@@ -131,9 +131,9 @@ export default function Settings() {
           {activeTab === 'whatsapp' && (
             <div className="space-y-5">
               <h2 className="font-semibold text-gray-900">WhatsApp Connection</h2>
-              <div className="flex items-center justify-between p-4 rounded-2xl border border-gray-100" style={{ background: CREAM }}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border border-gray-100 gap-3" style={{ background: CREAM }}>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#dce5fd' }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#dce5fd' }}>
                     <MessageCircle size={18} style={{ color: PRIMARY }} />
                   </div>
                   <div>
@@ -141,7 +141,7 @@ export default function Settings() {
                     <div className="text-xs font-medium" style={{ color: PRIMARY }}>● Connected via WhatsApp Business API</div>
                   </div>
                 </div>
-                <button className="text-sm font-semibold text-red-400 border border-red-200 bg-white px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
+                <button className="text-sm font-semibold text-red-400 border border-red-200 bg-white px-3 py-1.5 rounded-lg hover:bg-red-50 transition w-full sm:w-auto">
                   Disconnect
                 </button>
               </div>
@@ -289,12 +289,12 @@ export default function Settings() {
               <h2 className="font-semibold text-gray-900">Billing & Plan</h2>
               {/* Current plan */}
               <div className="rounded-2xl p-5 border-2" style={{ borderColor: PRIMARY, background: '#dce5fd' }}>
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
                   <div>
                     <div className="text-lg font-bold text-gray-900">Pro Plan</div>
                     <div className="text-sm text-gray-500">₦15,000 / month · Renews July 24, 2026</div>
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: PRIMARY }}>
+                  <div className="flex items-center gap-1.5 text-xs font-semibold flex-shrink-0" style={{ color: PRIMARY }}>
                     <Check size={14} /> Active
                   </div>
                 </div>

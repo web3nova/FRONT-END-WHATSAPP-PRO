@@ -21,23 +21,23 @@ const statusConfig = {
 export default function BusinessOrders() {
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Orders</h1>
           <p className="text-sm text-gray-400 mt-0.5">186 orders this month</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl shadow-sm hover:opacity-90 transition" style={{ background: PRIMARY }}>
+        <button className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl shadow-sm hover:opacity-90 transition w-full sm:w-auto" style={{ background: PRIMARY }}>
           <Plus size={15} />
           New Order
         </button>
       </div>
 
       {/* Status tabs */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none flex-nowrap w-full">
         {['All Orders', 'Pending', 'In Progress', 'Completed'].map((tab, i) => (
           <button
             key={tab}
-            className={`px-4 py-2 text-sm font-medium rounded-xl transition ${i === 0 ? 'text-white' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'}`}
+            className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-xl transition ${i === 0 ? 'text-white' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'}`}
             style={i === 0 ? { background: PRIMARY } : {}}
           >
             {tab}
@@ -46,15 +46,15 @@ export default function BusinessOrders() {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-          <div className="relative flex-1 max-w-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 border-b border-gray-100">
+          <div className="relative flex-1 w-full sm:max-w-sm">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               className="pl-9 pr-4 py-2 text-sm bg-gray-50 border border-gray-100 rounded-xl w-full focus:outline-none"
               placeholder="Search orders..."
             />
           </div>
-          <button className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 transition">
+          <button className="flex items-center justify-center gap-2 px-3 py-2 text-sm text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 transition w-full sm:w-auto">
             <Filter size={14} />
             Filter
           </button>

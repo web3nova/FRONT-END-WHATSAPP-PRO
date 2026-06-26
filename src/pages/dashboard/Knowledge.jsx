@@ -46,32 +46,32 @@ export default function Knowledge() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Knowledge Base</h1>
+          <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Knowledge Base</h1>
           <p className="text-sm text-gray-400 mt-0.5">Upload documents to train your AI assistant</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition" style={{ background: PRIMARY }}>
+        <button className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition w-full sm:w-auto" style={{ background: PRIMARY }}>
           <Upload size={15} /> Upload Document
         </button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {[
           { label: 'Documents', value: documents.length },
           { label: 'Indexed Chunks', value: totalChunks },
           { label: 'AI Confidence', value: '92%' },
           { label: 'Last Trained', value: 'Today' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-2xl px-5 py-4 shadow-sm border border-gray-100">
-            <div className="text-2xl font-bold text-gray-900">{s.value}</div>
-            <div className="text-sm text-gray-400 mt-0.5">{s.label}</div>
+          <div key={s.label} className="bg-white rounded-2xl px-4 py-3.5 sm:px-5 sm:py-4 shadow-sm border border-gray-100">
+            <div className="text-xl sm:text-2xl font-bold text-gray-900">{s.value}</div>
+            <div className="text-xs sm:text-sm text-gray-400 mt-0.5">{s.label}</div>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Left: Upload + Document List */}
         <div className="space-y-4">
           {/* Drop zone */}
@@ -79,7 +79,7 @@ export default function Knowledge() {
             onDragOver={e => { e.preventDefault(); setDragging(true) }}
             onDragLeave={() => setDragging(false)}
             onDrop={e => { e.preventDefault(); setDragging(false) }}
-            className="border-2 border-dashed rounded-2xl p-8 text-center transition-colors cursor-pointer"
+            className="border-2 border-dashed rounded-2xl p-6 sm:p-8 text-center transition-colors cursor-pointer"
             style={dragging ? { borderColor: PRIMARY, background: '#dce5fd' } : { borderColor: '#e5e7eb', background: CREAM }}
           >
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3" style={{ background: dragging ? PRIMARY : '#dce5fd' }}>
@@ -102,29 +102,33 @@ export default function Knowledge() {
                 const s = statusConfig[doc.status]
                 const Icon = s.icon
                 return (
-                  <div key={doc.id} className="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors">
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: CREAM }}>
-                      <FileText size={16} style={{ color: PRIMARY }} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-900 truncate">{doc.name}</div>
-                      <div className="text-xs text-gray-400">
-                        {doc.size} · {doc.chunks > 0 ? `${doc.chunks} chunks` : '—'} · {doc.uploaded}
+                  <div key={doc.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-5 py-3.5 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: CREAM }}>
+                        <FileText size={16} style={{ color: PRIMARY }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-900 truncate">{doc.name}</div>
+                        <div className="text-xs text-gray-400">
+                          {doc.size} · {doc.chunks > 0 ? `${doc.chunks} chunks` : '—'} · {doc.uploaded}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center justify-between sm:justify-end gap-2.5 flex-shrink-0 border-t border-gray-50 pt-2 sm:border-0 sm:pt-0">
                       <span className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg" style={{ background: s.bg, color: s.color }}>
                         <Icon size={11} />
                         {s.label}
                       </span>
-                      {doc.status === 'failed' && (
-                        <button className="p-1 text-gray-300 hover:text-blue-500 transition">
-                          <RefreshCw size={13} />
+                      <div className="flex items-center gap-2">
+                        {doc.status === 'failed' && (
+                          <button className="p-1 text-gray-300 hover:text-blue-500 transition">
+                            <RefreshCw size={13} />
+                          </button>
+                        )}
+                        <button className="p-1 text-gray-300 hover:text-red-400 transition">
+                          <Trash2 size={13} />
                         </button>
-                      )}
-                      <button className="p-1 text-gray-300 hover:text-red-400 transition">
-                        <Trash2 size={13} />
-                      </button>
+                      </div>
                     </div>
                   </div>
                 )
@@ -134,8 +138,8 @@ export default function Knowledge() {
         </div>
 
         {/* Right: AI Test Chat */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden h-[420px] sm:h-[480px]">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3 flex-shrink-0">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: '#dce5fd' }}>
               <Bot size={16} style={{ color: PRIMARY }} />
             </div>
@@ -154,7 +158,7 @@ export default function Knowledge() {
             {chat.map((m, i) => (
               <div key={i} className={`flex ${m.from === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className="max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed"
+                  className="max-w-[85%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed"
                   style={m.from === 'user'
                     ? { background: PRIMARY, color: '#fff', borderBottomRightRadius: 4 }
                     : { background: CREAM, color: '#1e293b', borderBottomLeftRadius: 4 }}
@@ -172,7 +176,7 @@ export default function Knowledge() {
           </div>
 
           {/* Input */}
-          <div className="px-4 py-3 border-t border-gray-100 flex gap-2">
+          <div className="px-4 py-3 border-t border-gray-100 flex gap-2 flex-shrink-0">
             <input
               value={testInput}
               onChange={e => setTestInput(e.target.value)}

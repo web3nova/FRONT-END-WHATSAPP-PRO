@@ -32,48 +32,48 @@ export default function Website() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Website</h1>
           <p className="text-sm text-gray-400 mt-0.5">Manage your storefront at perfectstyleedits.web3nova.com</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <a
             href="#"
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium border border-gray-200 bg-white text-gray-600 rounded-xl hover:bg-gray-50 transition"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium border border-gray-200 bg-white text-gray-600 rounded-xl hover:bg-gray-50 transition"
           >
             <Eye size={15} /> Preview
           </a>
-          <button className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition" style={{ background: PRIMARY }}>
+          <button className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition" style={{ background: PRIMARY }}>
             <Globe size={15} /> Publish Changes
           </button>
         </div>
       </div>
 
       {/* Domain card */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center justify-between">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: CREAM }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: CREAM }}>
             <Globe size={20} style={{ color: PRIMARY }} />
           </div>
           <div>
-            <div className="text-sm font-semibold text-gray-900">perfectstyleedits.web3nova.com</div>
+            <div className="text-sm font-semibold text-gray-900 break-all">perfectstyleedits.web3nova.com</div>
             <div className="text-xs text-gray-400 mt-0.5">Free subdomain · Upgrade to use a custom domain</div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto border-t sm:border-t-0 pt-3 sm:pt-0 border-gray-50">
           <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: PRIMARY }}>
             <CheckCircle size={14} /> Live
           </div>
-          <button className="flex items-center gap-1.5 text-xs font-semibold text-white px-3 py-1.5 rounded-lg hover:opacity-90" style={{ background: PRIMARY }}>
+          <button className="flex items-center gap-1.5 text-xs font-semibold text-white px-3 py-1.5 rounded-lg hover:opacity-90 transition" style={{ background: PRIMARY }}>
             <ExternalLink size={12} /> Visit Site
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Left - controls */}
-        <div className="col-span-1 space-y-4">
+        <div className="col-span-1 lg:col-span-1 space-y-4">
           {/* Tabs */}
           <div className="flex bg-white rounded-xl border border-gray-100 p-1 gap-1">
             {['pages', 'sections', 'design'].map(t => (
@@ -187,7 +187,7 @@ export default function Website() {
         </div>
 
         {/* Right - website preview mockup */}
-        <div className="col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 bg-gray-50">
             <div className="flex gap-1.5">
               <div className="w-3 h-3 rounded-full bg-red-400"></div>
@@ -224,7 +224,7 @@ export default function Website() {
               <div className="text-center mb-4">
                 <div className="text-sm font-bold text-gray-900">Featured Products</div>
               </div>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {['Bridal Gown', 'Corset Dress', 'Senator Wear', 'Native Attire'].map((name, i) => (
                   <div key={name} className="rounded-xl overflow-hidden border border-gray-100">
                     <div className="h-20 flex items-center justify-center text-xl" style={{ background: CREAM }}>

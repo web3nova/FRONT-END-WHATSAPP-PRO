@@ -35,12 +35,12 @@ export default function Customers() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
           <p className="text-sm text-gray-400 mt-0.5">3,481 customers tracked</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl shadow-sm hover:opacity-90 transition" style={{ background: PRIMARY }}>
+        <button className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl shadow-sm hover:opacity-90 transition w-full sm:w-auto" style={{ background: PRIMARY }}>
           <Plus size={15} /> Add Customer
         </button>
       </div>
@@ -60,11 +60,11 @@ export default function Customers() {
         ))}
       </div>
 
-      <div className="flex gap-4">
+      <div className="flex flex-col lg:flex-row gap-4">
         {/* Customer Table */}
         <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-            <div className="relative flex-1">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 border-b border-gray-100">
+            <div className="relative flex-1 w-full">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 value={search}
@@ -73,7 +73,7 @@ export default function Customers() {
                 placeholder="Search customers..."
               />
             </div>
-            <button className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50">
+            <button className="flex items-center justify-center gap-2 px-3 py-2 text-sm text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 transition w-full sm:w-auto">
               <Filter size={14} /> Filter
             </button>
           </div>
@@ -137,7 +137,7 @@ export default function Customers() {
 
         {/* Customer Detail Panel */}
         {sel && (
-          <div className="w-72 flex-shrink-0 bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
+          <div className="w-full lg:w-72 lg:flex-shrink-0 bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ background: PRIMARY }}>
                 {sel.name.split(' ').map(n => n[0]).join('')}

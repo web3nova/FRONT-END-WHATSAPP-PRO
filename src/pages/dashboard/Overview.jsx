@@ -64,9 +64,9 @@ const statusConfig = {
   rejected: { label: 'Rejected', bg: '#fee2e2', color: '#dc2626' },
 }
 
-function StatCard({ label, value, sub, positive, icon: Icon }) {
+function StatCard({ label, value, sub, positive, icon: Icon, className = "" }) {
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+    <div className={`bg-white rounded-2xl p-5 shadow-sm border border-gray-100 ${className}`}>
       <div className="flex items-start justify-between mb-4">
         <div className="p-2.5 rounded-xl" style={{ background: CREAM }}>
           <Icon size={19} style={{ color: PRIMARY }} />
@@ -108,7 +108,7 @@ export default function BusinessOverview() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Welcome back, Perfect Style Edits</h1>
           <p className="text-sm text-gray-400 mt-0.5">Here's what's happening with your business today · June 24, 2026</p>
@@ -127,12 +127,12 @@ export default function BusinessOverview() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard label="Total Customers" value="3,481" sub="+23 this week" positive icon={Users} />
         <StatCard label="Orders This Month" value="186" sub="+18% vs last month" positive icon={ShoppingBag} />
         <StatCard label="Monthly Revenue" value="₦14.8M" sub="+22% growth" positive icon={DollarSign} />
         <StatCard label="Website Visits" value="12,400" sub="this month" positive={false} icon={Globe} />
-        <StatCard label="WhatsApp Messages" value="2,847" sub="AI handled 94%" positive icon={MessageCircle} />
+        <StatCard label="WhatsApp Messages" value="2,847" sub="AI handled 94%" positive icon={MessageCircle} className="col-span-2 md:col-span-1 lg:col-span-1" />
       </div>
 
       {/* Charts row */}

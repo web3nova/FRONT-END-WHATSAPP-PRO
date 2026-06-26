@@ -38,12 +38,12 @@ export default function Products() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Products</h1>
           <p className="text-sm text-gray-400 mt-0.5">{products.length} products in your catalog</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl shadow-sm hover:opacity-90 transition" style={{ background: PRIMARY }}>
+        <button className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl shadow-sm hover:opacity-90 transition w-full sm:w-auto" style={{ background: PRIMARY }}>
           <Plus size={15} /> Add Product
         </button>
       </div>
@@ -65,34 +65,34 @@ export default function Products() {
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 flex-nowrap">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1.5 sm:pb-0 flex-nowrap w-full sm:w-auto scrollbar-none">
           {categories.map(c => (
             <button
               key={c}
               onClick={() => setCat(c)}
-              className="px-3.5 py-1.5 text-sm font-medium rounded-xl transition"
+              className="flex-shrink-0 px-3.5 py-1.5 text-sm font-medium rounded-xl transition"
               style={cat === c ? { background: PRIMARY, color: '#fff' } : { background: 'white', color: '#6b7280', border: '1px solid #e5e7eb' }}
             >
               {c}
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
+        <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-initial">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="pl-9 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-xl w-52 focus:outline-none"
+              className="pl-9 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-xl w-full sm:w-52 focus:outline-none"
               placeholder="Search products..."
             />
           </div>
-          <div className="flex bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <div className="flex bg-white border border-gray-200 rounded-xl overflow-hidden flex-shrink-0">
             {['grid', 'list'].map(v => (
               <button
                 key={v}
                 onClick={() => setView(v)}
-                className="px-3 py-2 text-sm transition"
+                className="px-3 py-2 text-sm transition cursor-pointer"
                 style={view === v ? { background: PRIMARY, color: '#fff' } : { color: '#9ca3af' }}
               >
                 {v === 'grid' ? '⊞' : '☰'}
@@ -158,7 +158,7 @@ export default function Products() {
         </div>
       ) : (
         /* List View */
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr style={{ background: CREAM }}>

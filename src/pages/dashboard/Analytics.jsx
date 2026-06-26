@@ -73,16 +73,16 @@ export default function Analytics() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
           <p className="text-sm text-gray-400 mt-0.5">Performance insights for your business</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 flex-nowrap w-full sm:w-auto scrollbar-none">
           {['7 days', '30 days', '3 months', '1 year'].map((r, i) => (
             <button
               key={r}
-              className="px-3 py-1.5 text-xs font-medium rounded-xl transition"
+              className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-xl transition"
               style={i === 0 ? { background: PRIMARY, color: '#fff' } : { background: 'white', color: '#6b7280', border: '1px solid #e5e7eb' }}
             >
               {r}
@@ -92,15 +92,15 @@ export default function Analytics() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {[
           { label: 'Revenue (7d)', value: '₦2.33M', change: '+14%', icon: TrendingUp },
           { label: 'Orders (7d)', value: '57', change: '+21%', icon: ShoppingBag },
           { label: 'New Customers', value: '34', change: '+8%', icon: Users },
           { label: 'WhatsApp Msgs', value: '3,409', change: '+32%', icon: MessageCircle },
           { label: 'Website Visits', value: '2,840', change: '+11%', icon: Globe },
-        ].map(kpi => (
-          <div key={kpi.label} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+        ].map((kpi, idx) => (
+          <div key={kpi.label} className={`bg-white rounded-2xl p-4 shadow-sm border border-gray-100 ${idx === 4 ? 'col-span-2 md:col-span-1 lg:col-span-1' : ''}`}>
             <div className="flex items-center justify-between mb-3">
               <div className="p-2 rounded-xl" style={{ background: CREAM }}>
                 <kpi.icon size={16} style={{ color: PRIMARY }} />
