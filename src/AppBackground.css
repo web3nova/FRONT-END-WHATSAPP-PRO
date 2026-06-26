@@ -1,20 +1,6 @@
 
 
-@layer base {
-  html,
-  body,
-  #root {
-    min-height: 100%;
-  }
 
-  body {
-    margin: 0;
-    background: #F8F4E8;
-    color: #000;
-    overflow-x: hidden;
-    font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
-  }
-}
 
 .app-bg {
   position: relative;

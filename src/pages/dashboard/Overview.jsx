@@ -138,7 +138,7 @@ export default function BusinessOverview() {
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Revenue + Orders */}
-        <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100 min-w-0 overflow-hidden">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="font-semibold text-gray-900">Revenue & Orders Trend</h2>
@@ -179,7 +179,7 @@ export default function BusinessOverview() {
         </div>
 
         {/* Customer sources */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 min-w-0 overflow-hidden">
           <div className="mb-4">
             <h2 className="font-semibold text-gray-900">Customer Sources</h2>
             <p className="text-xs text-gray-400 mt-0.5">Where your customers come from</p>
@@ -300,7 +300,7 @@ export default function BusinessOverview() {
       {/* Bottom row: Products + Quotes */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Top Products */}
-        <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+        <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-5 min-w-0 overflow-hidden">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="font-semibold text-gray-900">Top Products by Revenue</h2>

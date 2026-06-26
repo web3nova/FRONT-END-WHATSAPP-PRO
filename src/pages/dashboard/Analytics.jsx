@@ -114,8 +114,8 @@ export default function Analytics() {
       </div>
 
       {/* Revenue Charts */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100 min-w-0 overflow-hidden">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="font-semibold text-gray-900">Daily Revenue (This Week)</h2>
@@ -143,7 +143,7 @@ export default function Analytics() {
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 min-w-0 overflow-hidden">
           <h2 className="font-semibold text-gray-900 mb-1">Traffic Sources</h2>
           <p className="text-xs text-gray-400 mb-4">Where customers find you</p>
           <ResponsiveContainer width="100%" height={145}>
@@ -169,9 +169,9 @@ export default function Analytics() {
       </div>
 
       {/* Bottom charts row */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Top products */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 min-w-0 overflow-hidden">
           <h2 className="font-semibold text-gray-900 mb-1">Top Products</h2>
           <p className="text-xs text-gray-400 mb-4">Orders this month</p>
           <ResponsiveContainer width="100%" height={190}>
@@ -186,7 +186,7 @@ export default function Analytics() {
         </div>
 
         {/* Customer growth */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 min-w-0 overflow-hidden">
           <h2 className="font-semibold text-gray-900 mb-1">Customer Growth</h2>
           <p className="text-xs text-gray-400 mb-4">Total customers over time</p>
           <ResponsiveContainer width="100%" height={190}>
@@ -201,7 +201,7 @@ export default function Analytics() {
         </div>
 
         {/* WhatsApp breakdown */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 min-w-0 overflow-hidden">
           <h2 className="font-semibold text-gray-900 mb-1">WhatsApp Messages</h2>
           <p className="text-xs text-gray-400 mb-4">AI vs Staff handled (this week)</p>
           <ResponsiveContainer width="100%" height={190}>

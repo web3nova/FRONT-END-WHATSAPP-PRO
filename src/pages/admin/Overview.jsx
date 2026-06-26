@@ -130,7 +130,7 @@ export default function AdminOverview() {
       {/* Charts row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Revenue chart */}
-        <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100 min-w-0 overflow-hidden">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="font-semibold text-gray-900">Revenue Growth</h2>
@@ -168,7 +168,7 @@ export default function AdminOverview() {
         </div>
 
         {/* Subscription tiers */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 min-w-0 overflow-hidden">
           <div className="mb-4">
             <h2 className="font-semibold text-gray-900">Subscription Tiers</h2>
             <p className="text-xs text-gray-400 mt-0.5">1,247 total tenants</p>
@@ -211,7 +211,7 @@ export default function AdminOverview() {
       {/* Charts row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* AI usage bar */}
-        <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100 min-w-0 overflow-hidden">
           <div className="mb-5">
             <h2 className="font-semibold text-gray-900">AI Token Usage</h2>
             <p className="text-xs text-gray-400 mt-0.5">Top 5 tenants by AI consumption this month (K tokens)</p>
@@ -228,7 +228,7 @@ export default function AdminOverview() {
         </div>
 
         {/* Platform health */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 min-w-0 overflow-hidden">
           <div className="flex items-center gap-2 mb-4">
             <Activity size={16} style={{ color: PRIMARY }} />
             <h2 className="font-semibold text-gray-900">Platform Health</h2>

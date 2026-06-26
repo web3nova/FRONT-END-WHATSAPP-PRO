@@ -1,4 +1,5 @@
 @import "tailwindcss";
+/* Fonts are loaded via <link> tags in index.html — no duplicate @import needed here */
 
 @layer base {
   *, *::before, *::after {
@@ -56,6 +57,21 @@
 
   #root {
     width: 100%;
-    height: 100vh;
+    min-height: 100vh;
   }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
 }

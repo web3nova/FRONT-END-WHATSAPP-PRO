@@ -781,8 +781,8 @@ export default function BusinessWebsiteBuilder() {
           {step < steps.length - 1
             ? <Btn onClick={() => setStep(s => s + 1)}>Next: {steps[step + 1]}</Btn>
             : <Btn onClick={() => {
-                alert("Website published successfully! Redirecting to dashboard...");
-                navigate("/dashboard");
+                alert("Website published successfully!");
+                navigate("/dashboard/website");
               }}>
               Publish Website
             </Btn>
