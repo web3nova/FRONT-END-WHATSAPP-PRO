@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Noise from './Noise';
 import MagneticButton from './MagneticButton';
+import HeroImageFader from './HeroImageFader';
 import { useScrollReveal } from '../../hooks/useAnimations';
 import './BotpressHero.css';
 
@@ -114,20 +115,9 @@ export default function BotpressHero() {
   return (
     <section className="bp-hero">
 
-      {/* Circuit Board Grid Background */}
-      <div
-        className="absolute inset-0 z-0 pointer-events-none"
-        style={{
-          background: '#f8fafc',
-          backgroundImage: `
-            linear-gradient(90deg, #e2e8f0 1px, transparent 1px),
-            linear-gradient(180deg, #e2e8f0 1px, transparent 1px),
-            linear-gradient(90deg, #cbd5e1 1px, transparent 1px),
-            linear-gradient(180deg, #cbd5e1 1px, transparent 1px)
-          `,
-          backgroundSize: '50px 50px, 50px 50px, 10px 10px, 10px 10px',
-        }}
-      />
+
+      {/* Background Image Fader */}
+      <HeroImageFader />
 
       {/* Noise Grain Overlay */}
       <div className="absolute inset-0 z-[1] pointer-events-none">
@@ -235,8 +225,7 @@ export default function BotpressHero() {
         </div>
       )}
 
-      {/* Smooth Fade Transition to Next Section */}
-      <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-b from-transparent to-white z-[2] pointer-events-none" />
+      {/* Smooth Fade Transition removed as the hero is now a bounded card */}
 
     </section>
   );

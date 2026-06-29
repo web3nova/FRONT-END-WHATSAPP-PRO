@@ -1,7 +1,7 @@
 import React from 'react';
 import Navbar from '../components/ui/Navbar';
 import BotpressHero from '../components/ui/BotpressHero';
-import FeaturesSection from '../components/ui/FeaturesSection';
+import FeatureShaderCards from '../components/ui/FeatureShaderCards';
 import ManagementSection from '../components/ui/ManagementSection';
 import PricingSection from '../components/ui/PricingSection';
 import FAQAndFooter from '../components/ui/FAQAndFooter';
@@ -18,7 +18,9 @@ export default function LandingPage() {
 
         <BotpressHero />
 
-        <FeaturesSection />
+        <div id="features">
+          <FeatureShaderCards />
+        </div>
 
         <ManagementSection />
 

@@ -87,10 +87,10 @@ export default function PricingSection() {
           transition={{ duration: 0.5 }}
           className="text-left max-w-6xl mx-auto mb-16 pt-8 pl-8 md:pl-0"
         >
-          <h2 className="text-[#4166F5] text-[36px] sm:text-[40px] font-bold leading-tight mb-4 font-manrope">
+          <h2 className="text-[#4166F5] text-[24px] md:text-[28px] font-bold leading-[1.3] mb-4 font-['Manrope']">
             Simple, Transparent Pricing
           </h2>
-          <p className="text-gray-600 text-lg">
+          <p className="text-gray-600 text-[16px] leading-[1.6] font-['Inter'] font-normal">
             Choose the plan that works for you.
           </p>
         </motion.div>

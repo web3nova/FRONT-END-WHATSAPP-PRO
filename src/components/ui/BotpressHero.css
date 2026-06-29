@@ -22,9 +22,11 @@
 .bp-hero-content {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  max-width: 1200px;
+  align-items: center;
+  text-align: center;
+  max-width: 900px;
   pointer-events: auto;
+  margin: 0 auto;
 }
 
 /* ============ Stagger Reveal ============ */
@@ -44,15 +46,17 @@
 .bp-badge {
   display: inline-flex;
   align-items: center;
-  background-color: #d2e3fc;
-  color: #111;
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  color: #fff;
   padding: 4px 12px 4px 4px;
   border-radius: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   font-size: 14px;
   font-weight: 500;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   cursor: pointer;
-  transition: box-shadow 0.3s ease, transform 0.3s ease;
+  transition: box-shadow 0.3s ease, transform 0.3s ease, background-color 0.3s ease;
 }
 
 .bp-badge-animated {
@@ -60,23 +64,20 @@
 }
 
 @keyframes badgePulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(91, 117, 230, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 0 8px rgba(91, 117, 230, 0);
-  }
+  0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.2); }
+  70% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
 }
 
 .bp-badge:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(91, 117, 230, 0.2);
+  background-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .bp-badge-tag {
-  background-color: #fff;
-  color: #5b75e6;
+  background-color: #5b75e6;
+  color: #fff;
   padding: 2px 8px;
   border-radius: 100px;
   font-weight: 700;
@@ -97,19 +98,27 @@
 
 /* ============ Title ============ */
 .bp-hero-title {
-  font-size: 64px;
-  line-height: 1.1;
+  font-family: 'Manrope', sans-serif;
+  font-size: 28px;
+  line-height: 1.2;
   font-weight: 700;
-  letter-spacing: -2px;
-  color: #111;
+  letter-spacing: -1px;
+  color: #ffffff;
   margin: 0 0 32px 0;
+}
+
+@media (min-width: 768px) {
+  .bp-hero-title {
+    font-size: 56px;
+    letter-spacing: -2px;
+  }
 }
 
 .bp-typed-word {
   display: inline-block;
   min-width: 5.5em;
   white-space: nowrap;
-  background: linear-gradient(135deg, #5b75e6, #8b5cf6, #d946ef);
+  background: linear-gradient(135deg, #a5b4fc, #c4b5fd, #f0abfc);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -130,7 +139,7 @@
 }
 
 .bp-cursor {
-  -webkit-text-fill-color: #5b75e6;
+  -webkit-text-fill-color: #a5b4fc;
   animation: blink 0.8s step-end infinite;
   font-weight: 300;
   margin-left: 2px;
@@ -148,9 +157,11 @@
 
 /* ============ Subtitle ============ */
 .bp-hero-subtitle {
-  font-size: 20px;
-  line-height: 1.5;
-  color: #444;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.9);
   margin: 0 0 40px 0;
   max-width: 800px;
 }
@@ -505,6 +516,13 @@
 
   .bp-hero-container {
     padding: 0 24px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+  }
+
+  .bp-hero-content {
+    max-width: 100%;
   }
 
   .bp-badge {

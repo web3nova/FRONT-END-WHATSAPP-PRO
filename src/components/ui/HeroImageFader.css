@@ -1,0 +1,41 @@
+/* ============================================================
+   HeroImageFader – full-background cross-fading images
+   ============================================================ */
+
+.hero-fader-wrapper {
+  position: absolute;
+  top: 100px;
+  bottom: 40px;
+  left: 40px;
+  right: 40px;
+  border-radius: 40px;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.hero-fader-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 1.8s ease-in-out, transform 6s ease-in-out;
+  transform: scale(1.08);
+}
+
+.hero-fader-img-active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Dark overlay to ensure text placed on top is readable */
+.hero-fader-darken {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.5);
+}

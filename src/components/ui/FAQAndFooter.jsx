@@ -1,91 +1,11 @@
-import React, { useState } from 'react';
-
-// FAQ Data tailored to Biz AI's WhatsApp Automation & Ordering platform
-const faqData = [
-    {
-        question: "How does Biz AI automate WhatsApp customer support?",
-        answer: "Biz AI uses an advanced AI assistant to instantly understand your customers' queries and trigger automated, human-like responses directly on WhatsApp. It handles everything from product FAQs to complex order inquiries without human intervention."
-    },
-    {
-        question: "Can I manage my store's orders directly through WhatsApp?",
-        answer: "Yes! Biz AI seamlessly integrates order management. When a customer places or requests an order via WhatsApp, it updates on your centralized dashboard in real-time, complete with seamless status tracking and zero hidden messaging fees."
-    },
-    {
-        question: "Do I need a special WhatsApp Business account?",
-        answer: "Biz AI works seamlessly with standard WhatsApp Business configurations. Our onboarding team will help you connect your number to our Visual Automation Builder smoothly so you can launch your first campaign in minutes."
-    },
-    {
-        question: "Are there any hidden messaging fees or extra charges?",
-        answer: "No. Unlike other platforms that add extra costs per message, Biz AI provides transparent flat-rate pricing based on your chosen plan, ensuring complete control over your operational costs."
-    }
-];
+import Accordion_02 from "./ruixen-accordian02";
 
 export default function FAQAndFooter() {
-    const [openIndex, setOpenIndex] = useState(null);
-
-    const toggleFAQ = (index) => {
-        setOpenIndex(openIndex === index ? null : index);
-    };
-
     return (
         <div className="w-full">
 
-            {/* ================= 🟦 FAQ SECTION (ULTRAMARINE BLUE BACKGROUND) ================= */}
-            <section className="w-full bg-[#4166F5] selection:bg-white/20">
-                <div className="max-w-[1200px] mx-auto px-6 py-20 md:py-28">
-                    <div className="text-center mb-12 md:mb-16">
-                        <h2 className="font-['Manrope'] font-bold text-[28px] md:text-[36px] text-white leading-[1.2] tracking-tight">
-                            Frequently Asked Questions
-                        </h2>
-                        <p className="font-['Inter'] font-normal text-[16px] text-white/80 leading-[1.6] mt-4 max-w-xl mx-auto">
-                            Got questions about Biz AI? We've got answers. Explore how our platform transforms your business operations.
-                        </p>
-                    </div>
-
-                    <div className="max-w-3xl mx-auto space-y-4">
-                        {faqData.map((faq, index) => {
-                            const isOpen = openIndex === index;
-                            return (
-                                <div
-                                    key={index}
-                                    className={`rounded-xl overflow-hidden transition-all duration-300 border ${isOpen
-                                        ? 'bg-white border-transparent shadow-xl scale-[1.01]'
-                                        : 'bg-transparent border-white/20 hover:border-white/40'
-                                        }`}
-                                >
-                                    <button
-                                        onClick={() => toggleFAQ(index)}
-                                        className="w-full flex items-center justify-between p-5 md:p-6 text-left focus:outline-none"
-                                    >
-                                        <span className={`font-['Manrope'] font-semibold text-[18px] md:text-[20px] leading-[1.4] transition-colors duration-200 ${isOpen ? 'text-[#1E293B]' : 'text-white'
-                                            }`}>
-                                            {faq.question}
-                                        </span>
-
-                                        <span className={`ml-4 flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full border transition-all duration-200 ${isOpen
-                                            ? 'rotate-180 bg-[#4166F5] text-white border-transparent'
-                                            : 'border-white/30 text-white bg-transparent'
-                                            }`}>
-                                            <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg" className="stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                <path d="M1 1L6 6L11 1" />
-                                            </svg>
-                                        </span>
-                                    </button>
-
-                                    <div
-                                        className={`transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-48 border-t border-[#F1F5F9]' : 'max-h-0'
-                                            }`}
-                                    >
-                                        <p className="font-['Inter'] font-normal text-[15px] md:text-[16px] text-[#4166F5] leading-[1.6] p-5 md:p-6 bg-white">
-                                            {faq.answer}
-                                        </p>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            </section>
+            {/* ================= ⬜ FAQ SECTION (LIGHT THEME ACCORDION) ================= */}
+            <Accordion_02 />
 
             {/* ================= ⬜ PROFESSIONAL UPGRADED FOOTER ================= */}
             <footer className="w-full bg-white text-[#1E293B] font-['Inter'] selection:bg-[#4166F5]/10">
@@ -94,10 +14,10 @@ export default function FAQAndFooter() {
                 <div className="border-b border-[#E2E8F0]">
                     <div className="max-w-[1200px] mx-auto px-6 py-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                         <div>
-                            <h3 className="font-['Manrope'] font-bold text-[22px] md:text-[26px] text-[#1E293B] tracking-tight">
+                            <h3 className="font-['Manrope'] font-semibold text-[20px] md:text-[22px] text-[#1E293B] tracking-tight leading-[1.4]">
                                 Ready to automate your operations?
                             </h3>
-                            <p className="text-[14px] md:text-[16px] text-[#64748B] mt-1">
+                            <p className="text-[14px] text-[#64748B] mt-1 leading-[1.5] font-['Inter'] font-normal">
                                 Join scaling businesses accelerating client relationships using Biz AI.
                             </p>
                         </div>
