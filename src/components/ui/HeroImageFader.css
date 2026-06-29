@@ -39,3 +39,61 @@
   z-index: 1;
   background: rgba(0, 0, 0, 0.5);
 }
+
+/* Progress Indicators */
+.hero-fader-indicators {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 2;
+  pointer-events: auto;
+}
+
+.hero-fader-indicator {
+  width: 40px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.hero-fader-indicator-progress {
+  width: 0%;
+  height: 100%;
+  background: #ffffff;
+  border-radius: 2px;
+}
+
+.hero-fader-indicator-progress.active {
+  animation: progressFill 4s linear forwards;
+}
+
+@keyframes progressFill {
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-fader-wrapper {
+    top: 110px;
+    bottom: 20px;
+    left: 16px;
+    right: 16px;
+    border-radius: 28px;
+  }
+  
+  .hero-fader-indicators {
+    bottom: 16px;
+  }
+  
+  .hero-fader-indicator {
+    width: 32px;
+  }
+}

@@ -30,6 +30,18 @@ export default function HeroImageFader() {
       ))}
       {/* Dark overlay so text stays readable */}
       <div className="hero-fader-darken" />
+
+      {/* Progress Indicators */}
+      <div className="hero-fader-indicators">
+        {images.map((_, idx) => (
+          <div key={idx} className="hero-fader-indicator">
+            <div 
+              className={`hero-fader-indicator-progress ${idx === currentIndex ? 'active' : ''}`}
+              key={`${idx}-${currentIndex === idx ? 'active' : 'inactive'}`} 
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
