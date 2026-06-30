@@ -1,63 +1,149 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { Check, Zap } from 'lucide-react'
+import { Check, Zap, Loader2 } from 'lucide-react'
+import { fetchPlans, initializePayment } from '../../api/billingApi'
 import './Auth.css'
 
-const PLANS = [
-  {
-    id: 'starter',
-    name: 'Starter',
-    price: '₦15,000',
-    period: '/month',
-    description: 'Perfect for small businesses just getting started.',
-    features: [
-      'Up to 100 orders/month',
-      '1 WhatsApp number',
-      'Basic analytics',
-      'Email support',
-    ],
-    cta: 'Get started',
-  },
-  {
-    id: 'growth',
-    name: 'Growth',
-    price: '₦35,000',
-    period: '/month',
-    description: 'For growing teams managing higher order volumes.',
-    features: [
-      'Up to 1,000 orders/month',
-      '3 WhatsApp numbers',
-      'Advanced analytics',
-      'Priority support',
-      'Team members (up to 5)',
-    ],
-    cta: 'Choose Growth',
-    highlighted: true,
-  },
-  {
-    id: 'scale',
-    name: 'Scale',
-    price: 'Custom',
-    period: '',
-    description: 'Enterprise-grade for high-volume operations.',
-    features: [
-      'Unlimited orders',
-      'Unlimited WhatsApp numbers',
-      'Custom integrations',
-      'Dedicated account manager',
-      'SLA guarantee',
-    ],
-    cta: 'Contact sales',
-  },
-]
+// Best-effort feature copy per plan name. If the backend gains a
+// `features` field on each plan, this preset map can be removed.
+const FEATURE_PRESETS = {
+  weekly: [
+    'Up to 100 orders/week',
+    '1 WhatsApp number',
+    'Basic analytics',
+    'Email support',
+  ],
+  monthly: [
+    'Up to 1,000 orders/month',
+    '3 WhatsApp numbers',
+    'Advanced analytics',
+    'Priority support',
+    'Team members (up to 5)',
+  ],
+  quarterly: [
+    'Up to 3,500 orders/quarter',
+    '3 WhatsApp numbers',
+    'Advanced analytics',
+    'Priority support',
+    'Team members (up to 5)',
+  ],
+  yearly: [
+    'Unlimited orders',
+    'Unlimited WhatsApp numbers',
+    'Custom integrations',
+    'Dedicated account manager',
+    'SLA guarantee',
+  ],
+}
+
+const formatPrice = (priceMinor, currency) => {
+  if (priceMinor === undefined || priceMinor === null) return 'Custom'
+  const amount = priceMinor / 100
+  const symbol = currency === 'NGN' ? '₦' : `${currency} `
+  return `${symbol}${amount.toLocaleString('en-NG')}`
+}
+
+const formatPeriod = (intervalDays) => {
+  switch (intervalDays) {
+    case 7:
+      return '/week'
+    case 30:
+      return '/month'
+    case 90:
+      return '/quarter'
+    case 365:
+      return '/year'
+    default:
+      return intervalDays ? `/${intervalDays} days` : ''
+  }
+}
+
+const FREE_TRIAL_DAYS = 14
 
 export default function SubscribePage() {
-  const { selectPlan } = useAuth()
+  const { startFreeTrial } = useAuth()
   const navigate = useNavigate()
 
-  const handleSelect = (planId) => {
-    selectPlan(planId)
-    navigate('/onboarding')
+  const [plans, setPlans] = useState([])
+  const [loadingPlans, setLoadingPlans] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [selectingId, setSelectingId] = useState(null)
+  const [selectError, setSelectError] = useState('')
+  const [startingTrial, setStartingTrial] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadPlans = async () => {
+      setLoadingPlans(true)
+      setLoadError('')
+      try {
+        const data = await fetchPlans()
+        if (!cancelled) {
+          setPlans(data.filter((p) => p.isActive !== false))
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setLoadError(err.message || 'Could not load plans. Please refresh.')
+        }
+      } finally {
+        if (!cancelled) setLoadingPlans(false)
+      }
+    }
+
+    loadPlans()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const handleSelectPlan = async (plan) => {
+    setSelectError('')
+    setSelectingId(plan.id)
+
+    try {
+      // Stash which plan this checkout was for, so the callback page
+      // (which has no way to ask the backend "what did they pay for"
+      // without a status endpoint) knows what to mark active once the
+      // user lands back from Monnify. Set BEFORE the redirect, not after
+      // — we never get a chance to run code "after" window.location.href.
+      sessionStorage.setItem('pendingPlanId', plan.id)
+
+      const { checkoutUrl } = await initializePayment(plan.id)
+
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl
+        return
+      }
+
+      sessionStorage.removeItem('pendingPlanId')
+      setSelectError('Checkout could not be started. Please try again.')
+    } catch (err) {
+      sessionStorage.removeItem('pendingPlanId')
+      setSelectError(err.message || 'Could not start checkout. Please try again.')
+    } finally {
+      setSelectingId(null)
+    }
+  }
+
+  const handleFreeTrial = async () => {
+    setSelectError('')
+    setStartingTrial(true)
+
+    try {
+      // startFreeTrial should be implemented in AuthContext to mark the
+      // tenant as on a trial (locally and/or via a backend call), entirely
+      // separate from the billing/initialize (paid) flow.
+      if (typeof startFreeTrial === 'function') {
+        await startFreeTrial()
+      }
+      navigate('/onboarding')
+    } catch (err) {
+      setSelectError(err.message || 'Could not start your free trial. Please try again.')
+    } finally {
+      setStartingTrial(false)
+    }
   }
 
   return (
@@ -82,90 +168,130 @@ export default function SubscribePage() {
         </h1>
 
         <p className="auth-subheading">
-          Start free for 14 days. No card required.
+          Try free for {FREE_TRIAL_DAYS} days, or subscribe now.
           Upgrade or cancel anytime.
         </p>
       </header>
 
-      <section className="plan-grid">
+      <div className="trial-banner">
+        <div className="trial-banner__copy">
+          <strong>Not ready to commit?</strong>
+          <span>Start a {FREE_TRIAL_DAYS}-day free trial — no card required.</span>
+        </div>
+        <button
+          type="button"
+          onClick={handleFreeTrial}
+          disabled={startingTrial}
+          className="auth-btn-secondary"
+        >
+          {startingTrial ? 'Starting trial…' : 'Start free trial'}
+        </button>
+      </div>
 
-        {PLANS.map((plan) => (
-          <article
-            key={plan.id}
-            className={`plan-card ${
-              plan.highlighted
-                ? 'plan-card--featured'
-                : ''
-            }`}
-          >
+      {selectError && (
+        <div className="auth-error" role="alert" style={{ maxWidth: 480, margin: '0 auto 24px' }}>
+          {selectError}
+        </div>
+      )}
 
-            {plan.highlighted && (
-              <div className="plan-badge">
-                Most Popular
-              </div>
-            )}
+      {loadingPlans && (
+        <div className="subscribe-loading">
+          <Loader2 className="auth-spinner" size={24} />
+          <span>Loading plans…</span>
+        </div>
+      )}
 
-            <div className="plan-header">
+      {!loadingPlans && loadError && (
+        <div className="auth-error" role="alert" style={{ maxWidth: 480, margin: '0 auto' }}>
+          {loadError}
+        </div>
+      )}
 
-              <h3 className="plan-name">
-                {plan.name}
-              </h3>
+      {!loadingPlans && !loadError && (
+        <section className="plan-grid">
 
-              <div className="plan-price">
+          {plans.map((plan) => {
+            const key = (plan.name || '').toLowerCase()
+            const features = FEATURE_PRESETS[key] || [
+              'Includes core platform features',
+              'WhatsApp business integration',
+              'Standard support',
+            ]
+            // Highlight the monthly plan — the most common default choice
+            const highlighted = key === 'monthly'
 
-                <span className="plan-amount">
-                  {plan.price}
-                </span>
+            return (
+              <article
+                key={plan.id}
+                className={`plan-card ${highlighted ? 'plan-card--featured' : ''}`}
+              >
 
-                {plan.period && (
-                  <span className="plan-period">
-                    {plan.period}
-                  </span>
+                {highlighted && (
+                  <div className="plan-badge">
+                    Most Popular
+                  </div>
                 )}
 
-              </div>
+                <div className="plan-header">
 
-              <p className="plan-description">
-                {plan.description}
-              </p>
+                  <h3 className="plan-name">
+                    {plan.label || plan.name}
+                  </h3>
 
-            </div>
+                  <div className="plan-price">
 
-            <ul className="plan-features">
+                    <span className="plan-amount">
+                      {formatPrice(plan.priceMinor, plan.currency)}
+                    </span>
 
-              {plan.features.map((feature) => (
-                <li key={feature}>
+                    {formatPeriod(plan.intervalDays) && (
+                      <span className="plan-period">
+                        {formatPeriod(plan.intervalDays)}
+                      </span>
+                    )}
 
-                  <Check
-                    size={16}
-                    className="plan-check"
-                  />
+                  </div>
 
-                  <span>
-                    {feature}
-                  </span>
+                  <p className="plan-description">
+                    Billed every {plan.intervalDays} days.
+                  </p>
 
-                </li>
-              ))}
+                </div>
 
-            </ul>
+                <ul className="plan-features">
 
-            <button
-              type="button"
-              onClick={() => handleSelect(plan.id)}
-              className={
-                plan.highlighted
-                  ? 'auth-btn-primary'
-                  : 'auth-btn-secondary'
-              }
-            >
-              {plan.cta}
-            </button>
+                  {features.map((feature) => (
+                    <li key={feature}>
 
-          </article>
-        ))}
+                      <Check
+                        size={16}
+                        className="plan-check"
+                      />
 
-      </section>
+                      <span>
+                        {feature}
+                      </span>
+
+                    </li>
+                  ))}
+
+                </ul>
+
+                <button
+                  type="button"
+                  onClick={() => handleSelectPlan(plan)}
+                  disabled={selectingId === plan.id}
+                  className={highlighted ? 'auth-btn-primary' : 'auth-btn-secondary'}
+                >
+                  {selectingId === plan.id ? 'Redirecting…' : `Choose ${plan.label || plan.name}`}
+                </button>
+
+              </article>
+            )
+          })}
+
+        </section>
+      )}
 
     </div>
   )

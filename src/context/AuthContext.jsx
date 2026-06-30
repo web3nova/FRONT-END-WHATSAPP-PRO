@@ -7,6 +7,8 @@ import {
 
 const AuthContext = createContext(null)
 
+const TRIAL_DAYS = 14
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [subscription, setSubscription] =
@@ -78,8 +80,11 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  // Store authenticated user
-  const login = (userData) => {
+  // Store authenticated user + tokens.
+  // `tokens` is optional so existing callers that only pass userData don't break,
+  // but the billing API requires accessToken to be set or every authenticated
+  // request (including initializePayment) will go out unauthenticated/fail.
+  const login = (userData, tokens = {}) => {
     setUser(userData)
 
     localStorage.setItem(
@@ -88,6 +93,14 @@ export function AuthProvider({ children }) {
         userData
       )
     )
+
+    if (tokens.accessToken) {
+      localStorage.setItem('accessToken', tokens.accessToken)
+    }
+
+    if (tokens.refreshToken) {
+      localStorage.setItem('refreshToken', tokens.refreshToken)
+    }
   }
 
   // Update user data later if needed
@@ -131,7 +144,7 @@ export function AuthProvider({ children }) {
     )
   }
 
-  // Subscription management
+  // Subscription management (paid plan, confirmed via checkout + webhook)
   const selectPlan = (
     plan
   ) => {
@@ -150,6 +163,36 @@ export function AuthProvider({ children }) {
     )
   }
 
+  // ⚠️ CLIENT-ONLY TRIAL — there is no backend trial endpoint yet.
+  // This only sets local/localStorage state. It is NOT enforced server-side,
+  // so anyone who edits localStorage can grant themselves a trial or extend
+  // an expired one, and a trial started here is invisible to the backend
+  // (e.g. it won't show up if you build an admin view of subscriptions later).
+  // Replace the body of this function with a real API call as soon as a
+  // POST /billing/trial (or similar) endpoint exists, and keep the local
+  // state update for instant UI feedback.
+  const startFreeTrial = async () => {
+    const now = new Date()
+    const expiresAt = new Date(now)
+    expiresAt.setDate(expiresAt.getDate() + TRIAL_DAYS)
+
+    const sub = {
+      plan: 'trial',
+      status: 'trial',
+      startDate: now.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+    }
+
+    setSubscription(sub)
+
+    localStorage.setItem(
+      'subscription',
+      JSON.stringify(sub)
+    )
+
+    return sub
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -161,6 +204,7 @@ export function AuthProvider({ children }) {
         logout,
         updateUser,
         selectPlan,
+        startFreeTrial,
 
         isAuthenticated:
           !!user,

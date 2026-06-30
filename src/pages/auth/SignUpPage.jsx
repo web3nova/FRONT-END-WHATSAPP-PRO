@@ -23,7 +23,7 @@ const TESTIMONIALS = [
 
 const friendlyError = (err) => {
   if (!err) return ''
-  
+
   // Handle the error object properly
   let msg = ''
   if (typeof err === 'string') {
@@ -35,37 +35,37 @@ const friendlyError = (err) => {
   } else {
     msg = JSON.stringify(err)
   }
-  
+
   const lower = msg.toLowerCase()
 
   // Specific error messages
   if (lower.includes('email already in use') || lower.includes('already exists'))
     return 'An account with this email already exists. Try signing in instead.'
-  
+
   if (lower.includes('invalid email') || lower.includes('email is required'))
     return "That email address doesn't look right. Please double-check it."
-  
+
   if (lower.includes('weak password') || lower.includes('password too short') || lower.includes('minimum'))
     return 'Choose a stronger password — at least 8 characters with letters and numbers.'
-  
+
   if (lower.includes('rate limit') || lower.includes('too many') || lower.includes('attempts'))
     return 'Too many attempts. Please wait a moment and try again.'
-  
+
   if (lower.includes('network') || lower.includes('fetch') || lower.includes('failed to fetch'))
     return 'Network error. Please check your internet connection and try again.'
-  
+
   if (lower.includes('server') || lower.includes('500') || lower.includes('internal server'))
     return 'Something went wrong on our end. Please try again shortly.'
-  
+
   if (lower.includes('401') || lower.includes('unauthorized'))
     return 'Authentication failed. Please check your credentials.'
-  
+
   if (lower.includes('403') || lower.includes('forbidden'))
     return "You don't have permission to perform this action."
-  
+
   if (lower.includes('404'))
     return 'Service not found. Please try again later.'
-  
+
   if (lower.includes('validation') || lower.includes('invalid'))
     return 'Please check your input and try again.'
 
