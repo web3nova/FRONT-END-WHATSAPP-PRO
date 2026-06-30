@@ -1,8 +1,32 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { Zap } from 'lucide-react'
 import './Onboarding.css'
+
+const API_BASE = 'https://back-end-whatsapp-pro.onrender.com/api/v1'
+
+// Pulls the auth token from wherever AuthContext/localStorage puts it.
+// Adjust getAuthToken() if your AuthContext exposes the token differently
+// (e.g. `const { token } = useAuth()` instead of `user.token`).
+function getAuthToken(user) {
+  return (
+    user?.token ||
+    user?.accessToken ||
+    localStorage.getItem('token') ||
+    localStorage.getItem('accessToken') ||
+    null
+  )
+}
+
+function authHeaders(user) {
+  const token = getAuthToken(user)
+  return {
+    'Content-Type': 'application/json',
+    accept: 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  }
+}
 
 const STEPS = [
   { id: 'identity',      label: 'Business identity' },
@@ -53,6 +77,54 @@ export default function OnboardingPage() {
   const [form, setForm] = useState(empty)
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
+  const [checkingStatus, setCheckingStatus] = useState(true)
+
+  // On load: check onboarding status, skip this page if already onboarded.
+  useEffect(() => {
+    let cancelled = false
+
+    async function checkStatus() {
+      try {
+        const res = await fetch(`${API_BASE}/onboarding/status`, {
+          method: 'GET',
+          headers: authHeaders(user),
+        })
+
+        if (!res.ok) {
+          // If the status check fails (e.g. 401), just let the user
+          // go through onboarding rather than blocking them.
+          if (!cancelled) setCheckingStatus(false)
+          return
+        }
+
+        const data = await res.json()
+
+        // Adjust this condition to match whatever shape the API actually
+        // returns, e.g. { onboarded: true } or { status: 'completed' }.
+        const isOnboarded =
+          data?.onboarded === true ||
+          data?.isOnboarded === true ||
+          data?.status === 'completed' ||
+          data?.data?.onboarded === true
+
+        if (!cancelled) {
+          if (isOnboarded) {
+            navigate('/business-profile')
+          } else {
+            setCheckingStatus(false)
+          }
+        }
+      } catch (err) {
+        console.error('Failed to check onboarding status:', err)
+        if (!cancelled) setCheckingStatus(false)
+      }
+    }
+
+    checkStatus()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const set = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }))
@@ -110,15 +182,49 @@ export default function OnboardingPage() {
   const handleSubmit = async () => {
     if (!validate()) return
     setSubmitting(true)
+    setSubmitError('')
 
-    // TODO: Replace with real API call to save onboarding data
-    await new Promise(r => setTimeout(r, 1000))
+    try {
+      // Sent exactly as the form state is shaped, per your instruction.
+      const res = await fetch(`${API_BASE}/onboarding`, {
+        method: 'POST',
+        headers: authHeaders(user),
+        body: JSON.stringify(form),
+      })
 
-    setSubmitting(false)
-    navigate('/business-profile')
+      if (!res.ok) {
+        let message = `Request failed (${res.status})`
+        try {
+          const errData = await res.json()
+          message = errData?.message || errData?.error || message
+        } catch {
+          // response wasn't JSON — keep default message
+        }
+        throw new Error(message)
+      }
+
+      navigate('/business-profile')
+    } catch (err) {
+      console.error('Onboarding submit failed:', err)
+      setSubmitError(err.message || 'Something went wrong. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const progress = ((step + 1) / STEPS.length) * 100
+
+  if (checkingStatus) {
+    return (
+      <div className="ob-page">
+        <main className="ob-main">
+          <div className="ob-form-wrap">
+            <p>Loading…</p>
+          </div>
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="ob-page">
@@ -392,6 +498,12 @@ export default function OnboardingPage() {
                 </Field>
               </div>
             </section>
+          )}
+
+          {submitError && (
+            <p className="ob-error-msg" role="alert" style={{ marginTop: '1rem' }}>
+              {submitError}
+            </p>
           )}
 
           {/* ── Navigation ── */}
