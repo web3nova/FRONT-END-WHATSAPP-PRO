@@ -102,9 +102,15 @@ export default function LoginPage() {
             form.password,
         })
 
-      // Save user in AuthContext
+      // Save user and tokens in AuthContext
       auth.login(
-        authData.user
+        authData.user,
+        {
+          accessToken:
+            authData.accessToken,
+          refreshToken:
+            authData.refreshToken,
+        }
       )
 
       navigate(from, {

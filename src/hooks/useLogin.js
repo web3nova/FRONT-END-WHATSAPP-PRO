@@ -1,7 +1,7 @@
 import { useState } from 'react'
+import { API_BASE } from '../lib/apiConfig'
 
-const API_URL =
-`${import.meta.env.VITE_API_URL}/auth/login`
+const API_URL = `${API_BASE}/auth/login`
 
 export function useLogin() {
   const [loading, setLoading] =
@@ -17,22 +17,6 @@ export function useLogin() {
     try {
       setLoading(true)
       setError(null)
-
-      if (!import.meta.env.VITE_API_URL) {
-        console.warn('VITE_API_URL is not defined. Falling back to mock authentication.')
-        await new Promise(r => setTimeout(r, 600))
-        const mockAuthData = {
-          user: {
-            email,
-            name: email.split('@')[0] || 'User',
-          },
-          accessToken: 'mock-access-token',
-          refreshToken: 'mock-refresh-token',
-        }
-        localStorage.setItem('accessToken', mockAuthData.accessToken)
-        localStorage.setItem('refreshToken', mockAuthData.refreshToken)
-        return mockAuthData
-      }
 
       const response =
         await fetch(API_URL, {
@@ -63,21 +47,27 @@ export function useLogin() {
         )
       }
 
-      const authData =
-        result.data
+      const authData = result.data || result
+      const accessToken = authData.accessToken || authData.token || authData.access_token || authData.tokens?.accessToken || authData.tokens?.access_token || authData.tokens?.token
+      const refreshToken = authData.refreshToken || authData.refresh_token || authData.tokens?.refreshToken || authData.tokens?.refresh_token
+      const user = authData.user || authData.profile || authData
+
+      if (!accessToken) {
+        throw new Error('Login response did not include an access token.')
+      }
 
       // Save tokens
-      localStorage.setItem(
-        'accessToken',
-        authData.accessToken
-      )
+      localStorage.setItem('accessToken', accessToken)
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken)
+      }
 
-      localStorage.setItem(
-        'refreshToken',
-        authData.refreshToken
-      )
-
-      return authData
+      return {
+        ...authData,
+        user,
+        accessToken,
+        refreshToken,
+      }
 
     } catch (err) {
       setError(err.message)

@@ -1,7 +1,7 @@
 import { useState } from 'react'
+import { API_BASE } from '../lib/apiConfig'
 
-const API_URL =
-  `${import.meta.env.VITE_API_URL}/auth/register`
+const API_URL = `${API_BASE}/auth/register`
 
 export function useSignup() {
   const [loading, setLoading] = useState(false)
@@ -16,22 +16,6 @@ export function useSignup() {
     try {
       setLoading(true)
       setError(null)
-
-      if (!import.meta.env.VITE_API_URL) {
-        console.warn('VITE_API_URL is not defined. Falling back to mock signup.')
-        await new Promise(r => setTimeout(r, 600))
-        return {
-          message: 'Signup successful (mock)',
-          data: {
-            user: {
-              email,
-              name: name || email.split('@')[0],
-            },
-            accessToken: 'mock-access-token',
-            refreshToken: 'mock-refresh-token',
-          }
-        }
-      }
 
       const response = await fetch(API_URL, {
         method: 'POST',

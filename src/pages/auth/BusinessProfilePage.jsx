@@ -1,10 +1,20 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
+import { API_BASE } from '../../lib/apiConfig'
 import { Camera, Building2, Mail, MessageCircle, ArrowRight, ArrowLeft, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
+
+function authHeaders(token) {
+  return {
+    accept: 'application/json',
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  }
+}
 
 const CATEGORIES = [
   'Fashion & Apparel', 'Food & Beverage', 'Electronics', 'Beauty & Wellness',
@@ -16,6 +26,7 @@ const FLOW_STEPS = ['Account', 'Plan', 'Onboarding', 'Profile']
 
 export default function BusinessProfilePage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [logoPreview, setLogoPreview] = useState(null)
   const [subStep, setSubStep] = useState(0)
   const [form, setForm] = useState({
@@ -26,6 +37,7 @@ export default function BusinessProfilePage() {
     whatsapp: '',
   })
   const [saving, setSaving] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }))
 
@@ -40,10 +52,50 @@ export default function BusinessProfilePage() {
 
   const handleComplete = async () => {
     setSaving(true)
-    // Mock save delay
-    await new Promise(r => setTimeout(r, 1000))
-    setSaving(false)
-    navigate('/dashboard')
+    setSubmitError('')
+
+    const token = user?.accessToken || localStorage.getItem('accessToken')
+    if (!token) {
+      setSubmitError('You must be signed in to save your business profile.')
+      setSaving(false)
+      return
+    }
+
+    const payload = {
+      category: form.category,
+      tagline: form.tagline,
+      description: form.description,
+      email: form.email,
+      whatsapp: form.whatsapp,
+      logo: logoPreview,
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/business-profile`, {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify(payload),
+      })
+
+      let result = null
+      try {
+        result = await response.json()
+      } catch {
+        // ignore non-JSON response
+      }
+
+      if (!response.ok) {
+        const message = result?.message || result?.error || `Request failed (${response.status})`
+        throw new Error(message)
+      }
+
+      navigate('/dashboard')
+    } catch (error) {
+      console.error('Business profile save failed:', error)
+      setSubmitError(error.message || 'Failed to save business profile. Please try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const isFieldEmpty = () => {
@@ -282,6 +334,12 @@ export default function BusinessProfilePage() {
             </motion.div>
           </AnimatePresence>
         </div>
+
+        {submitError ? (
+          <div className="px-8 pb-2 text-sm text-red-600">
+            {submitError}
+          </div>
+        ) : null}
 
         {/* Navigation Actions */}
         <div className="px-8 py-5 border-t border-gray-100 flex items-center justify-between bg-gray-50/50">
