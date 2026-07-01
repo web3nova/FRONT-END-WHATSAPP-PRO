@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useSignup } from '../../hooks/useSignup'
+import BizBackground from '../../components/BizBackground'
 import './Auth.css'
 
 const TESTIMONIALS = [
@@ -183,157 +184,162 @@ export default function SignUpPage() {
   const t = TESTIMONIALS[tIdx]
 
   return (
-    <div className="auth-split">
+    <div className="app-bg">
+      <BizBackground variant="dark" />
+      <div className="content-layer">
+        <div className="auth-split">
 
-      <div className="auth-panel auth-panel--brand">
-        <div className="auth-panel__inner">
+          <div className="auth-panel auth-panel--brand">
+            <div className="auth-panel__inner">
 
-          <div className="auth-logo">
-            <span className="auth-logo__mark">B</span>
-            <span className="auth-logo__wordmark">BizAI</span>
+              <div className="auth-logo">
+                <span className="auth-logo__mark">B</span>
+                <span className="auth-logo__wordmark">BizAI</span>
+              </div>
+
+              <div className="auth-panel__copy">
+                <p className="auth-panel__eyebrow">Get started</p>
+                <h1 className="auth-panel__headline">
+                  Automate your<br />business today.
+                </h1>
+                <p className="auth-panel__body">
+                  Join 500+ Nigerian businesses using AI.
+                </p>
+              </div>
+
+              <div className="auth-testimonial">
+                <p className="auth-testimonial__quote">{t.quote}</p>
+                <p className="auth-testimonial__name">{t.name}</p>
+                <p className="auth-testimonial__role">{t.role}</p>
+                <div className="auth-testimonial__dots">
+                  {TESTIMONIALS.map((_, i) => (
+                    <button
+                      key={i}
+                      className={`auth-testimonial__dot${i === tIdx ? ' auth-testimonial__dot--active' : ''}`}
+                      onClick={() => setTIdx(i)}
+                      aria-label={`Testimonial ${i + 1}`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+            </div>
           </div>
 
-          <div className="auth-panel__copy">
-            <p className="auth-panel__eyebrow">Get started</p>
-            <h1 className="auth-panel__headline">
-              Automate your<br />business today.
-            </h1>
-            <p className="auth-panel__body">
-              Join 500+ Nigerian businesses using AI.
-            </p>
-          </div>
+          <div className="auth-panel auth-panel--form">
+            <div className="auth-form-inner">
 
-          <div className="auth-testimonial">
-            <p className="auth-testimonial__quote">{t.quote}</p>
-            <p className="auth-testimonial__name">{t.name}</p>
-            <p className="auth-testimonial__role">{t.role}</p>
-            <div className="auth-testimonial__dots">
-              {TESTIMONIALS.map((_, i) => (
+              <h2 className="auth-form__heading">Create your account</h2>
+              <p className="auth-form__sub">Free for 14 days · No credit card required</p>
+
+              {displayError && (
+                <div className="auth-error" role="alert">
+                  <svg className="auth-error__icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-.75-9.25a.75.75 0 011.5 0v3.5a.75.75 0 01-1.5 0v-3.5zm.75 6a.875.875 0 110-1.75.875.875 0 010 1.75z" clipRule="evenodd" />
+                  </svg>
+                  {displayError}
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="auth-form" noValidate>
+
+                <div className={`auth-field${fieldErrors.name ? ' auth-field--error' : ''}`}>
+                  <label className="auth-field__label" htmlFor="name">Full Name</label>
+                  <input
+                    id="name"
+                    name="name"
+                    autoComplete="name"
+                    value={form.name}
+                    onChange={handleChange}
+                    className="auth-field__input"
+                    aria-describedby={fieldErrors.name ? 'name-error' : undefined}
+                    disabled={loading}
+                  />
+                  {fieldErrors.name && (
+                    <p id="name-error" className="auth-field__error">{fieldErrors.name}</p>
+                  )}
+                </div>
+
+                <div className={`auth-field${fieldErrors.tenantName ? ' auth-field--error' : ''}`}>
+                  <label className="auth-field__label" htmlFor="tenantName">Company Name</label>
+                  <input
+                    id="tenantName"
+                    name="tenantName"
+                    autoComplete="organization"
+                    value={form.tenantName}
+                    onChange={handleChange}
+                    className="auth-field__input"
+                    aria-describedby={fieldErrors.tenantName ? 'tenantName-error' : undefined}
+                    disabled={loading}
+                  />
+                  {fieldErrors.tenantName && (
+                    <p id="tenantName-error" className="auth-field__error">{fieldErrors.tenantName}</p>
+                  )}
+                </div>
+
+                <div className={`auth-field${fieldErrors.email ? ' auth-field--error' : ''}`}>
+                  <label className="auth-field__label" htmlFor="email">Email</label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    className="auth-field__input"
+                    aria-describedby={fieldErrors.email ? 'email-error' : undefined}
+                    disabled={loading}
+                  />
+                  {fieldErrors.email && (
+                    <p id="email-error" className="auth-field__error">{fieldErrors.email}</p>
+                  )}
+                </div>
+
+                <div className={`auth-field${fieldErrors.password ? ' auth-field--error' : ''}`}>
+                  <label className="auth-field__label" htmlFor="password">Password</label>
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={form.password}
+                    onChange={handleChange}
+                    className="auth-field__input"
+                    aria-describedby={fieldErrors.password ? 'password-error' : undefined}
+                    disabled={loading}
+                  />
+                  {fieldErrors.password && (
+                    <p id="password-error" className="auth-field__error">{fieldErrors.password}</p>
+                  )}
+                </div>
+
                 <button
-                  key={i}
-                  className={`auth-testimonial__dot${i === tIdx ? ' auth-testimonial__dot--active' : ''}`}
-                  onClick={() => setTIdx(i)}
-                  aria-label={`Testimonial ${i + 1}`}
-                />
-              ))}
+                  type="submit"
+                  disabled={loading}
+                  className="auth-btn-primary"
+                >
+                  {loading ? (
+                    <>
+                      <Spinner />
+                      Creating account...
+                    </>
+                  ) : (
+                    'Create account'
+                  )}
+                </button>
+
+              </form>
+
+              <p className="auth-switch">
+                Already have an account?{' '}
+                <Link to="/login" className="auth-switch__link">Sign in</Link>
+              </p>
+
             </div>
           </div>
 
         </div>
       </div>
-
-      <div className="auth-panel auth-panel--form">
-        <div className="auth-form-inner">
-
-          <h2 className="auth-form__heading">Create your account</h2>
-          <p className="auth-form__sub">Free for 14 days · No credit card required</p>
-
-          {displayError && (
-            <div className="auth-error" role="alert">
-              <svg className="auth-error__icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-.75-9.25a.75.75 0 011.5 0v3.5a.75.75 0 01-1.5 0v-3.5zm.75 6a.875.875 0 110-1.75.875.875 0 010 1.75z" clipRule="evenodd" />
-              </svg>
-              {displayError}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="auth-form" noValidate>
-
-            <div className={`auth-field${fieldErrors.name ? ' auth-field--error' : ''}`}>
-              <label className="auth-field__label" htmlFor="name">Full Name</label>
-              <input
-                id="name"
-                name="name"
-                autoComplete="name"
-                value={form.name}
-                onChange={handleChange}
-                className="auth-field__input"
-                aria-describedby={fieldErrors.name ? 'name-error' : undefined}
-                disabled={loading}
-              />
-              {fieldErrors.name && (
-                <p id="name-error" className="auth-field__error">{fieldErrors.name}</p>
-              )}
-            </div>
-
-            <div className={`auth-field${fieldErrors.tenantName ? ' auth-field--error' : ''}`}>
-              <label className="auth-field__label" htmlFor="tenantName">Company Name</label>
-              <input
-                id="tenantName"
-                name="tenantName"
-                autoComplete="organization"
-                value={form.tenantName}
-                onChange={handleChange}
-                className="auth-field__input"
-                aria-describedby={fieldErrors.tenantName ? 'tenantName-error' : undefined}
-                disabled={loading}
-              />
-              {fieldErrors.tenantName && (
-                <p id="tenantName-error" className="auth-field__error">{fieldErrors.tenantName}</p>
-              )}
-            </div>
-
-            <div className={`auth-field${fieldErrors.email ? ' auth-field--error' : ''}`}>
-              <label className="auth-field__label" htmlFor="email">Email</label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                value={form.email}
-                onChange={handleChange}
-                className="auth-field__input"
-                aria-describedby={fieldErrors.email ? 'email-error' : undefined}
-                disabled={loading}
-              />
-              {fieldErrors.email && (
-                <p id="email-error" className="auth-field__error">{fieldErrors.email}</p>
-              )}
-            </div>
-
-            <div className={`auth-field${fieldErrors.password ? ' auth-field--error' : ''}`}>
-              <label className="auth-field__label" htmlFor="password">Password</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                value={form.password}
-                onChange={handleChange}
-                className="auth-field__input"
-                aria-describedby={fieldErrors.password ? 'password-error' : undefined}
-                disabled={loading}
-              />
-              {fieldErrors.password && (
-                <p id="password-error" className="auth-field__error">{fieldErrors.password}</p>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="auth-btn-primary"
-            >
-              {loading ? (
-                <>
-                  <Spinner />
-                  Creating account...
-                </>
-              ) : (
-                'Create account'
-              )}
-            </button>
-
-          </form>
-
-          <p className="auth-switch">
-            Already have an account?{' '}
-            <Link to="/login" className="auth-switch__link">Sign in</Link>
-          </p>
-
-        </div>
-      </div>
-
     </div>
   )
 }
