@@ -2,19 +2,12 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { API_BASE } from '../../lib/apiConfig'
+import { getStoredAccessToken, getAuthHeaders, clearStoredAuth } from '../../lib/auth'
 import { Camera, Building2, Mail, MessageCircle, ArrowRight, ArrowLeft, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
-
-function authHeaders(token) {
-  return {
-    accept: 'application/json',
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  }
-}
 
 const CATEGORIES = [
   'Fashion & Apparel', 'Food & Beverage', 'Electronics', 'Beauty & Wellness',
@@ -54,9 +47,10 @@ export default function BusinessProfilePage() {
     setSaving(true)
     setSubmitError('')
 
-    const token = user?.accessToken || localStorage.getItem('accessToken')
+    const token = getStoredAccessToken() || user?.accessToken
     if (!token) {
-      setSubmitError('You must be signed in to save your business profile.')
+      clearStoredAuth()
+      setSubmitError('Authentication token is invalid. Please sign in again.')
       setSaving(false)
       return
     }
@@ -71,18 +65,13 @@ export default function BusinessProfilePage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/business-profile`, {
+      const response = await fetch(`${API_BASE}/business`, {
         method: 'POST',
-        headers: authHeaders(token),
+        headers: getAuthHeaders(token),
         body: JSON.stringify(payload),
       })
 
-      let result = null
-      try {
-        result = await response.json()
-      } catch {
-        // ignore non-JSON response
-      }
+      const result = await response.json().catch(() => null)
 
       if (!response.ok) {
         const message = result?.message || result?.error || `Request failed (${response.status})`

@@ -1,32 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { getStoredAccessToken, getAuthHeaders, clearStoredAuth } from '../../lib/auth'
 import { Zap } from 'lucide-react'
 import './Onboarding.css'
 
 const API_BASE = 'https://back-end-whatsapp-pro.onrender.com/api/v1'
-
-// Pulls the auth token from wherever AuthContext/localStorage puts it.
-// Adjust getAuthToken() if your AuthContext exposes the token differently
-// (e.g. `const { token } = useAuth()` instead of `user.token`).
-function getAuthToken(user) {
-  return (
-    user?.token ||
-    user?.accessToken ||
-    localStorage.getItem('token') ||
-    localStorage.getItem('accessToken') ||
-    null
-  )
-}
-
-function authHeaders(user) {
-  const token = getAuthToken(user)
-  return {
-    'Content-Type': 'application/json',
-    accept: 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  }
-}
 
 const STEPS = [
   { id: 'identity',      label: 'Business identity' },
@@ -85,10 +64,17 @@ export default function OnboardingPage() {
     let cancelled = false
 
     async function checkStatus() {
+      const token = getStoredAccessToken() || user?.accessToken
+      if (!token) {
+        clearStoredAuth()
+        if (!cancelled) setCheckingStatus(false)
+        return
+      }
+
       try {
         const res = await fetch(`${API_BASE}/onboarding/status`, {
           method: 'GET',
-          headers: authHeaders(user),
+          headers: getAuthHeaders(token),
         })
 
         if (!res.ok) {
@@ -184,11 +170,19 @@ export default function OnboardingPage() {
     setSubmitting(true)
     setSubmitError('')
 
+    const token = getStoredAccessToken() || user?.accessToken
+    if (!token) {
+      clearStoredAuth()
+      setSubmitError('Authentication token is invalid. Please sign in again.')
+      setSubmitting(false)
+      return
+    }
+
     try {
       // Sent exactly as the form state is shaped, per your instruction.
       const res = await fetch(`${API_BASE}/onboarding`, {
         method: 'POST',
-        headers: authHeaders(user),
+        headers: getAuthHeaders(token),
         body: JSON.stringify(form),
       })
 

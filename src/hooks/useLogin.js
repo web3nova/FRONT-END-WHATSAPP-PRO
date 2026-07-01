@@ -37,6 +37,8 @@ export function useLogin() {
       try {
         result = await response.json()
       } catch (err) {
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
         throw new Error('API server returned a non-JSON response. Please check if your backend server is running.')
       }
 
@@ -53,6 +55,8 @@ export function useLogin() {
       const user = authData.user || authData.profile || authData
 
       if (!accessToken) {
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
         throw new Error('Login response did not include an access token.')
       }
 
@@ -60,6 +64,8 @@ export function useLogin() {
       localStorage.setItem('accessToken', accessToken)
       if (refreshToken) {
         localStorage.setItem('refreshToken', refreshToken)
+      } else {
+        localStorage.removeItem('refreshToken')
       }
 
       return {
