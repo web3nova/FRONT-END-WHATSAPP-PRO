@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import BizBackground from '../../components/BizBackground'
+import { API_BASE } from '../../lib/apiConfig'
 import { getStoredAccessToken, getAuthHeaders, clearStoredAuth } from '../../lib/auth'
 import { Zap } from 'lucide-react'
 import './Onboarding.css'
-
-const API_BASE = 'https://back-end-whatsapp-pro.onrender.com/api/v1'
 
 const STEPS = [
   { id: 'identity',      label: 'Business identity' },
@@ -180,17 +179,25 @@ export default function Onboarding() {
     }
 
     try {
-      // Sent exactly as the form state is shaped, per your instruction.
-      const res = await fetch(`${API_BASE}/onboarding`, {
-        method: 'POST',
-        headers: getAuthHeaders(token),
-        body: JSON.stringify(form),
-      })
+      const endpoints = [`${API_BASE}/onboarding`, `${API_BASE}/business`]
+      let res = null
 
-      if (!res.ok) {
-        let message = `Request failed (${res.status})`
+      for (const endpoint of endpoints) {
+        res = await fetch(endpoint, {
+          method: 'POST',
+          headers: getAuthHeaders(token),
+          body: JSON.stringify(form),
+        })
+
+        if (res.ok || res.status !== 404) {
+          break
+        }
+      }
+
+      if (!res?.ok) {
+        let message = `Request failed (${res?.status || 'unknown'})`
         try {
-          const errData = await res.json()
+          const errData = await res?.json?.()
           message = errData?.message || errData?.error || message
         } catch {
           // response wasn't JSON — keep default message
