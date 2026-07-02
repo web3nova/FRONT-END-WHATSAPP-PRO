@@ -179,6 +179,7 @@ export default function Onboarding() {
     }
 
     try {
+      // 1. Save the collected business onboarding data.
       const endpoints = [`${API_BASE}/onboarding`, `${API_BASE}/business`]
       let res = null
 
@@ -198,6 +199,23 @@ export default function Onboarding() {
         let message = `Request failed (${res?.status || 'unknown'})`
         try {
           const errData = await res?.json?.()
+          message = errData?.message || errData?.error || message
+        } catch {
+          // response wasn't JSON — keep default message
+        }
+        throw new Error(message)
+      }
+
+      // 2. Mark the "business" onboarding step as complete.
+      const completeRes = await fetch(`${API_BASE}/onboarding/steps/business/complete`, {
+        method: 'POST',
+        headers: getAuthHeaders(token),
+      })
+
+      if (!completeRes.ok) {
+        let message = `Could not mark this step complete (${completeRes.status})`
+        try {
+          const errData = await completeRes.json()
           message = errData?.message || errData?.error || message
         } catch {
           // response wasn't JSON — keep default message
