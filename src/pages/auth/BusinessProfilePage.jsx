@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { API_BASE } from '../../lib/apiConfig'
-import { getStoredAccessToken, getAuthHeaders, clearStoredAuth } from '../../lib/auth'
+import { getStoredAccessToken, clearStoredAuth } from '../../lib/auth'
 import { Camera, Building2, Mail, MessageCircle, ArrowRight, ArrowLeft, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -15,12 +15,27 @@ const CATEGORIES = [
   'Retail & E-commerce', 'Professional Services', 'Other',
 ]
 
+const CATEGORY_MAP = {
+  'Fashion & Apparel': 'fashion',
+  'Food & Beverage': 'food',
+  'Electronics': 'electronics',
+  'Beauty & Wellness': 'beauty',
+  'Home & Furniture': 'home',
+  'Health & Fitness': 'health',
+  'Education': 'services',
+  'Logistics': 'services',
+  'Retail & E-commerce': 'services',
+  'Professional Services': 'services',
+  Other: 'others',
+}
+
 const FLOW_STEPS = ['Account', 'Plan', 'Onboarding', 'Profile']
 
 export default function BusinessProfilePage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [logoPreview, setLogoPreview] = useState(null)
+  const [logoFile, setLogoFile] = useState(null)
   const [subStep, setSubStep] = useState(0)
   const [form, setForm] = useState({
     category: '',
@@ -35,19 +50,20 @@ export default function BusinessProfilePage() {
   const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }))
 
   const handleLogoChange = (e) => {
-    const file = e.target.files[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = () => setLogoPreview(reader.result)
-      reader.readAsDataURL(file)
-    }
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setLogoFile(file)
+    const reader = new FileReader()
+    reader.onload = () => setLogoPreview(reader.result)
+    reader.readAsDataURL(file)
   }
 
   const handleComplete = async () => {
     setSaving(true)
     setSubmitError('')
 
-    const token = getStoredAccessToken() || user?.accessToken
+    const token = getStoredAccessToken() || user?.accessToken || user?.token || user?.access_token || user?.tokens?.accessToken || user?.tokens?.token || user?.tokens?.access_token || user?.jwt
     if (!token) {
       clearStoredAuth()
       setSubmitError('Authentication token is invalid. Please sign in again.')
@@ -56,26 +72,56 @@ export default function BusinessProfilePage() {
     }
 
     const payload = {
-      category: form.category,
-      tagline: form.tagline,
-      description: form.description,
-      email: form.email,
-      whatsapp: form.whatsapp,
-      logo: logoPreview,
+      displayName: (form.tagline || form.email || user?.name || 'My Business').trim() || 'My Business',
+      category: CATEGORY_MAP[form.category] || 'others',
+      categoryOther: form.category === 'Other' ? form.category : undefined,
+      tagline: form.tagline || undefined,
+      description: form.description || undefined,
+      email: form.email || undefined,
+      whatsappNumber: form.whatsapp || undefined,
     }
 
     try {
       const response = await fetch(`${API_BASE}/business`, {
         method: 'POST',
-        headers: getAuthHeaders(token),
+        headers: {
+          accept: 'application/json',
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(payload),
       })
 
       const result = await response.json().catch(() => null)
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          clearStoredAuth()
+          throw new Error('Your session has expired. Please sign in again.')
+        }
+
         const message = result?.message || result?.error || `Request failed (${response.status})`
         throw new Error(message)
+      }
+
+      if (logoFile) {
+        const formPayload = new FormData()
+        formPayload.append('image', logoFile)
+
+        const logoResponse = await fetch(`${API_BASE}/business/logo`, {
+          method: 'POST',
+          headers: {
+            accept: 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: formPayload,
+        })
+
+        if (!logoResponse.ok) {
+          const logoResult = await logoResponse.json().catch(() => null)
+          const logoMessage = logoResult?.message || logoResult?.error || `Logo upload failed (${logoResponse.status})`
+          throw new Error(logoMessage)
+        }
       }
 
       navigate('/dashboard')

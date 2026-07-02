@@ -94,12 +94,15 @@ export function AuthProvider({ children }) {
       )
     )
 
-    if (tokens.accessToken) {
-      localStorage.setItem('accessToken', tokens.accessToken)
+    const resolvedAccessToken = tokens.accessToken || tokens.token || tokens.access_token || tokens.jwt
+    const resolvedRefreshToken = tokens.refreshToken || tokens.refresh_token
+
+    if (resolvedAccessToken) {
+      localStorage.setItem('accessToken', resolvedAccessToken)
     }
 
-    if (tokens.refreshToken) {
-      localStorage.setItem('refreshToken', tokens.refreshToken)
+    if (resolvedRefreshToken) {
+      localStorage.setItem('refreshToken', resolvedRefreshToken)
     }
   }
 
