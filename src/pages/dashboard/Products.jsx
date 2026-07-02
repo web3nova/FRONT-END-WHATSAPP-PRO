@@ -1,19 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus, Search, Filter, Edit2, Trash2, MoreHorizontal, Package, Tag } from 'lucide-react'
+import { API_BASE } from '../../lib/apiConfig'
 
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
-
-const products = [
-  { id: 1, name: 'Corset Dress', category: 'Dresses', price: 80000, stock: 12, status: 'active', orders: 52, sku: 'CD-001' },
-  { id: 2, name: 'Bridal Gown', category: 'Bridal', price: 60000, stock: 5, status: 'active', orders: 38, sku: 'BG-002' },
-  { id: 3, name: 'Native Attire', category: 'Native', price: 40000, stock: 20, status: 'active', orders: 41, sku: 'NA-003' },
-  { id: 4, name: 'Senator Wear', category: 'Native', price: 50000, stock: 8, status: 'active', orders: 29, sku: 'SW-004' },
-  { id: 5, name: 'Ankara Blouse', category: 'Tops', price: 25000, stock: 0, status: 'out-of-stock', orders: 17, sku: 'AB-005' },
-  { id: 6, name: 'Lace Gown', category: 'Dresses', price: 75000, stock: 3, status: 'active', orders: 24, sku: 'LG-006' },
-  { id: 7, name: 'Agbada Set', category: 'Native', price: 120000, stock: 4, status: 'active', orders: 11, sku: 'AG-007' },
-  { id: 8, name: 'Aso-Ebi Dress', category: 'Dresses', price: 55000, stock: 0, status: 'draft', orders: 0, sku: 'AE-008' },
-]
 
 const categories = ['All', 'Dresses', 'Bridal', 'Native', 'Tops']
 
@@ -24,16 +14,88 @@ const statusStyle = {
 }
 
 const placeholderColors = [PRIMARY, '#1e3fc2', '#7b96f8', '#2952d9', '#3457e8', '#4166F5', '#1a35c8', '#5577f6']
+const PRODUCTS_API_URL = `${API_BASE}/products`
 
 export default function Products() {
+  const [products, setProducts] = useState([])
   const [search, setSearch] = useState('')
   const [cat, setCat] = useState('All')
   const [view, setView] = useState('grid')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const filtered = products.filter(p =>
-    (cat === 'All' || p.category === cat) &&
-    p.name.toLowerCase().includes(search.toLowerCase())
-  )
+  useEffect(() => {
+    let ignore = false
+
+    async function loadProducts() {
+      try {
+        setLoading(true)
+        setError('')
+
+        const response = await fetch(PRODUCTS_API_URL, {
+          method: 'GET',
+          headers: {
+            accept: 'application/json',
+          },
+        })
+
+        if (!response.ok) {
+          throw new Error(`Request failed (${response.status})`)
+        }
+
+        const data = await response.json()
+        const payload = Array.isArray(data) ? data : data?.data || data?.products || []
+
+        if (!ignore) {
+          setProducts(payload)
+        }
+      } catch (err) {
+        if (!ignore) {
+          setError(err.message || 'Could not load products.')
+          setProducts([])
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadProducts()
+    return () => {
+      ignore = true
+    }
+  }, [])
+
+  const normalizeProduct = (product) => {
+    const name = product?.name || product?.title || product?.productName || 'Untitled product'
+    const category = product?.category || product?.type || product?.productCategory || 'Uncategorized'
+    const price = Number(product?.price || product?.amount || product?.unitPrice || 0)
+    const stock = Number(product?.stock || product?.inventory || product?.quantity || 0)
+    const status = product?.status || (stock > 0 ? 'active' : 'out-of-stock')
+    const orders = Number(product?.orders || product?.sales || product?.orderCount || 0)
+    const sku = product?.sku || product?.code || product?.id || ''
+
+    return {
+      ...product,
+      id: product?.id || product?._id || sku,
+      name,
+      category,
+      price,
+      stock,
+      status,
+      orders,
+      sku,
+    }
+  }
+
+  const normalizedProducts = products.map(normalizeProduct)
+
+  const filtered = normalizedProducts.filter(p => {
+    const name = p.name.toString().toLowerCase()
+    const category = p.category.toString()
+    return (cat === 'All' || category === cat) && name.includes(search.toLowerCase())
+  })
 
   return (
     <div className="space-y-5">
@@ -48,13 +110,16 @@ export default function Products() {
         </button>
       </div>
 
+      {loading && <div className="text-sm text-gray-500">Loading products…</div>}
+      {error && <div className="text-sm text-red-500">{error}</div>}
+
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Products', value: products.length },
-          { label: 'Active', value: products.filter(p => p.status === 'active').length },
-          { label: 'Out of Stock', value: products.filter(p => p.status === 'out-of-stock').length },
-          { label: 'Draft', value: products.filter(p => p.status === 'draft').length },
+          { label: 'Total Products', value: normalizedProducts.length },
+          { label: 'Active', value: normalizedProducts.filter(p => p.status === 'active').length },
+          { label: 'Out of Stock', value: normalizedProducts.filter(p => p.status === 'out-of-stock').length },
+          { label: 'Draft', value: normalizedProducts.filter(p => p.status === 'draft').length },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-2xl px-5 py-4 shadow-sm border border-gray-100">
             <div className="text-2xl font-bold text-gray-900">{s.value}</div>
