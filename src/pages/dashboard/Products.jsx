@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Plus, Search, Filter, Edit2, Trash2, MoreHorizontal, Package, Tag } from 'lucide-react'
 import { API_BASE } from '../../lib/apiConfig'
 import { getStoredAccessToken, clearStoredAuth } from '../../lib/auth'
@@ -21,6 +22,7 @@ const PRODUCT_CATEGORIES = ['best-selling', 'new-arrival', 'featured', 'discount
 
 export default function Products() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [products, setProducts] = useState([])
   const [search, setSearch] = useState('')
   const [cat, setCat] = useState('All')
@@ -122,7 +124,7 @@ export default function Products() {
           <h1 className="text-2xl font-bold text-gray-900">Products</h1>
           <p className="text-sm text-gray-400 mt-0.5">{products.length} products in your catalog</p>
         </div>
-        <button className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl shadow-sm hover:opacity-90 transition w-full sm:w-auto" style={{ background: PRIMARY }}>
+        <button onClick={() => navigate('/dashboard/products/new')} className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl shadow-sm hover:opacity-90 transition w-full sm:w-auto" style={{ background: PRIMARY }}>
           <Plus size={15} /> Add Product
         </button>
       </div>
@@ -231,7 +233,7 @@ export default function Products() {
             )
           })}
           {/* Add new card */}
-          <button className="bg-white rounded-2xl border-2 border-dashed border-gray-200 h-72 flex flex-col items-center justify-center gap-2 text-gray-300 hover:border-blue-300 hover:text-blue-400 transition">
+          <button onClick={() => navigate('/dashboard/products/new')} className="bg-white rounded-2xl border-2 border-dashed border-gray-200 h-72 flex flex-col items-center justify-center gap-2 text-gray-300 hover:border-blue-300 hover:text-blue-400 transition">
             <div className="w-10 h-10 rounded-xl border-2 border-current flex items-center justify-center">
               <Plus size={20} />
             </div>

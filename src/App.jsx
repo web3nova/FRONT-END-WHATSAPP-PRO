@@ -23,6 +23,7 @@ import BusinessOverview from './pages/dashboard/Overview';
 import BusinessOrders from './pages/dashboard/Orders';
 import WhatsAppPage from './pages/dashboard/WhatsApp';
 import Products from './pages/dashboard/Products';
+import ProductNew from './pages/dashboard/ProductNew';
 import Customers from './pages/dashboard/Customers';
 import Website from './layouts/BusinessWebsite';
 import Analytics from './pages/dashboard/Analytics';
@@ -149,6 +150,11 @@ export default function App() {
                 <Route
                   path="products"
                   element={<Products />}
+                />
+
+                <Route
+                  path="products/new"
+                  element={<ProductNew />}
                 />
 
                 <Route
