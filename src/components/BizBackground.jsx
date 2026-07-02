@@ -1,81 +1,55 @@
-// components/BizBackground.jsx
 import './BizBackground.css'
 
-export default function BizBackground({ variant = 'dark' }) {
-  const isDark = variant === 'dark'
-  
+export default function BizBackground() {
   return (
-    <div className={`biz-bg biz-bg--${variant}`}>
-      {/* Animated grid */}
+    <div className="biz-bg" aria-hidden="true">
       <div className="biz-bg__grid" />
 
-      {/* Chart SVG - this creates the trend line */}
       <svg
         className="biz-bg__chart"
-        viewBox="0 0 1200 200"
-        preserveAspectRatio="none"
+        viewBox="0 0 1400 800"
+        preserveAspectRatio="xMidYMid slice"
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
-          <linearGradient id="bizFillGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={isDark ? "#ffffff" : "#4166F5"} stopOpacity="0.15" />
-            <stop offset="100%" stopColor={isDark ? "#ffffff" : "#4166F5"} stopOpacity="0" />
+          <linearGradient id="bizStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.6" />
+            <stop offset="55%" stopColor="#ffffff" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#4166F5" stopOpacity="0.55" />
+          </linearGradient>
+          <linearGradient id="bizFill" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.12" />
+            <stop offset="100%" stopColor="#4166F5" stopOpacity="0.10" />
           </linearGradient>
         </defs>
         <path
           className="biz-bg__chart-fill"
-          fill="url(#bizFillGradient)"
-          d="M0,180 Q100,150 200,120 T400,80 T600,100 T800,60 T1000,90 T1200,70 L1200,200 L0,200 Z"
+          fill="url(#bizFill)"
+          d="M0,520 Q120,460 240,400 T480,320 T720,380 T960,260 T1200,320 T1400,280 L1400,800 L0,800 Z"
         />
         <path
           className="biz-bg__chart-line"
-          stroke={isDark ? "rgba(255,255,255,0.7)" : "#4166F5"}
-          strokeWidth="2.5"
+          stroke="url(#bizStroke)"
+          strokeWidth="3"
           fill="none"
-          strokeLinejoin="round"
           strokeLinecap="round"
-          d="M0,180 Q100,150 200,120 T400,80 T600,100 T800,60 T1000,90 T1200,70"
+          strokeLinejoin="round"
+          d="M0,520 Q120,460 240,400 T480,320 T720,380 T960,260 T1200,320 T1400,280"
         />
       </svg>
 
-      {/* Data points - pulsing dots */}
-      <div 
-        className="biz-bg__dot" 
-        style={{ 
-          left: '20%', 
-          bottom: '22%',
-          background: isDark ? 'rgba(255,255,255,0.9)' : '#4166F5'
-        }} 
-      />
-      <div 
-        className="biz-bg__dot" 
-        style={{ 
-          left: '45%', 
-          bottom: '12%', 
-          animationDelay: '0.8s',
-          background: isDark ? 'rgba(255,255,255,0.9)' : '#4166F5'
-        }} 
-      />
-      <div 
-        className="biz-bg__dot" 
-        style={{ 
-          left: '70%', 
-          bottom: '8%', 
-          animationDelay: '1.6s',
-          background: isDark ? 'rgba(255,255,255,0.9)' : '#4166F5'
-        }} 
-      />
+      <span className="biz-bg__dot biz-bg__dot--a" />
+      <span className="biz-bg__dot biz-bg__dot--b" />
+      <span className="biz-bg__dot biz-bg__dot--c" />
 
-      {/* Particles - floating dots */}
-      {[...Array(12)].map((_, i) => (
-        <div
+      {[...Array(14)].map((_, i) => (
+        <span
           key={i}
-          className="biz-bg__particle"
+          className={`biz-bg__particle${i % 3 === 0 ? ' biz-bg__particle--blue' : ''}`}
           style={{
-            left: `${5 + i * 8}%`,
-            animationDelay: `${i * 0.6}s`,
-            animationDuration: `${6 + i * 0.5}s`,
-            background: isDark ? 'rgba(255,255,255,0.6)' : '#4166F5'
+            left: `${4 + i * 7}%`,
+            animationDelay: `${i * 0.55}s`,
+            animationDuration: `${7 + (i % 5) * 0.6}s`,
           }}
         />
       ))}

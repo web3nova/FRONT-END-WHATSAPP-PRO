@@ -176,8 +176,8 @@ export default function LoginPage() {
 
           {/* Right panel - Form */}
           <div className="auth-panel auth-panel--form">
-            <div className="auth-form-inner">
-              <h2 className="auth-form__heading">Sign in</h2>
+          <div className="auth-form-card">   {/* was: auth-form-inner */}
+            <h2 className="auth-form__heading">Sign in</h2>
               <p className="auth-form__sub">Access your business dashboard</p>
 
               {notice && (
