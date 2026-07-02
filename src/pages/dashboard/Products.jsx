@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Plus, Search, Filter, Edit2, Trash2, MoreHorizontal, Package, Tag } from 'lucide-react'
 import { API_BASE } from '../../lib/apiConfig'
+import { getStoredAccessToken, clearStoredAuth } from '../../lib/auth'
+import { useAuth } from '../../context/AuthContext'
 
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
@@ -15,8 +17,10 @@ const statusStyle = {
 
 const placeholderColors = [PRIMARY, '#1e3fc2', '#7b96f8', '#2952d9', '#3457e8', '#4166F5', '#1a35c8', '#5577f6']
 const PRODUCTS_API_URL = `${API_BASE}/products`
+const PRODUCT_CATEGORIES = ['best-selling', 'new-arrival', 'featured', 'discount', 'regular', 'others']
 
 export default function Products() {
+  const { user } = useAuth()
   const [products, setProducts] = useState([])
   const [search, setSearch] = useState('')
   const [cat, setCat] = useState('All')
@@ -32,18 +36,31 @@ export default function Products() {
         setLoading(true)
         setError('')
 
+        const token = getStoredAccessToken() || user?.accessToken || user?.token || user?.access_token || user?.tokens?.accessToken || user?.tokens?.token || user?.tokens?.access_token || user?.jwt
+
+        if (!token) {
+          clearStoredAuth()
+          throw new Error('You need to sign in before loading products.')
+        }
+
         const response = await fetch(PRODUCTS_API_URL, {
           method: 'GET',
           headers: {
             accept: 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
         })
 
         if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            clearStoredAuth()
+            throw new Error('Your session is expired or unauthorized. Please sign in again.')
+          }
+
           throw new Error(`Request failed (${response.status})`)
         }
 
-        const data = await response.json()
+        const data = await response.json().catch(() => null)
         const payload = Array.isArray(data) ? data : data?.data || data?.products || []
 
         if (!ignore) {
@@ -69,8 +86,8 @@ export default function Products() {
 
   const normalizeProduct = (product) => {
     const name = product?.name || product?.title || product?.productName || 'Untitled product'
-    const category = product?.category || product?.type || product?.productCategory || 'Uncategorized'
-    const price = Number(product?.price || product?.amount || product?.unitPrice || 0)
+    const category = product?.category || product?.type || product?.productCategory || 'regular'
+    const price = Number(product?.priceMinor != null ? product.priceMinor / 100 : product?.price || product?.amount || product?.unitPrice || 0)
     const stock = Number(product?.stock || product?.inventory || product?.quantity || 0)
     const status = product?.status || (stock > 0 ? 'active' : 'out-of-stock')
     const orders = Number(product?.orders || product?.sales || product?.orderCount || 0)
