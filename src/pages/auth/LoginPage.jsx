@@ -101,7 +101,13 @@ export default function LoginPage() {
 
     try {
       const authData = await loginRequest({ email, password })
-      auth.login(authData.user)
+
+      // Save user and tokens in AuthContext
+      auth.login(authData.user, {
+        accessToken: authData.accessToken,
+        refreshToken: authData.refreshToken,
+      })
+
       navigate(from, { replace: true })
     } catch (err) {
       setError(err.message || 'Login failed. Please try again.')

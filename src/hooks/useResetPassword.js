@@ -1,7 +1,7 @@
 import { useState } from 'react'
+import { API_BASE } from '../lib/apiConfig'
 
-const API_URL =
-`${import.meta.env.VITE_API_URL}/auth/reset-password`
+const API_URL = `${API_BASE}/auth/reset-password`
 
 export function useResetPassword() {
   const [loading, setLoading] =
@@ -21,13 +21,6 @@ export function useResetPassword() {
       setLoading(true)
       setError(null)
       setSuccess(null)
-
-      if (!import.meta.env.VITE_API_URL) {
-        console.warn('VITE_API_URL is not defined. Falling back to mock reset password.')
-        await new Promise(r => setTimeout(r, 600))
-        setSuccess('Password reset successful (mock).')
-        return { message: 'Password reset successful (mock)' }
-      }
 
       const response =
         await fetch(API_URL, {

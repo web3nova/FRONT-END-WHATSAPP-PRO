@@ -1,7 +1,7 @@
 import { useState } from 'react'
+import { API_BASE } from '../lib/apiConfig'
 
-const API_URL =
-`${import.meta.env.VITE_API_URL}/auth/forgot-password`
+const API_URL = `${API_BASE}/auth/forgot-password`
 
 export function useForgotPassword() {
   const [loading, setLoading] =
@@ -19,13 +19,6 @@ export function useForgotPassword() {
         setLoading(true)
         setError(null)
         setSuccess(null)
-
-        if (!import.meta.env.VITE_API_URL) {
-          console.warn('VITE_API_URL is not defined. Falling back to mock forgot password.')
-          await new Promise(r => setTimeout(r, 600))
-          setSuccess('Reset email sent successfully (mock).')
-          return { message: 'Reset email sent successfully (mock)' }
-        }
 
         const response =
           await fetch(API_URL,{

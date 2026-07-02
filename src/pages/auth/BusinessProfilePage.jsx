@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
+import { API_BASE } from '../../lib/apiConfig'
+import { getStoredAccessToken, getAuthHeaders, clearStoredAuth } from '../../lib/auth'
 import { Camera, Building2, Mail, MessageCircle, ArrowRight, ArrowLeft, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -16,6 +19,7 @@ const FLOW_STEPS = ['Account', 'Plan', 'Onboarding', 'Profile']
 
 export default function BusinessProfilePage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [logoPreview, setLogoPreview] = useState(null)
   const [subStep, setSubStep] = useState(0)
   const [form, setForm] = useState({
@@ -26,6 +30,7 @@ export default function BusinessProfilePage() {
     whatsapp: '',
   })
   const [saving, setSaving] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }))
 
@@ -40,10 +45,46 @@ export default function BusinessProfilePage() {
 
   const handleComplete = async () => {
     setSaving(true)
-    // Mock save delay
-    await new Promise(r => setTimeout(r, 1000))
-    setSaving(false)
-    navigate('/dashboard')
+    setSubmitError('')
+
+    const token = getStoredAccessToken() || user?.accessToken
+    if (!token) {
+      clearStoredAuth()
+      setSubmitError('Authentication token is invalid. Please sign in again.')
+      setSaving(false)
+      return
+    }
+
+    const payload = {
+      category: form.category,
+      tagline: form.tagline,
+      description: form.description,
+      email: form.email,
+      whatsapp: form.whatsapp,
+      logo: logoPreview,
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/business`, {
+        method: 'POST',
+        headers: getAuthHeaders(token),
+        body: JSON.stringify(payload),
+      })
+
+      const result = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        const message = result?.message || result?.error || `Request failed (${response.status})`
+        throw new Error(message)
+      }
+
+      navigate('/dashboard')
+    } catch (error) {
+      console.error('Business profile save failed:', error)
+      setSubmitError(error.message || 'Failed to save business profile. Please try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const isFieldEmpty = () => {
@@ -282,6 +323,12 @@ export default function BusinessProfilePage() {
             </motion.div>
           </AnimatePresence>
         </div>
+
+        {submitError ? (
+          <div className="px-8 pb-2 text-sm text-red-600">
+            {submitError}
+          </div>
+        ) : null}
 
         {/* Navigation Actions */}
         <div className="px-8 py-5 border-t border-gray-100 flex items-center justify-between bg-gray-50/50">
