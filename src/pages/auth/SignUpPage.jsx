@@ -25,7 +25,6 @@ const TESTIMONIALS = [
 const friendlyError = (err) => {
   if (!err) return ''
 
-  // Handle the error object properly
   let msg = ''
   if (typeof err === 'string') {
     msg = err
@@ -39,7 +38,6 @@ const friendlyError = (err) => {
 
   const lower = msg.toLowerCase()
 
-  // Specific error messages
   if (lower.includes('email already in use') || lower.includes('already exists'))
     return 'An account with this email already exists. Try signing in instead.'
 
@@ -70,7 +68,6 @@ const friendlyError = (err) => {
   if (lower.includes('validation') || lower.includes('invalid'))
     return 'Please check your input and try again.'
 
-  // Return the actual error message if it's not too long
   if (msg.length > 0 && msg.length < 150) return msg
 
   return 'Something went wrong. Please try again.'
@@ -173,7 +170,6 @@ export default function SignUpPage() {
         },
       })
     } catch (err) {
-      // The friendlyError function will handle formatting
       const errorMsg = friendlyError(err.message || err)
       setSubmitError(errorMsg)
       console.error('Signup error:', err)
@@ -185,7 +181,7 @@ export default function SignUpPage() {
 
   return (
     <div className="app-bg">
-      <BizBackground variant="dark" />
+      <BizBackground />
       <div className="content-layer">
         <div className="auth-split">
 
@@ -227,7 +223,7 @@ export default function SignUpPage() {
           </div>
 
           <div className="auth-panel auth-panel--form">
-            <div className="auth-form-inner">
+            <div className="auth-form-card">
 
               <h2 className="auth-form__heading">Create your account</h2>
               <p className="auth-form__sub">Free for 14 days · No credit card required</p>
