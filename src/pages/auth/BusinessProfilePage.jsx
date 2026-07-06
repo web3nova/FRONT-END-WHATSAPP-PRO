@@ -1,9 +1,8 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { API_BASE } from '../../lib/apiConfig'
-import { getStoredAccessToken, clearStoredAuth } from '../../lib/auth'
-import { Camera, Building2, Mail, MessageCircle, ArrowRight, ArrowLeft, Check } from 'lucide-react'
+import { useBusinessProfile } from '../../hooks/useBusinessProfile'
+import { Camera, Building2, Mail, MessageCircle, ArrowRight, ArrowLeft, Check, Search, ChevronDown, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const PRIMARY = '#4166F5'
@@ -31,21 +30,137 @@ const CATEGORY_MAP = {
 
 const FLOW_STEPS = ['Account', 'Plan', 'Onboarding', 'Profile']
 
+// Country list: name, ISO2 code (used for flag emoji), dial code
+const COUNTRIES = [
+  { name: 'Nigeria', iso: 'NG', dial: '+234' },
+  { name: 'Ghana', iso: 'GH', dial: '+233' },
+  { name: 'Kenya', iso: 'KE', dial: '+254' },
+  { name: 'South Africa', iso: 'ZA', dial: '+27' },
+  { name: 'United States', iso: 'US', dial: '+1' },
+  { name: 'United Kingdom', iso: 'GB', dial: '+44' },
+  { name: 'Canada', iso: 'CA', dial: '+1' },
+  { name: 'India', iso: 'IN', dial: '+91' },
+  { name: 'United Arab Emirates', iso: 'AE', dial: '+971' },
+  { name: 'Egypt', iso: 'EG', dial: '+20' },
+  { name: 'Ethiopia', iso: 'ET', dial: '+251' },
+  { name: 'Rwanda', iso: 'RW', dial: '+250' },
+  { name: 'Tanzania', iso: 'TZ', dial: '+255' },
+  { name: 'Uganda', iso: 'UG', dial: '+256' },
+  { name: 'Cameroon', iso: 'CM', dial: '+237' },
+  { name: 'Ivory Coast', iso: 'CI', dial: '+225' },
+  { name: 'Senegal', iso: 'SN', dial: '+221' },
+  { name: 'Germany', iso: 'DE', dial: '+49' },
+  { name: 'France', iso: 'FR', dial: '+33' },
+  { name: 'Netherlands', iso: 'NL', dial: '+31' },
+  { name: 'China', iso: 'CN', dial: '+86' },
+  { name: 'Brazil', iso: 'BR', dial: '+55' },
+  { name: 'Saudi Arabia', iso: 'SA', dial: '+966' },
+  { name: 'Australia', iso: 'AU', dial: '+61' },
+]
+
+// Converts ISO2 code to flag emoji
+function isoToFlag(iso) {
+  return iso
+    .toUpperCase()
+    .replace(/./g, char => String.fromCodePoint(127397 + char.charCodeAt(0)))
+}
+
+function CountryPickerModal({ selected, onSelect, onClose }) {
+  const [query, setQuery] = useState('')
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return COUNTRIES
+    return COUNTRIES.filter(
+      c => c.name.toLowerCase().includes(q) || c.dial.includes(q)
+    )
+  }, [query])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        transition={{ duration: 0.18 }}
+        className="bg-white w-full max-w-sm rounded-3xl shadow-lg overflow-hidden flex flex-col max-h-[70vh]"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 pt-5 pb-3">
+          <h3 className="text-sm font-semibold text-gray-900">Select country</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="px-5 pb-3">
+          <div className="relative">
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              autoFocus
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search country or code"
+              className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:border-blue-300 focus:bg-white transition"
+            />
+          </div>
+        </div>
+
+        <div className="overflow-y-auto px-2 pb-4">
+          {filtered.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-6">No countries found.</p>
+          ) : (
+            filtered.map(c => {
+              const isSelected = c.iso === selected.iso
+              return (
+                <button
+                  key={c.iso}
+                  type="button"
+                  onClick={() => onSelect(c)}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-left text-sm transition ${
+                    isSelected ? 'bg-blue-50 text-blue-900 font-semibold' : 'hover:bg-gray-50 text-gray-700'
+                  }`}
+                >
+                  <span className="text-xl leading-none">{isoToFlag(c.iso)}</span>
+                  <span className="flex-1">{c.name}</span>
+                  <span className="text-gray-400">{c.dial}</span>
+                  {isSelected && <Check size={15} className="text-blue-600" />}
+                </button>
+              )
+            })
+          )}
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
 export default function BusinessProfilePage() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { saveProfile, uploadLogo, loading, error: apiError } = useBusinessProfile()
   const [logoPreview, setLogoPreview] = useState(null)
   const [logoFile, setLogoFile] = useState(null)
   const [subStep, setSubStep] = useState(0)
   const [form, setForm] = useState({
     category: '',
+    categoryOther: '',
     tagline: '',
     description: '',
     email: '',
     whatsapp: '',
   })
-  const [saving, setSaving] = useState(false)
-  const [submitError, setSubmitError] = useState('')
+  const [country, setCountry] = useState(COUNTRIES[0])
+  const [whatsappLocal, setWhatsappLocal] = useState('')
+  const [showCountryPicker, setShowCountryPicker] = useState(false)
 
   const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }))
 
@@ -59,22 +174,25 @@ export default function BusinessProfilePage() {
     reader.readAsDataURL(file)
   }
 
+  const handleWhatsappLocalChange = (value) => {
+    // Keep only digits/spaces the user typed locally
+    setWhatsappLocal(value)
+    const cleaned = value.replace(/[^\d]/g, '')
+    set('whatsapp', cleaned ? `${country.dial}${cleaned}` : '')
+  }
+
+  const handleCountrySelect = (c) => {
+    setCountry(c)
+    setShowCountryPicker(false)
+    const cleaned = whatsappLocal.replace(/[^\d]/g, '')
+    set('whatsapp', cleaned ? `${c.dial}${cleaned}` : '')
+  }
+
   const handleComplete = async () => {
-    setSaving(true)
-    setSubmitError('')
-
-    const token = getStoredAccessToken() || user?.accessToken || user?.token || user?.access_token || user?.tokens?.accessToken || user?.tokens?.token || user?.tokens?.access_token || user?.jwt
-    if (!token) {
-      clearStoredAuth()
-      setSubmitError('Authentication token is invalid. Please sign in again.')
-      setSaving(false)
-      return
-    }
-
     const payload = {
       displayName: (form.tagline || form.email || user?.name || 'My Business').trim() || 'My Business',
       category: CATEGORY_MAP[form.category] || 'others',
-      categoryOther: form.category === 'Other' ? form.category : undefined,
+      categoryOther: form.category === 'Other' ? form.categoryOther.trim() : undefined,
       tagline: form.tagline || undefined,
       description: form.description || undefined,
       email: form.email || undefined,
@@ -82,64 +200,25 @@ export default function BusinessProfilePage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/business`, {
-        method: 'POST',
-        headers: {
-          accept: 'application/json',
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(payload),
-      })
-
-      const result = await response.json().catch(() => null)
-
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          clearStoredAuth()
-          throw new Error('Your session has expired. Please sign in again.')
-        }
-
-        const message = result?.message || result?.error || `Request failed (${response.status})`
-        throw new Error(message)
-      }
+      await saveProfile(payload)
 
       if (logoFile) {
-        const formPayload = new FormData()
-        formPayload.append('image', logoFile)
-
-        const logoResponse = await fetch(`${API_BASE}/business/logo`, {
-          method: 'POST',
-          headers: {
-            accept: 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: formPayload,
-        })
-
-        if (!logoResponse.ok) {
-          const logoResult = await logoResponse.json().catch(() => null)
-          const logoMessage = logoResult?.message || logoResult?.error || `Logo upload failed (${logoResponse.status})`
-          throw new Error(logoMessage)
-        }
+        await uploadLogo(logoFile)
       }
 
       navigate('/dashboard')
-    } catch (error) {
-      console.error('Business profile save failed:', error)
-      setSubmitError(error.message || 'Failed to save business profile. Please try again.')
-    } finally {
-      setSaving(false)
+    } catch {
+      // error surfaced via apiError from the hook
     }
   }
 
   const isFieldEmpty = () => {
     if (subStep === 0) return !logoPreview
-    if (subStep === 1) return !form.category
+    if (subStep === 1) return form.category === 'Other' ? !form.categoryOther.trim() : !form.category
     if (subStep === 2) return !form.tagline.trim()
     if (subStep === 3) return !form.description.trim()
     if (subStep === 4) return !form.email.trim()
-    if (subStep === 5) return !form.whatsapp.trim()
+    if (subStep === 5) return !whatsappLocal.trim()
     return true
   }
 
@@ -150,6 +229,9 @@ export default function BusinessProfilePage() {
       setSubStep(s => s + 1)
     }
   }
+
+  const isContinueDisabled =
+    subStep === 1 && (!form.category || (form.category === 'Other' && !form.categoryOther.trim()))
 
   const renderSubStep = () => {
     switch (subStep) {
@@ -196,7 +278,9 @@ export default function BusinessProfilePage() {
                     type="button"
                     onClick={() => {
                       set('category', c)
-                      setTimeout(() => setSubStep(2), 250)
+                      if (c !== 'Other') {
+                        setTimeout(() => setSubStep(2), 250)
+                      }
                     }}
                     className={`p-3 rounded-2xl border text-left text-sm font-medium transition-all duration-150 ${
                       isSelected
@@ -209,6 +293,31 @@ export default function BusinessProfilePage() {
                 )
               })}
             </div>
+
+            {form.category === 'Other' && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                transition={{ duration: 0.2 }}
+                className="pt-1"
+              >
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+                  Tell us your category
+                </label>
+                <input
+                  type="text"
+                  value={form.categoryOther}
+                  onChange={e => set('categoryOther', e.target.value)}
+                  placeholder="e.g. Event Planning"
+                  className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:border-blue-300 focus:bg-white transition"
+                  autoFocus
+                />
+              </motion.div>
+            )}
+
+            <p className="text-xs text-gray-400 pt-1">
+              Can't find your category? Choose <span className="font-medium text-gray-500">Other</span> and describe it above.
+            </p>
           </div>
         )
       case 2:
@@ -272,17 +381,33 @@ export default function BusinessProfilePage() {
               WhatsApp Business Number
             </label>
             <p className="text-sm text-gray-500">Your AI agent will receive and respond to customer messages on this number.</p>
-            <div className="relative">
-              <MessageCircle size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="tel"
-                value={form.whatsapp}
-                onChange={e => set('whatsapp', e.target.value)}
-                placeholder="+234 801 234 5678"
-                className="w-full pl-11 pr-4 py-3 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:border-blue-300 focus:bg-white transition"
-                autoFocus
-              />
+            <div className="flex items-stretch gap-2">
+              <button
+                type="button"
+                onClick={() => setShowCountryPicker(true)}
+                className="flex items-center gap-1.5 px-3 py-3 text-sm font-medium border border-gray-200 rounded-xl bg-gray-50 hover:bg-gray-100 transition shrink-0"
+              >
+                <span className="text-lg leading-none">{isoToFlag(country.iso)}</span>
+                <span className="text-gray-700">{country.dial}</span>
+                <ChevronDown size={14} className="text-gray-400" />
+              </button>
+              <div className="relative flex-1">
+                <MessageCircle size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="tel"
+                  value={whatsappLocal}
+                  onChange={e => handleWhatsappLocalChange(e.target.value)}
+                  placeholder="801 234 5678"
+                  className="w-full pl-11 pr-4 py-3 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:border-blue-300 focus:bg-white transition"
+                  autoFocus
+                />
+              </div>
             </div>
+            {form.whatsapp && (
+              <p className="text-xs text-gray-400">
+                We'll save this as <span className="font-medium text-gray-600">{form.whatsapp}</span>
+              </p>
+            )}
           </div>
         )
       default:
@@ -342,7 +467,7 @@ export default function BusinessProfilePage() {
 
       {/* Card */}
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 w-full max-w-lg overflow-hidden flex flex-col">
-        
+
         {/* Questionnaire Progress Bar */}
         <div className="w-full bg-gray-100 h-1.5 flex">
           <div
@@ -370,9 +495,9 @@ export default function BusinessProfilePage() {
           </AnimatePresence>
         </div>
 
-        {submitError ? (
+        {apiError ? (
           <div className="px-8 pb-2 text-sm text-red-600">
-            {submitError}
+            {apiError}
           </div>
         ) : null}
 
@@ -393,12 +518,12 @@ export default function BusinessProfilePage() {
           <button
             type="button"
             onClick={handleNext}
-            disabled={subStep === 1 && !form.category}
+            disabled={isContinueDisabled}
             className="py-2.5 px-6 text-sm font-semibold text-white rounded-xl flex items-center justify-center gap-1.5 hover:opacity-90 transition disabled:opacity-50"
             style={{ background: PRIMARY }}
           >
             {subStep === 5 ? (
-              saving ? 'Saving...' : 'Complete Setup'
+              loading ? 'Saving...' : 'Complete Setup'
             ) : (
               isFieldEmpty() && subStep !== 1 ? 'Skip' : 'Continue'
             )}
@@ -410,6 +535,16 @@ export default function BusinessProfilePage() {
       <p className="text-xs text-gray-400 mt-6 text-center">
         You can update your business profile anytime from <span className="font-medium">Settings → Business Profile</span>.
       </p>
+
+      <AnimatePresence>
+        {showCountryPicker && (
+          <CountryPickerModal
+            selected={country}
+            onSelect={handleCountrySelect}
+            onClose={() => setShowCountryPicker(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

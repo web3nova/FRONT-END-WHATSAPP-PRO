@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../context/AuthContext'
+import { useOnboarding } from '../../hooks/useOnboarding'
 import BizBackground from '../../components/BizBackground'
-import { API_BASE } from '../../lib/apiConfig'
-import { getStoredAccessToken, getAuthHeaders, clearStoredAuth } from '../../lib/auth'
-import { Zap } from 'lucide-react'
+import { Zap, Loader2, ChevronDown, MapPin } from 'lucide-react'
+import CountryCodeModal from '../../components/CountryCodeModal'
+import LocationModal from '../../components/LocationModal'
+import { COUNTRIES, DEFAULT_COUNTRY } from '../../data/countries'
 import './Onboarding.css'
 
 const STEPS = [
@@ -26,8 +27,6 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const empty = {
   // Step 1 — identity
   businessName: '',
-  phone: '',
-  location: '',
 
   // Step 2 — compliance
   cacRegNo: '',
@@ -50,64 +49,40 @@ const empty = {
 }
 
 export default function Onboarding() {
-  const { user } = useAuth()
   const navigate = useNavigate()
+  const { checkStatus, createProfile, loading: apiLoading, error: apiError } = useOnboarding()
   const [step, setStep] = useState(0)
   const [form, setForm] = useState(empty)
   const [errors, setErrors] = useState({})
-  const [submitting, setSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState('')
   const [checkingStatus, setCheckingStatus] = useState(true)
+
+  // Phone country code + location, picked via modals rather than free text
+  const [selectedCountry, setSelectedCountry] = useState(DEFAULT_COUNTRY)
+  const [phoneNational, setPhoneNational] = useState('')
+  const [locationState, setLocationState] = useState('')
+  const [locationCity, setLocationCity] = useState('')
+  const [showCountryModal, setShowCountryModal] = useState(false)
+  const [showLocationModal, setShowLocationModal] = useState(false)
 
   // On load: check onboarding status, skip this page if already onboarded.
   useEffect(() => {
     let cancelled = false
 
-    async function checkStatus() {
-      const token = getStoredAccessToken() || user?.accessToken
-      if (!token) {
-        clearStoredAuth()
-        if (!cancelled) setCheckingStatus(false)
-        return
-      }
-
+    async function run() {
       try {
-        const res = await fetch(`${API_BASE}/onboarding/status`, {
-          method: 'GET',
-          headers: getAuthHeaders(token),
-        })
-
-        if (!res.ok) {
-          // If the status check fails (e.g. 401), just let the user
-          // go through onboarding rather than blocking them.
-          if (!cancelled) setCheckingStatus(false)
-          return
+        const status = await checkStatus()
+        if (cancelled) return
+        if (status?.completed === true || status?.steps?.business === true) {
+          navigate('/business-profile', { replace: true })
+        } else {
+          setCheckingStatus(false)
         }
-
-        const data = await res.json()
-
-        // Adjust this condition to match whatever shape the API actually
-        // returns, e.g. { onboarded: true } or { status: 'completed' }.
-        const isOnboarded =
-          data?.onboarded === true ||
-          data?.isOnboarded === true ||
-          data?.status === 'completed' ||
-          data?.data?.onboarded === true
-
-        if (!cancelled) {
-          if (isOnboarded) {
-            navigate('/business-profile')
-          } else {
-            setCheckingStatus(false)
-          }
-        }
-      } catch (err) {
-        console.error('Failed to check onboarding status:', err)
+      } catch {
         if (!cancelled) setCheckingStatus(false)
       }
     }
 
-    checkStatus()
+    run()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -131,15 +106,17 @@ export default function Onboarding() {
     const e = {}
     if (step === 0) {
       if (!form.businessName.trim()) e.businessName = 'Business name is required.'
-      if (!form.phone.trim()) e.phone = 'Phone number is required.'
-      if (!form.location.trim()) e.location = 'Location is required.'
+
+      const digits = phoneNational.replace(/\D/g, '')
+      if (!digits) e.phone = 'Phone number is required.'
+      else if (digits.length < 6) e.phone = 'Enter a valid phone number.'
+
+      if (!locationState.trim() || !locationCity.trim()) {
+        e.location = 'Select your state/province and city.'
+      }
     }
     if (step === 1) {
-      if (!form.cacRegNo.trim()) e.cacRegNo = 'CAC registration number is required.'
-      // TAX ID optional but validated if present
-      if (form.taxId && !/^[A-Z0-9-]{6,}$/i.test(form.taxId)) {
-        e.taxId = 'Enter a valid Tax ID.'
-      }
+      // Both CAC and TIN are optional
     }
     if (step === 2) {
       if (!form.numClients) e.numClients = 'Required.'
@@ -167,68 +144,21 @@ export default function Onboarding() {
 
   const handleSubmit = async () => {
     if (!validate()) return
-    setSubmitting(true)
-    setSubmitError('')
 
-    const token = getStoredAccessToken() || user?.accessToken
-    if (!token) {
-      clearStoredAuth()
-      setSubmitError('Authentication token is invalid. Please sign in again.')
-      setSubmitting(false)
-      return
+    const payload = {
+      ...form,
+      countryIso2: selectedCountry.iso2,
+      phone: `${selectedCountry.dialCode} ${phoneNational}`.trim(),
+      locationState,
+      locationCity,
+      location: `${locationCity}, ${locationState}`,
     }
 
     try {
-      // 1. Save the collected business onboarding data.
-      const endpoints = [`${API_BASE}/onboarding`, `${API_BASE}/business`]
-      let res = null
-
-      for (const endpoint of endpoints) {
-        res = await fetch(endpoint, {
-          method: 'POST',
-          headers: getAuthHeaders(token),
-          body: JSON.stringify(form),
-        })
-
-        if (res.ok || res.status !== 404) {
-          break
-        }
-      }
-
-      if (!res?.ok) {
-        let message = `Request failed (${res?.status || 'unknown'})`
-        try {
-          const errData = await res?.json?.()
-          message = errData?.message || errData?.error || message
-        } catch {
-          // response wasn't JSON — keep default message
-        }
-        throw new Error(message)
-      }
-
-      // 2. Mark the "business" onboarding step as complete.
-      const completeRes = await fetch(`${API_BASE}/onboarding/steps/business/complete`, {
-        method: 'POST',
-        headers: getAuthHeaders(token),
-      })
-
-      if (!completeRes.ok) {
-        let message = `Could not mark this step complete (${completeRes.status})`
-        try {
-          const errData = await completeRes.json()
-          message = errData?.message || errData?.error || message
-        } catch {
-          // response wasn't JSON — keep default message
-        }
-        throw new Error(message)
-      }
-
-      navigate('/business-profile')
-    } catch (err) {
-      console.error('Onboarding submit failed:', err)
-      setSubmitError(err.message || 'Something went wrong. Please try again.')
-    } finally {
-      setSubmitting(false)
+      await createProfile(payload)
+      navigate('/business-profile', { replace: true })
+    } catch {
+      // error is surfaced via apiError from the hook
     }
   }
 
@@ -239,12 +169,14 @@ export default function Onboarding() {
       <div className="app-bg">
         <BizBackground variant="light" />
         <div className="content-layer">
-          <div className="ob-page">
-            <main className="ob-main">
-              <div className="ob-form-wrap">
-                <p>Loading…</p>
+          <div className="ob-loading-screen">
+            <div className="ob-loading-card">
+              <div className="ob-loading-icon">
+                <Loader2 size={24} />
               </div>
-            </main>
+              <p className="ob-loading-heading">Setting things up</p>
+              <p className="ob-loading-sub">Checking your account status…</p>
+            </div>
           </div>
         </div>
       </div>
@@ -304,21 +236,40 @@ export default function Onboarding() {
                   </Field>
 
                   <Field label="Phone number" error={errors.phone} required>
-                    <input
-                      type="tel"
-                      placeholder="+234 801 234 5678"
-                      value={form.phone}
-                      onChange={e => set('phone', e.target.value)}
-                    />
+                    <div className="ob-phone-group">
+                      <button
+                        type="button"
+                        className="ob-country-trigger"
+                        onClick={() => setShowCountryModal(true)}
+                      >
+                        <span className="ob-country-flag" aria-hidden="true">{selectedCountry.flag}</span>
+                        <span className="ob-country-dial">{selectedCountry.dialCode}</span>
+                        <ChevronDown size={14} />
+                      </button>
+                      <input
+                        type="tel"
+                        placeholder="801 234 5678"
+                        value={phoneNational}
+                        onChange={e => {
+                          setPhoneNational(e.target.value)
+                          setErrors(prev => ({ ...prev, phone: undefined }))
+                        }}
+                      />
+                    </div>
                   </Field>
 
-                  <Field label="Business location" hint="City, state — e.g. Ikeja, Lagos" error={errors.location} required>
-                    <input
-                      type="text"
-                      placeholder="Ikeja, Lagos"
-                      value={form.location}
-                      onChange={e => set('location', e.target.value)}
-                    />
+                  <Field label="Business location" hint="State/province and city" error={errors.location} required>
+                    <button
+                      type="button"
+                      className={`ob-location-trigger ${!(locationState && locationCity) ? 'ob-location-trigger--empty' : ''}`}
+                      onClick={() => setShowLocationModal(true)}
+                    >
+                      <MapPin size={16} />
+                      <span>
+                        {locationState && locationCity ? `${locationCity}, ${locationState}` : 'Select state & city'}
+                      </span>
+                      <ChevronDown size={14} />
+                    </button>
                   </Field>
                 </section>
               )}
@@ -330,7 +281,7 @@ export default function Onboarding() {
                     We use these to verify your business registration. Your data is encrypted and never shared.
                   </p>
 
-                  <Field label="CAC registration number" error={errors.cacRegNo} required>
+                  <Field label="CAC registration number" hint="Optional — enter if your business is registered" error={errors.cacRegNo}>
                     <input
                       type="text"
                       placeholder="RC 1234567"
@@ -341,7 +292,7 @@ export default function Onboarding() {
 
                   <Field
                     label="Tax identification number (TIN)"
-                    hint="Optional — include if your business is tax-registered"
+                    hint="Optional"
                     error={errors.taxId}
                   >
                     <input
@@ -521,9 +472,9 @@ export default function Onboarding() {
                 </section>
               )}
 
-              {submitError && (
+              {apiError && (
                 <p className="ob-error-msg" role="alert" style={{ marginTop: '1rem' }}>
-                  {submitError}
+                  {apiError}
                 </p>
               )}
 
@@ -544,9 +495,9 @@ export default function Onboarding() {
                       type="button"
                       className="ob-btn-next"
                       onClick={handleSubmit}
-                      disabled={submitting}
+                      disabled={apiLoading}
                     >
-                      {submitting ? 'Saving…' : 'Continue to profile setup →'}
+                      {apiLoading ? 'Saving…' : 'Continue to profile setup →'}
                     </button>
                   )}
                 </div>
@@ -555,6 +506,27 @@ export default function Onboarding() {
           </main>
         </div>
       </div>
+
+      <CountryCodeModal
+        open={showCountryModal}
+        onClose={() => setShowCountryModal(false)}
+        countries={COUNTRIES}
+        selected={selectedCountry}
+        onSelect={setSelectedCountry}
+      />
+
+      <LocationModal
+        open={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        country={selectedCountry}
+        initialState={locationState}
+        initialCity={locationCity}
+        onApply={(state, city) => {
+          setLocationState(state)
+          setLocationCity(city)
+          setErrors(prev => ({ ...prev, location: undefined }))
+        }}
+      />
     </div>
   )
 }

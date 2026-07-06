@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useLogin } from '../../hooks/useLogin'
+import { API_BASE } from '../../lib/apiConfig'
 import BizBackground from '../../components/BizBackground'
 import './Auth.css'
 
@@ -23,6 +24,8 @@ const TESTIMONIALS = [
   },
 ]
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export default function LoginPage() {
   const auth = useAuth()
   const { login: loginRequest, loading, error: apiError } = useLogin()
@@ -37,8 +40,10 @@ export default function LoginPage() {
     email: prefillEmail,
     password: '',
   })
+  const [fieldErrors, setFieldErrors] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
   const [tIdx, setTIdx] = useState(0)
+  const [isPaused, setIsPaused] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -47,13 +52,14 @@ export default function LoginPage() {
 
   const from = fromSignup ? '/subscribe' : location.state?.from?.pathname || '/dashboard'
 
-  // Auto-rotate testimonials
+  // Auto-rotate testimonials (pauses on hover/focus)
   useEffect(() => {
+    if (isPaused) return
     const interval = setInterval(() => {
       setTIdx((prev) => (prev + 1) % TESTIMONIALS.length)
     }, 6000)
     return () => clearInterval(interval)
-  }, [])
+  }, [isPaused])
 
   // Focus email on mount
   useEffect(() => {
@@ -62,11 +68,32 @@ export default function LoginPage() {
     }
   }, [])
 
+  const validateEmail = (email) => {
+    if (!email) return ''
+    return EMAIL_REGEX.test(email) ? '' : 'Please enter a valid email address.'
+  }
+
+  const validatePassword = (password) => {
+    if (!password) return ''
+    return password.length >= 6 ? '' : 'Password must be at least 6 characters.'
+  }
+
   const handleChange = (e) => {
     const { name, value } = e.target
     setForm((prev) => ({ ...prev, [name]: value }))
-    // Clear error when user types
+    // Clear errors as the user corrects them
     if (error) setError('')
+    if (fieldErrors[name]) setFieldErrors((prev) => ({ ...prev, [name]: '' }))
+  }
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target
+    const trimmed = value.trim()
+    if (name === 'email') {
+      setFieldErrors((prev) => ({ ...prev, email: validateEmail(trimmed) }))
+    } else if (name === 'password') {
+      setFieldErrors((prev) => ({ ...prev, password: validatePassword(trimmed) }))
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -83,16 +110,18 @@ export default function LoginPage() {
       return
     }
 
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      setError('Please enter a valid email address.')
+    const emailError = validateEmail(email)
+    if (emailError) {
+      setError(emailError)
+      setFieldErrors((prev) => ({ ...prev, email: emailError }))
       emailInputRef.current?.focus()
       return
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.')
+    const passwordError = validatePassword(password)
+    if (passwordError) {
+      setError(passwordError)
+      setFieldErrors((prev) => ({ ...prev, password: passwordError }))
       passwordInputRef.current?.focus()
       return
     }
@@ -108,18 +137,34 @@ export default function LoginPage() {
         refreshToken: authData.refreshToken,
       })
 
-      navigate(from, { replace: true })
+      // Determine post-login route based on onboarding + business profile status
+      const token = authData.accessToken
+
+      try {
+        // Check if business profile exists first (most reliable completion indicator)
+        const bizRes = await fetch(`${API_BASE}/business`, {
+          headers: { Authorization: `Bearer ${token}`, accept: 'application/json' },
+        })
+        if (bizRes.ok) {
+          navigate(from, { replace: true })
+          return
+        }
+
+        // No business profile — check onboarding status to decide where to send them
+        const statusRes = await fetch(`${API_BASE}/onboarding/status`, {
+          headers: { Authorization: `Bearer ${token}`, accept: 'application/json' },
+        })
+        const statusData = await statusRes.json()
+        const isOnboarded = statusData?.data?.completed === true || statusData?.data?.steps?.business === true
+
+        navigate(isOnboarded ? '/business-profile' : '/onboarding', { replace: true })
+      } catch {
+        navigate(from, { replace: true })
+      }
     } catch (err) {
       setError(err.message || 'Login failed. Please try again.')
-      // Don't clear password on error - let user correct it
     } finally {
       setIsSubmitting(false)
-    }
-  }
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !isSubmitting && !loading) {
-      handleSubmit(e)
     }
   }
 
@@ -150,7 +195,13 @@ export default function LoginPage() {
                 </p>
               </div>
 
-              <div className="auth-testimonial">
+              <div
+                className="auth-testimonial"
+                onMouseEnter={() => setIsPaused(true)}
+                onMouseLeave={() => setIsPaused(false)}
+                onFocus={() => setIsPaused(true)}
+                onBlur={() => setIsPaused(false)}
+              >
                 <p className="auth-testimonial__quote">"{t.quote}"</p>
                 <div className="auth-testimonial__author">
                   <span className="auth-testimonial__avatar">{t.name[0]}</span>
@@ -181,13 +232,13 @@ export default function LoginPage() {
               <p className="auth-form__sub">Access your business dashboard</p>
 
               {notice && (
-                <div className="auth-alert auth-alert--success" role="status">
+                <div className="auth-alert auth-alert--success" role="status" aria-live="polite">
                   {notice}
                 </div>
               )}
 
               {(error || apiError) && (
-                <div className="auth-alert auth-alert--error" role="alert">
+                <div className="auth-alert auth-alert--error" role="alert" aria-live="assertive">
                   <span className="auth-alert__icon">✕</span>
                   {error || apiError}
                 </div>
@@ -205,14 +256,19 @@ export default function LoginPage() {
                     name="email"
                     value={form.email}
                     onChange={handleChange}
-                    onKeyDown={handleKeyDown}
+                    onBlur={handleBlur}
                     placeholder="you@example.com"
-                    className={`auth-field__input ${error && !form.email ? 'auth-field__input--error' : ''}`}
+                    className={`auth-field__input ${(error && !form.email) || fieldErrors.email ? 'auth-field__input--error' : ''}`}
                     autoComplete="email"
                     disabled={isSubmitting || loading}
-                    aria-invalid={!!error}
-                    aria-describedby={error ? 'login-error' : undefined}
+                    aria-invalid={!!(error || fieldErrors.email)}
+                    aria-describedby={fieldErrors.email ? 'email-error' : undefined}
                   />
+                  {fieldErrors.email && (
+                    <p id="email-error" className="auth-field__error" role="alert">
+                      {fieldErrors.email}
+                    </p>
+                  )}
                 </div>
 
                 <div className="auth-field">
@@ -227,24 +283,30 @@ export default function LoginPage() {
                       name="password"
                       value={form.password}
                       onChange={handleChange}
-                      onKeyDown={handleKeyDown}
+                      onBlur={handleBlur}
                       placeholder="Your password"
-                      className={`auth-field__input ${error && !form.password ? 'auth-field__input--error' : ''}`}
+                      className={`auth-field__input ${(error && !form.password) || fieldErrors.password ? 'auth-field__input--error' : ''}`}
                       autoComplete="current-password"
                       disabled={isSubmitting || loading}
-                      aria-invalid={!!error}
-                      aria-describedby={error ? 'login-error' : undefined}
+                      aria-invalid={!!(error || fieldErrors.password)}
+                      aria-describedby={fieldErrors.password ? 'password-error' : undefined}
                     />
                     <button
                       type="button"
                       className="auth-password-toggle"
                       onClick={() => setShowPassword(!showPassword)}
+                      disabled={isSubmitting || loading}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                       tabIndex={-1}
                     >
                       {showPassword ? '👁️' : '👁️‍🗨️'}
                     </button>
                   </div>
+                  {fieldErrors.password && (
+                    <p id="password-error" className="auth-field__error" role="alert">
+                      {fieldErrors.password}
+                    </p>
+                  )}
                 </div>
 
                 <div className="auth-field-footer">

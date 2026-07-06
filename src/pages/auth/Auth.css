@@ -596,6 +596,11 @@
   outline-offset: 2px;
 }
 
+.auth-password-toggle:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 /* Spinner */
 
 @keyframes auth-spin{
@@ -633,10 +638,8 @@
   position:relative;
   z-index:1;
   padding:22px 48px;
-  border-bottom:1px solid var(--border);
-  background:rgba(255,255,255,0.85);
-  backdrop-filter:blur(8px);
-  -webkit-backdrop-filter:blur(8px);
+  background:var(--white);
+  box-shadow:var(--shadow-xs);
 }
 
 .subscribe-logo{

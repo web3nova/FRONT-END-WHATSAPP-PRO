@@ -1,5 +1,7 @@
-import { useState } from 'react'
-import { Outlet, NavLink, Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom'
+import { API_BASE } from '../lib/apiConfig'
+import { getStoredAccessToken } from '../lib/auth'
 import {
   LayoutDashboard, ShoppingBag, Package, Users, MessageCircle,
   Globe, BarChart3, BookOpen, Settings, Bell, Search, Zap, ExternalLink, Menu, X
@@ -21,7 +23,49 @@ const navItems = [
 ]
 
 export default function BusinessLayout() {
+  const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [checking, setChecking] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    const token = getStoredAccessToken()
+    if (!token) return
+
+    async function check() {
+      try {
+        // Business profile exists → fully set up, let them through
+        const bizRes = await fetch(`${API_BASE}/business`, {
+          headers: { Authorization: `Bearer ${token}`, accept: 'application/json' },
+        })
+        if (bizRes.ok) {
+          if (!cancelled) setChecking(false)
+          return
+        }
+
+        // No business profile — check onboarding to decide where to send them
+        const statusRes = await fetch(`${API_BASE}/onboarding/status`, {
+          headers: { Authorization: `Bearer ${token}`, accept: 'application/json' },
+        })
+        const statusData = await statusRes.json()
+        const isOnboarded = statusData?.data?.completed === true || statusData?.data?.steps?.business === true
+
+        if (!cancelled) {
+          navigate(isOnboarded ? '/business-profile' : '/onboarding', { replace: true })
+        }
+      } catch {
+        // API unavailable — let user through to dashboard
+        if (!cancelled) setChecking(false)
+      } finally {
+        if (!cancelled) setChecking(false)
+      }
+    }
+
+    check()
+    return () => { cancelled = true }
+  }, [navigate])
+
+  if (checking) return null
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: CREAM }}>

@@ -101,9 +101,9 @@ export default function App() {
               <Route
                 path="/onboarding"
                 element={
-                  <RequireSubscription>
+                  <RequireAuth>
                     <OnboardingPage />
-                  </RequireSubscription>
+                  </RequireAuth>
                 }
               />
 
