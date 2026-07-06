@@ -146,12 +146,27 @@ export default function Onboarding() {
     if (!validate()) return
 
     const payload = {
-      ...form,
-      countryIso2: selectedCountry.iso2,
+      businessName: form.businessName.trim(),
       phone: `${selectedCountry.dialCode} ${phoneNational}`.trim(),
+      location: `${locationCity}, ${locationState}`,
       locationState,
       locationCity,
-      location: `${locationCity}, ${locationState}`,
+      countryIso2: selectedCountry.iso2,
+
+      // Only include filled-in optional fields
+      ...(form.cacRegNo.trim() && { cacRegNo: form.cacRegNo.trim() }),
+      ...(form.taxId.trim() && { taxId: form.taxId.trim() }),
+      ...(form.numClients && { numClients: Number(form.numClients) }),
+      ...(form.numStaff && { numStaff: Number(form.numStaff) }),
+      ...(form.avgMonthlyIncome && { avgMonthlyIncome: Number(form.avgMonthlyIncome) }),
+      ...(form.deliveryStructure && { deliveryStructure: form.deliveryStructure }),
+      ...(form.instagram.trim() && { instagram: form.instagram.trim() }),
+      ...(form.twitter.trim() && { twitter: form.twitter.trim() }),
+      ...(form.facebook.trim() && { facebook: form.facebook.trim() }),
+      ...(form.tiktok.trim() && { tiktok: form.tiktok.trim() }),
+      ...(form.availableDays.length > 0 && { availableDays: form.availableDays }),
+      ...(form.openTime !== '08:00' && { openTime: form.openTime }),
+      ...(form.closeTime !== '18:00' && { closeTime: form.closeTime }),
     }
 
     try {
