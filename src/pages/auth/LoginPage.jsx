@@ -131,37 +131,26 @@ export default function LoginPage() {
     try {
       const authData = await loginRequest({ email, password })
 
-      // Save user and tokens in AuthContext
-      auth.login(authData.user, {
+      // Save user and tokens in AuthContext (also fetches real subscription)
+      await auth.login(authData.user, {
         accessToken: authData.accessToken,
         refreshToken: authData.refreshToken,
       })
 
-      // Determine post-login route: subscription → onboarding → business → dashboard
+      // Navigate to intended destination — RequireSubscription handles redirect
+      // to /subscribe if the subscription is not active.
       try {
-        // 1. Check subscription status
-        if (!auth.hasSubscription) {
-          navigate('/subscribe', { replace: true })
-          return
-        }
-
-        // 2. Check if business profile exists (fully set up)
-        try {
-          await onboardingApi.getProfile()
-          navigate(from, { replace: true })
-          return
-        } catch {
-          // No business profile — continue to check onboarding
-        }
-
-        // 3. Check onboarding status
         const statusData = await onboardingApi.checkStatus()
         const isOnboarded = statusData?.completed === true || statusData?.steps?.business === true
-
-        navigate(isOnboarded ? '/business-profile' : '/onboarding', { replace: true })
+        if (!isOnboarded) {
+          navigate('/onboarding', { replace: true })
+          return
+        }
       } catch {
-        navigate(from, { replace: true })
+        // onboarding check failed — proceed to destination
       }
+
+      navigate(from, { replace: true })
     } catch (err) {
       setError(err.message || 'Login failed. Please try again.')
     } finally {

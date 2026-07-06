@@ -17,10 +17,10 @@ export function RequireAuth({ children }) {
 
 // Requires an active subscription after login
 export function RequireSubscription({ children }) {
-  const { isAuthenticated, hasSubscription, loading } = useAuth()
+  const { isAuthenticated, hasSubscription, loading, subscriptionLoading } = useAuth()
   const location = useLocation()
 
-  if (loading) return <div className="auth-loading">Loading…</div>
+  if (loading || subscriptionLoading) return <div className="auth-loading">Loading…</div>
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />

@@ -1,4 +1,4 @@
-const API_BASE = 'https://back-end-whatsapp-pro.onrender.com/api/v1'
+import { API_BASE } from '../lib/apiConfig'
 
 function authHeaders() {
   const token = localStorage.getItem('accessToken')
@@ -85,6 +85,24 @@ export async function initializePayment(planId) {
   sessionStorage.setItem('pendingPaymentReference', reference || '')
 
   return { checkoutUrl, reference }
+}
+
+/**
+ * Fetch the current tenant's real subscription status from the backend.
+ * GET /billing/subscription
+ */
+export async function fetchSubscription() {
+  const token = localStorage.getItem('accessToken')
+  if (!token) return null
+
+  const res = await fetch(`${API_BASE}/billing/subscription`, {
+    headers: { accept: 'application/json', ...authHeaders() },
+  })
+
+  if (!res.ok) return null
+
+  const body = await res.json()
+  return body?.data ?? null
 }
 
 /**

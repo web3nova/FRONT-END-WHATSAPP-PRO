@@ -3,198 +3,105 @@ import {
   useContext,
   useState,
   useEffect,
+  useCallback,
 } from 'react'
+import { fetchSubscription } from '../api/billingApi'
 
 const AuthContext = createContext(null)
 
-const TRIAL_DAYS = 14
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [subscription, setSubscription] =
-    useState(null)
+  const [subscription, setSubscription] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false)
 
-  const [loading, setLoading] =
-    useState(true)
-
-  useEffect(() => {
+  // Fetch the real subscription from the backend and update state
+  const refreshSubscription = useCallback(async () => {
+    setSubscriptionLoading(true)
     try {
-      // Restore user session
-      const storedUser =
-        localStorage.getItem('user')
-
-      const storedSubscription =
-        localStorage.getItem(
-          'subscription'
-        )
-
-      const accessToken =
-        localStorage.getItem(
-          'accessToken'
-        )
-
-      if (
-        storedUser &&
-        accessToken
-      ) {
-        setUser(
-          JSON.parse(
-            storedUser
-          )
-        )
+      const sub = await fetchSubscription()
+      setSubscription(sub)
+      if (sub) {
+        localStorage.setItem('subscription', JSON.stringify(sub))
+      } else {
+        localStorage.removeItem('subscription')
       }
-
-      if (
-        storedSubscription
-      ) {
-        setSubscription(
-          JSON.parse(
-            storedSubscription
-          )
-        )
-      }
-    } catch (error) {
-      console.error(
-        'Error restoring session:',
-        error
-      )
-
-      // Clear corrupted storage
-      localStorage.removeItem(
-        'user'
-      )
-
-      localStorage.removeItem(
-        'subscription'
-      )
-
-      localStorage.removeItem(
-        'accessToken'
-      )
-
-      localStorage.removeItem(
-        'refreshToken'
-      )
+    } catch {
+      // non-fatal — leave existing subscription state as-is
     } finally {
-      setLoading(false)
+      setSubscriptionLoading(false)
     }
   }, [])
 
-  // Store authenticated user + tokens.
-  // `tokens` is optional so existing callers that only pass userData don't break,
-  // but the billing API requires accessToken to be set or every authenticated
-  // request (including initializePayment) will go out unauthenticated/fail.
-  const login = (userData, tokens = {}) => {
-    setUser(userData)
+  // Restore session on mount, then fetch real subscription from backend
+  useEffect(() => {
+    try {
+      const storedUser = localStorage.getItem('user')
+      const accessToken = localStorage.getItem('accessToken')
 
-    localStorage.setItem(
-      'user',
-      JSON.stringify(
-        userData
-      )
-    )
+      if (storedUser && accessToken) {
+        setUser(JSON.parse(storedUser))
+      } else {
+        setLoading(false)
+        return
+      }
+    } catch {
+      localStorage.removeItem('user')
+      localStorage.removeItem('subscription')
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('refreshToken')
+      setLoading(false)
+      return
+    }
+
+    setLoading(false)
+    // Fetch real subscription state from backend (replaces stale localStorage value)
+    refreshSubscription()
+  }, [refreshSubscription])
+
+  // Store authenticated user + tokens, then immediately fetch real subscription
+  const login = useCallback(async (userData, tokens = {}) => {
+    setUser(userData)
+    localStorage.setItem('user', JSON.stringify(userData))
 
     const resolvedAccessToken = tokens.accessToken || tokens.token || tokens.access_token || tokens.jwt
     const resolvedRefreshToken = tokens.refreshToken || tokens.refresh_token
 
-    if (resolvedAccessToken) {
-      localStorage.setItem('accessToken', resolvedAccessToken)
-    }
+    if (resolvedAccessToken) localStorage.setItem('accessToken', resolvedAccessToken)
+    if (resolvedRefreshToken) localStorage.setItem('refreshToken', resolvedRefreshToken)
 
-    if (resolvedRefreshToken) {
-      localStorage.setItem('refreshToken', resolvedRefreshToken)
-    }
-  }
+    // Fetch real subscription immediately after login
+    await refreshSubscription()
+  }, [refreshSubscription])
 
-  // Update user data later if needed
-  const updateUser = (
-    updatedData
-  ) => {
-    const updatedUser = {
-      ...user,
-      ...updatedData,
-    }
-
+  const updateUser = useCallback((updatedData) => {
+    const updatedUser = { ...user, ...updatedData }
     setUser(updatedUser)
+    localStorage.setItem('user', JSON.stringify(updatedUser))
+  }, [user])
 
-    localStorage.setItem(
-      'user',
-      JSON.stringify(
-        updatedUser
-      )
-    )
-  }
-
-  // Logout user
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null)
     setSubscription(null)
+    localStorage.removeItem('user')
+    localStorage.removeItem('subscription')
+    localStorage.removeItem('accessToken')
+    localStorage.removeItem('refreshToken')
+  }, [])
 
-    localStorage.removeItem(
-      'user'
-    )
+  // Keep selectPlan for after a successful Monnify payment — refreshes from backend
+  const selectPlan = useCallback(async () => {
+    await refreshSubscription()
+  }, [refreshSubscription])
 
-    localStorage.removeItem(
-      'subscription'
-    )
+  // startFreeTrial is now a no-op alias for refreshSubscription.
+  // The backend already created the trial on register — just sync state.
+  const startFreeTrial = useCallback(async () => {
+    await refreshSubscription()
+    return subscription
+  }, [refreshSubscription, subscription])
 
-    localStorage.removeItem(
-      'accessToken'
-    )
-
-    localStorage.removeItem(
-      'refreshToken'
-    )
-  }
-
-  // Subscription management (paid plan, confirmed via checkout + webhook)
-  const selectPlan = (
-    plan
-  ) => {
-    const sub = {
-      plan,
-      startDate:
-        new Date().toISOString(),
-      status: 'active',
-    }
-
-    setSubscription(sub)
-
-    localStorage.setItem(
-      'subscription',
-      JSON.stringify(sub)
-    )
-  }
-
-  // ⚠️ CLIENT-ONLY TRIAL — there is no backend trial endpoint yet.
-  // This only sets local/localStorage state. It is NOT enforced server-side,
-  // so anyone who edits localStorage can grant themselves a trial or extend
-  // an expired one, and a trial started here is invisible to the backend
-  // (e.g. it won't show up if you build an admin view of subscriptions later).
-  // Replace the body of this function with a real API call as soon as a
-  // POST /billing/trial (or similar) endpoint exists, and keep the local
-  // state update for instant UI feedback.
-  const startFreeTrial = async () => {
-    const now = new Date()
-    const expiresAt = new Date(now)
-    expiresAt.setDate(expiresAt.getDate() + TRIAL_DAYS)
-
-    const sub = {
-      plan: 'trial',
-      status: 'trial',
-      startDate: now.toISOString(),
-      expiresAt: expiresAt.toISOString(),
-    }
-
-    setSubscription(sub)
-
-    localStorage.setItem(
-      'subscription',
-      JSON.stringify(sub)
-    )
-
-    return sub
-  }
+  const isActive = subscription?.isActive === true
 
   return (
     <AuthContext.Provider
@@ -202,18 +109,17 @@ export function AuthProvider({ children }) {
         user,
         subscription,
         loading,
+        subscriptionLoading,
 
         login,
         logout,
         updateUser,
         selectPlan,
         startFreeTrial,
+        refreshSubscription,
 
-        isAuthenticated:
-          !!user,
-
-        hasSubscription:
-          !!subscription,
+        isAuthenticated: !!user,
+        hasSubscription: isActive,
       }}
     >
       {children}
