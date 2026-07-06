@@ -145,9 +145,10 @@ export default function Onboarding() {
   const handleSubmit = async () => {
     if (!validate()) return
 
+    const rawPhone = `${selectedCountry.dialCode}${phoneNational}`.replace(/\s+/g, '')
     const payload = {
       businessName: form.businessName.trim(),
-      phone: `${selectedCountry.dialCode} ${phoneNational}`.trim(),
+      phone: rawPhone,
       location: `${locationCity}, ${locationState}`,
       locationState,
       locationCity,
@@ -172,8 +173,8 @@ export default function Onboarding() {
     try {
       await createProfile(payload)
       navigate('/business-profile', { replace: true })
-    } catch {
-      // error is surfaced via apiError from the hook
+    } catch (err) {
+      console.error('Onboarding submit failed:', err)
     }
   }
 
