@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useLogin } from '../../hooks/useLogin'
-import { API_BASE } from '../../lib/apiConfig'
+import onboardingApi from '../../services/onboardingService'
 import BizBackground from '../../components/BizBackground'
 import './Auth.css'
 
@@ -137,25 +137,26 @@ export default function LoginPage() {
         refreshToken: authData.refreshToken,
       })
 
-      // Determine post-login route based on onboarding + business profile status
-      const token = authData.accessToken
-
+      // Determine post-login route: subscription → onboarding → business → dashboard
       try {
-        // Check if business profile exists first (most reliable completion indicator)
-        const bizRes = await fetch(`${API_BASE}/business`, {
-          headers: { Authorization: `Bearer ${token}`, accept: 'application/json' },
-        })
-        if (bizRes.ok) {
-          navigate(from, { replace: true })
+        // 1. Check subscription status
+        if (!auth.hasSubscription) {
+          navigate('/subscribe', { replace: true })
           return
         }
 
-        // No business profile — check onboarding status to decide where to send them
-        const statusRes = await fetch(`${API_BASE}/onboarding/status`, {
-          headers: { Authorization: `Bearer ${token}`, accept: 'application/json' },
-        })
-        const statusData = await statusRes.json()
-        const isOnboarded = statusData?.data?.completed === true || statusData?.data?.steps?.business === true
+        // 2. Check if business profile exists (fully set up)
+        try {
+          await onboardingApi.getProfile()
+          navigate(from, { replace: true })
+          return
+        } catch {
+          // No business profile — continue to check onboarding
+        }
+
+        // 3. Check onboarding status
+        const statusData = await onboardingApi.checkStatus()
+        const isOnboarded = statusData?.completed === true || statusData?.steps?.business === true
 
         navigate(isOnboarded ? '/business-profile' : '/onboarding', { replace: true })
       } catch {

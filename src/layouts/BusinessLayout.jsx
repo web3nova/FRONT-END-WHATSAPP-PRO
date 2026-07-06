@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom'
-import { API_BASE } from '../lib/apiConfig'
-import { getStoredAccessToken } from '../lib/auth'
+import onboardingApi from '../services/onboardingService'
 import {
   LayoutDashboard, ShoppingBag, Package, Users, MessageCircle,
   Globe, BarChart3, BookOpen, Settings, Bell, Search, Zap, ExternalLink, Menu, X
@@ -29,26 +28,20 @@ export default function BusinessLayout() {
 
   useEffect(() => {
     let cancelled = false
-    const token = getStoredAccessToken()
-    if (!token) return
 
     async function check() {
       try {
         // Business profile exists → fully set up, let them through
-        const bizRes = await fetch(`${API_BASE}/business`, {
-          headers: { Authorization: `Bearer ${token}`, accept: 'application/json' },
-        })
-        if (bizRes.ok) {
-          if (!cancelled) setChecking(false)
-          return
-        }
-
+        await onboardingApi.getProfile()
+        if (!cancelled) setChecking(false)
+        return
+      } catch {
         // No business profile — check onboarding to decide where to send them
-        const statusRes = await fetch(`${API_BASE}/onboarding/status`, {
-          headers: { Authorization: `Bearer ${token}`, accept: 'application/json' },
-        })
-        const statusData = await statusRes.json()
-        const isOnboarded = statusData?.data?.completed === true || statusData?.data?.steps?.business === true
+      }
+
+      try {
+        const statusData = await onboardingApi.checkStatus()
+        const isOnboarded = statusData?.completed === true || statusData?.steps?.business === true
 
         if (!cancelled) {
           navigate(isOnboarded ? '/business-profile' : '/onboarding', { replace: true })
