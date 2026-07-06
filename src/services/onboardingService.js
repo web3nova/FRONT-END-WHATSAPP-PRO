@@ -33,6 +33,7 @@ async function request(method, path, options = {}) {
   if (!res.ok) {
     const message = data?.message || data?.error || `Request failed (${res.status})`
     const fieldErrors = data?.errors?.fieldErrors || data?.details?.fieldErrors
+    console.error(`API ${method} ${path} ${res.status}:`, { body, response: data })
     throw new OnboardingApiError(message, res.status, fieldErrors)
   }
 
