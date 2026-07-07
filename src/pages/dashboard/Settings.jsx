@@ -4,6 +4,7 @@ import {
   ToggleLeft, ToggleRight, Eye, EyeOff, Loader2, Upload, AlertCircle, X, Save
 } from 'lucide-react'
 import { useBusinessProfile } from '../../hooks/useBusinessProfile'
+import { useAuth } from '../../context/AuthContext'
 import { fetchWhatsappBusinessProfile, updateWhatsappBusinessProfile } from '../../api/whatsappApi'
 
 const PRIMARY = '#4166F5'
@@ -18,11 +19,6 @@ const tabs = [
   { id: 'billing', label: 'Billing & Plan', icon: CreditCard },
 ]
 
-const teamMembers = [
-  { name: 'Adaeze Okafor', email: 'adaeze@styleedits.com', role: 'Owner', avatar: 'AO' },
-  { name: 'Tunde Bakare', email: 'tunde@styleedits.com', role: 'Staff', avatar: 'TB' },
-  { name: 'Ngozi Eze', email: 'ngozi@styleedits.com', role: 'Staff', avatar: 'NE' },
-]
 
 function Toggle({ on, onToggle, label }) {
   return (
@@ -233,6 +229,7 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
 
 export default function Settings() {
   const { getProfile, saveProfile, updateProfile, uploadLogo } = useBusinessProfile()
+  const { user } = useAuth()
 
   const [activeTab, setActiveTab] = useState('profile')
   const [showKey, setShowKey] = useState(false)
@@ -542,41 +539,39 @@ export default function Settings() {
             <div className="space-y-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <h2 className="font-semibold text-gray-900">Team Members</h2>
-                <button className="flex items-center justify-center gap-2 text-sm font-semibold text-white px-4 py-2.5 sm:py-2 rounded-xl hover:opacity-90 w-full sm:w-auto" style={{ background: PRIMARY }}>
+                <button
+                  disabled
+                  title="Team invitations coming soon"
+                  className="flex items-center justify-center gap-2 text-sm font-semibold text-white px-4 py-2.5 sm:py-2 rounded-xl opacity-50 cursor-not-allowed w-full sm:w-auto"
+                  style={{ background: PRIMARY }}
+                >
                   <Plus size={14} /> Invite Member
                 </button>
               </div>
               <div className="space-y-3">
-                {teamMembers.map(m => (
-                  <div key={m.email} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-2xl border border-gray-100">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ background: PRIMARY }}>
-                        {m.avatar}
+                {/* Only the account owner — team management coming soon */}
+                {user && (() => {
+                  const name = user.name || user.email || 'Account Owner'
+                  const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+                  return (
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-2xl border border-gray-100">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ background: PRIMARY }}>
+                          {initials}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium text-gray-900 truncate">{name}</div>
+                          <div className="text-xs text-gray-400 truncate">{user.email}</div>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-gray-900 truncate">{m.name}</div>
-                        <div className="text-xs text-gray-400 truncate">{m.email}</div>
+                      <div className="flex items-center gap-3 flex-shrink-0 pl-12 sm:pl-0">
+                        <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-gray-100 text-gray-500">Owner</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 flex-shrink-0 pl-12 sm:pl-0">
-                      <select
-                        defaultValue={m.role}
-                        disabled={m.role === 'Owner'}
-                        className="text-xs font-medium border border-gray-200 rounded-lg px-2 py-2 sm:py-1.5 bg-gray-50 focus:outline-none disabled:opacity-60 flex-1 sm:flex-initial"
-                      >
-                        <option>Owner</option>
-                        <option>Staff</option>
-                        <option>Viewer</option>
-                      </select>
-                      {m.role !== 'Owner' && (
-                        <button aria-label={`Remove ${m.name}`} className="p-2 sm:p-1.5 text-gray-300 hover:text-red-400 transition flex-shrink-0">
-                          <Trash2 size={14} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  )
+                })()}
               </div>
+              <p className="text-xs text-gray-400 text-center pt-2">Team invitations and role management coming soon</p>
             </div>
           )}
 
