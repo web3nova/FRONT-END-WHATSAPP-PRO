@@ -31,6 +31,37 @@ export default function StorefrontPage() {
     return () => { ignore = true }
   }, [tenantId])
 
+  // Inject SEO meta tags into <head> once data is loaded.
+  // Must run before the loading/error early returns below — hooks can't be conditional.
+  useEffect(() => {
+    if (!data) return
+    const business = data?.business || {}
+    const settings = data?.settings || {}
+    const domain = data?.tenant?.domain || ''
+    const seo = settings?.seo || {}
+    const appName = import.meta.env.VITE_APP_NAME || 'Web3nova'
+
+    const title = seo.title || business.displayName || appName
+    document.title = title
+
+    const setMeta = (name, content, prop = false) => {
+      if (!content) return
+      const attr = prop ? 'property' : 'name'
+      let tag = document.querySelector(`meta[${attr}="${name}"]`)
+      if (!tag) { tag = document.createElement('meta'); tag.setAttribute(attr, name); document.head.appendChild(tag) }
+      tag.content = content
+    }
+
+    setMeta('description', seo.description || business.description || `Shop ${title}`)
+    setMeta('og:title', title, true)
+    setMeta('og:description', seo.description || business.description, true)
+    setMeta('og:image', seo.ogImage || business.logoUrl, true)
+    setMeta('og:type', 'website', true)
+    if (domain) setMeta('og:url', `https://${domain}`, true)
+
+    return () => { document.title = appName }
+  }, [data])
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -66,33 +97,6 @@ export default function StorefrontPage() {
   const products = data?.products || []
   const whatsapp = business?.whatsappNumber || ''
   const domain = data?.tenant?.domain || ''
-
-  // Inject SEO meta tags into <head> once data is loaded
-  useEffect(() => {
-    if (!data) return
-    const seo = settings?.seo || {}
-    const appName = import.meta.env.VITE_APP_NAME || 'Web3nova'
-
-    const title = seo.title || business.displayName || appName
-    document.title = title
-
-    const setMeta = (name, content, prop = false) => {
-      if (!content) return
-      const attr = prop ? 'property' : 'name'
-      let tag = document.querySelector(`meta[${attr}="${name}"]`)
-      if (!tag) { tag = document.createElement('meta'); tag.setAttribute(attr, name); document.head.appendChild(tag) }
-      tag.content = content
-    }
-
-    setMeta('description', seo.description || business.description || `Shop ${title}`)
-    setMeta('og:title', title, true)
-    setMeta('og:description', seo.description || business.description, true)
-    setMeta('og:image', seo.ogImage || business.logoUrl, true)
-    setMeta('og:type', 'website', true)
-    if (domain) setMeta('og:url', `https://${domain}`, true)
-
-    return () => { document.title = appName }
-  }, [data, business, settings, domain])
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
