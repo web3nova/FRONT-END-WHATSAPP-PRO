@@ -1,45 +1,16 @@
 import { useState, useEffect } from 'react'
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar
-} from 'recharts'
-import {
-  Users, ShoppingBag, DollarSign, Globe, MessageCircle,
-  TrendingUp, Package, ArrowRight, Bot, FileText
-} from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { Users, ShoppingBag, DollarSign, Globe, MessageCircle, TrendingUp, Package, ArrowRight, Bot, FileText, BarChart2 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { listCustomers } from '../../api/customersApi'
 import { listOrders } from '../../api/ordersApi'
 import { listConversations } from '../../api/conversationsApi'
 import { listQuotes } from '../../api/quotesApi'
+import { API_BASE } from '../../lib/apiConfig'
 
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
 const BLUE_LIGHT = '#dce5fd'
-
-// Charts stay illustrative — backend has no time-series analytics endpoint
-const monthlyData = [
-  { month: 'Jan', revenue: 1800, orders: 42 },
-  { month: 'Feb', revenue: 2400, orders: 58 },
-  { month: 'Mar', revenue: 3100, orders: 71 },
-  { month: 'Apr', revenue: 2800, orders: 65 },
-  { month: 'May', revenue: 4200, orders: 98 },
-  { month: 'Jun', revenue: 5100, orders: 112 },
-]
-
-const customerSources = [
-  { name: 'WhatsApp', value: 64, color: PRIMARY },
-  { name: 'Website',  value: 22, color: '#7b96f8' },
-  { name: 'Referral', value: 9,  color: '#1e3fc2' },
-  { name: 'Direct',   value: 5,  color: '#c7d2fb' },
-]
-
-const topProducts = [
-  { name: 'Corset Dress',  sales: 52, revenue: 4160000 },
-  { name: 'Bridal Gown',   sales: 38, revenue: 2280000 },
-  { name: 'Native Attire', sales: 41, revenue: 1640000 },
-  { name: 'Senator Wear',  sales: 29, revenue: 1450000 },
-]
 
 const ORDER_STATUS = {
   pending:   { label: 'Pending',   bg: '#FEF3C7', color: '#D97706' },
@@ -121,6 +92,16 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 const avatarColors = [PRIMARY, '#1e3fc2', '#7b96f8', '#4166F5', '#2952d9', '#3457e8']
 
+function EmptyPanel({ title, subtitle, height = 210 }) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 text-center" style={{ height }}>
+      <BarChart2 size={22} className="text-gray-200 mb-2" />
+      <div className="text-xs font-medium text-gray-400">{title}</div>
+      {subtitle && <div className="text-xs text-gray-300 mt-0.5">{subtitle}</div>}
+    </div>
+  )
+}
+
 export default function BusinessOverview() {
   const { user } = useAuth()
   const businessName = user?.businessName || user?.name || user?.email || 'your business'
@@ -130,19 +111,24 @@ export default function BusinessOverview() {
   const [recentOrders, setRecentOrders] = useState([])
   const [recentChats, setRecentChats] = useState([])
   const [recentQuotes, setRecentQuotes] = useState([])
+  const [topProducts, setTopProducts] = useState([])
+  const [topProductChart, setTopProductChart] = useState([])
 
   useEffect(() => {
     let ignore = false
+    const token = localStorage.getItem('accessToken')
+    const headers = { accept: 'application/json', Authorization: `Bearer ${token}` }
     const monthStart = new Date()
     monthStart.setDate(1)
     monthStart.setHours(0, 0, 0, 0)
 
     Promise.all([
       listCustomers({ limit: 1 }),
-      listOrders({ limit: 100 }),
+      listOrders({ limit: 200 }),
       listConversations({ limit: 4 }),
       listQuotes({ limit: 3 }),
-    ]).then(([custRes, ordRes, convRes, quoteRes]) => {
+      fetch(`${API_BASE}/products?limit=100&sort=sortOrder`, { headers }).then(r => r.json()).catch(() => ({ data: [] })),
+    ]).then(([custRes, ordRes, convRes, quoteRes, prodRes]) => {
       if (ignore) return
 
       const allOrders = ordRes.data
@@ -158,9 +144,38 @@ export default function BusinessOverview() {
       setRecentOrders(allOrders.slice(0, 5))
       setRecentChats(convRes.data)
       setRecentQuotes(quoteRes.data.slice(0, 3))
-    }).catch(() => {
-      // silently fail — page renders with zeroes
-    }).finally(() => {
+
+      // Compute top products by order frequency
+      const prodCounts = {}
+      allOrders.forEach(o => {
+        (o.items || []).forEach(item => {
+          const id = item.productId || item.name || 'unknown'
+          const name = item.name || item.productName || 'Unknown'
+          if (!prodCounts[id]) prodCounts[id] = { name, sales: 0, revenue: 0 }
+          prodCounts[id].sales += item.quantity || 1
+          prodCounts[id].revenue += (item.priceMinor || 0) * (item.quantity || 1)
+        })
+      })
+
+      // If no order-derived product data, fall back to catalog
+      const sortedByOrders = Object.values(prodCounts).sort((a, b) => b.sales - a.sales).slice(0, 4)
+      if (sortedByOrders.length > 0) {
+        setTopProducts(sortedByOrders)
+        setTopProductChart(sortedByOrders.map(p => ({
+          name: p.name.length > 12 ? p.name.slice(0, 11) + '…' : p.name,
+          revenue: Math.round(p.revenue / 100),
+        })))
+      } else {
+        // fall back to catalog products (no sales data yet)
+        const catalog = (prodRes.data ?? []).slice(0, 4).map(p => ({
+          name: p.name,
+          sales: 0,
+          revenue: 0,
+        }))
+        setTopProducts(catalog)
+        setTopProductChart([])
+      }
+    }).catch(() => {}).finally(() => {
       if (!ignore) setLoading(false)
     })
 
@@ -202,43 +217,11 @@ export default function BusinessOverview() {
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100 min-w-0 overflow-hidden">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h2 className="font-semibold text-gray-900">Revenue & Orders Trend</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Illustrative monthly overview</p>
-            </div>
-            <div className="flex items-center gap-4 text-xs">
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-0.5 rounded-full" style={{ background: PRIMARY }}></div>
-                <span className="text-gray-400">Revenue (₦K)</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-0.5 rounded-full" style={{ background: BLUE_LIGHT }}></div>
-                <span className="text-gray-400">Orders</span>
-              </div>
-            </div>
+          <div className="mb-5">
+            <h2 className="font-semibold text-gray-900">Revenue & Orders Trend</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Monthly time-series data coming soon</p>
           </div>
-          <ResponsiveContainer width="100%" height={210}>
-            <AreaChart data={monthlyData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-              <defs>
-                <linearGradient id="revGrad2" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={PRIMARY} stopOpacity={0.15} />
-                  <stop offset="95%" stopColor={PRIMARY} stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="ordGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#7b96f8" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#7b96f8" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <YAxis yAxisId="left"  tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <Tooltip content={<CustomTooltip />} />
-              <Area yAxisId="left"  type="monotone" dataKey="revenue" name="Revenue (₦K)" stroke={PRIMARY}   strokeWidth={2.5} fill="url(#revGrad2)" dot={false} activeDot={{ r: 5, fill: PRIMARY,   strokeWidth: 0 }} />
-              <Area yAxisId="right" type="monotone" dataKey="orders"  name="Orders"       stroke="#7b96f8" strokeWidth={2}   fill="url(#ordGrad)"  dot={false} activeDot={{ r: 4, fill: '#7b96f8', strokeWidth: 0 }} />
-            </AreaChart>
-          </ResponsiveContainer>
+          <EmptyPanel title="Revenue trend will appear here" subtitle="Requires time-series analytics endpoint" height={210} />
         </div>
 
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 min-w-0 overflow-hidden">
@@ -246,24 +229,15 @@ export default function BusinessOverview() {
             <h2 className="font-semibold text-gray-900">Customer Sources</h2>
             <p className="text-xs text-gray-400 mt-0.5">Where your customers come from</p>
           </div>
-          <ResponsiveContainer width="100%" height={155}>
-            <PieChart>
-              <Pie data={customerSources} cx="50%" cy="50%" innerRadius={50} outerRadius={72} paddingAngle={3} dataKey="value">
-                {customerSources.map((entry, i) => (
-                  <Cell key={i} fill={entry.color} strokeWidth={0} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(val) => [`${val}%`, 'Share']} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="space-y-2 mt-1">
-            {customerSources.map(s => (
-              <div key={s.name} className="flex items-center justify-between">
+          <EmptyPanel title="Source analytics coming soon" height={155} />
+          <div className="space-y-2 mt-3">
+            {['WhatsApp', 'Website', 'Referral', 'Direct'].map(s => (
+              <div key={s} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-sm" style={{ background: s.color }}></div>
-                  <span className="text-sm text-gray-500">{s.name}</span>
+                  <div className="w-2.5 h-2.5 rounded-sm bg-gray-200"></div>
+                  <span className="text-sm text-gray-400">{s}</span>
                 </div>
-                <span className="text-sm font-semibold text-gray-900">{s.value}%</span>
+                <span className="text-sm text-gray-300">—</span>
               </div>
             ))}
           </div>
@@ -380,32 +354,39 @@ export default function BusinessOverview() {
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="font-semibold text-gray-900">Top Products by Revenue</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Illustrative monthly performance</p>
+              <p className="text-xs text-gray-400 mt-0.5">Based on your order history</p>
             </div>
-            <button className="text-sm font-semibold flex items-center gap-1 hover:opacity-70 transition" style={{ color: PRIMARY }}>
-              Manage <ArrowRight size={13} />
-            </button>
           </div>
-          <ResponsiveContainer width="100%" height={160}>
-            <BarChart data={topProducts} barSize={32} margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `₦${(v / 1000000).toFixed(1)}M`} />
-              <Tooltip formatter={v => [`₦${v.toLocaleString()}`, 'Revenue']} />
-              <Bar dataKey="revenue" fill={PRIMARY} radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
-            {topProducts.map(p => (
-              <div key={p.name} className="rounded-xl p-3 border border-gray-100 hover:border-blue-100 transition-colors">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center mb-2" style={{ background: CREAM }}>
-                  <Package size={14} style={{ color: PRIMARY }} />
+          {loading ? (
+            <EmptyPanel title="Loading…" height={160} />
+          ) : topProductChart.length > 0 ? (
+            <ResponsiveContainer width="100%" height={160}>
+              <BarChart data={topProductChart} barSize={32} margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `₦${v.toLocaleString()}`} />
+                <Tooltip formatter={v => [`₦${v.toLocaleString()}`, 'Revenue']} />
+                <Bar dataKey="revenue" fill={PRIMARY} radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyPanel title="No sales data yet" subtitle="Revenue will appear as orders come in" height={160} />
+          )}
+          {topProducts.length > 0 ? (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
+              {topProducts.map(p => (
+                <div key={p.name} className="rounded-xl p-3 border border-gray-100 hover:border-blue-100 transition-colors">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center mb-2" style={{ background: CREAM }}>
+                    <Package size={14} style={{ color: PRIMARY }} />
+                  </div>
+                  <div className="text-xs font-semibold text-gray-800 mb-0.5 truncate">{p.name}</div>
+                  <div className="text-xs text-gray-400">{p.sales > 0 ? `${p.sales} sold` : 'No sales yet'}</div>
                 </div>
-                <div className="text-xs font-semibold text-gray-800 mb-0.5">{p.name}</div>
-                <div className="text-xs text-gray-400">{p.sales} sold</div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : !loading && (
+            <p className="text-xs text-gray-400 text-center mt-4">Add products to your catalog to see them here</p>
+          )}
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">

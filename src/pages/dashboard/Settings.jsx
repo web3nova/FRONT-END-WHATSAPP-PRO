@@ -229,7 +229,7 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
 
 export default function Settings() {
   const { getProfile, saveProfile, updateProfile, uploadLogo } = useBusinessProfile()
-  const { user } = useAuth()
+  const { user, subscription } = useAuth()
 
   const [activeTab, setActiveTab] = useState('profile')
   const [showKey, setShowKey] = useState(false)
@@ -492,7 +492,7 @@ export default function Settings() {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5">AI Persona Name</label>
-                <input defaultValue="Style Assistant" className="w-full px-4 py-3 sm:py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none bg-gray-50" />
+                <input placeholder="e.g. Sales Assistant" className="w-full px-4 py-3 sm:py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none bg-gray-50" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5">Tone of Voice</label>
@@ -521,7 +521,7 @@ export default function Settings() {
                   <div className="relative flex-1 min-w-0">
                     <input
                       type={showKey ? 'text' : 'password'}
-                      defaultValue="sk-proj-xxxxxxxxxxxxxxxxxxxx"
+                      placeholder="Enter your API key"
                       className="w-full px-4 py-3 sm:py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none pr-10"
                     />
                     <button onClick={() => setShowKey(v => !v)} aria-label={showKey ? 'Hide API key' : 'Show API key'} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 p-1">
@@ -595,55 +595,53 @@ export default function Settings() {
           )}
 
           {/* Billing */}
-          {activeTab === 'billing' && (
-            <div className="space-y-5">
-              <h2 className="font-semibold text-gray-900">Billing & Plan</h2>
-              <div className="rounded-2xl p-4 sm:p-5 border-2" style={{ borderColor: PRIMARY, background: '#dce5fd' }}>
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
-                  <div>
-                    <div className="text-lg font-bold text-gray-900">Pro Plan</div>
-                    <div className="text-sm text-gray-500">₦15,000 / month · Renews July 24, 2026</div>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs font-semibold flex-shrink-0" style={{ color: PRIMARY }}>
-                    <Check size={14} /> Active
-                  </div>
-                </div>
-                <div className="space-y-1.5 text-sm text-gray-600">
-                  {['5,000 AI messages/month', '1 WhatsApp number', 'Custom website', 'Priority support'].map(f => (
-                    <div key={f} className="flex items-center gap-2">
-                      <Check size={13} className="flex-shrink-0" style={{ color: PRIMARY }} /> {f}
+          {activeTab === 'billing' && (() => {
+            const isTrial = subscription?.status === 'TRIAL'
+            const isActive = subscription?.isActive === true
+            const planLabel = isTrial ? 'Free Trial' : isActive ? 'Active Plan' : subscription?.status || 'No active plan'
+            const trialEnd = subscription?.trialEndsAt
+              ? new Date(subscription.trialEndsAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+              : null
+            return (
+              <div className="space-y-5">
+                <h2 className="font-semibold text-gray-900">Billing & Plan</h2>
+                <div className="rounded-2xl p-4 sm:p-5 border-2" style={{ borderColor: PRIMARY, background: '#dce5fd' }}>
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
+                    <div>
+                      <div className="text-lg font-bold text-gray-900">{planLabel}</div>
+                      {isTrial && trialEnd && (
+                        <div className="text-sm text-gray-500">Free trial · Expires {trialEnd}</div>
+                      )}
+                      {!isTrial && !isActive && (
+                        <div className="text-sm text-red-500">No active subscription</div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <div className="flex items-center justify-between text-sm mb-2 gap-2">
-                  <span className="font-medium text-gray-700">AI Messages Used</span>
-                  <span className="font-semibold text-gray-900 flex-shrink-0">2,400 / 5,000</span>
-                </div>
-                <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: '48%', background: PRIMARY }}></div>
-                </div>
-                <div className="text-xs text-gray-400 mt-1">48% used · 2,600 remaining this month</div>
-              </div>
-              <div className="rounded-2xl p-4 border border-gray-100 bg-gray-50">
-                <div className="font-semibold text-gray-900 mb-0.5">Enterprise Plan</div>
-                <div className="text-xs text-gray-400 mb-3">Unlimited AI messages · Multiple WhatsApp numbers · Dedicated support</div>
-                <button className="text-sm font-semibold text-white px-4 py-2.5 sm:py-2 rounded-xl hover:opacity-90 w-full sm:w-auto" style={{ background: PRIMARY }}>
-                  Upgrade to Enterprise
-                </button>
-              </div>
-              <div>
-                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Payment History</div>
-                {['Jun 24, 2026', 'May 24, 2026', 'Apr 24, 2026'].map(d => (
-                  <div key={d} className="flex items-center justify-between gap-3 py-2.5 border-b border-gray-100">
-                    <span className="text-sm text-gray-600 truncate">Pro Plan · {d}</span>
-                    <span className="text-sm font-semibold text-gray-900 flex-shrink-0">₦15,000</span>
+                    <div className="flex items-center gap-1.5 text-xs font-semibold flex-shrink-0" style={{ color: isActive ? PRIMARY : '#9ca3af' }}>
+                      <Check size={14} /> {isActive ? 'Active' : 'Inactive'}
+                    </div>
                   </div>
-                ))}
+                  <div className="space-y-1.5 text-sm text-gray-600">
+                    {['AI-powered WhatsApp replies', '1 WhatsApp number', 'Custom website builder', 'Order & quote management'].map(f => (
+                      <div key={f} className="flex items-center gap-2">
+                        <Check size={13} className="flex-shrink-0" style={{ color: PRIMARY }} /> {f}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-2xl p-4 border border-gray-100 bg-gray-50">
+                  <div className="font-semibold text-gray-900 mb-0.5">Upgrade to Pro</div>
+                  <div className="text-xs text-gray-400 mb-3">Unlimited AI messages · Multiple WhatsApp numbers · Priority support</div>
+                  <button className="text-sm font-semibold text-white px-4 py-2.5 sm:py-2 rounded-xl hover:opacity-90 w-full sm:w-auto" style={{ background: PRIMARY }}>
+                    View Plans
+                  </button>
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Payment History</div>
+                  <div className="py-6 text-center text-sm text-gray-400">No payment history yet</div>
+                </div>
               </div>
-            </div>
-          )}
+            )
+          })()}
 
         </div>
       </div>
