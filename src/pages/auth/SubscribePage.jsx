@@ -139,7 +139,7 @@ export default function SubscribePage() {
       if (typeof startFreeTrial === 'function') {
         await startFreeTrial()
       }
-      navigate('/onboarding')
+      navigate('/dashboard')
     } catch (err) {
       setSelectError(err.message || 'Could not start your free trial. Please try again.')
     } finally {
