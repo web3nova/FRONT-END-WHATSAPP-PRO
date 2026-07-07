@@ -5,7 +5,7 @@ import {
   useEffect,
   useCallback,
 } from 'react'
-import { fetchSubscription } from '../api/billingApi'
+import { fetchSubscription, activateTrial } from '../api/billingApi'
 
 const AuthContext = createContext(null)
 
@@ -96,11 +96,14 @@ export function AuthProvider({ children }) {
     await refreshSubscription()
   }, [refreshSubscription])
 
-  // startFreeTrial syncs the trial subscription from the backend and returns it.
-  // The backend already created the trial on register — we just need to fetch it.
+  // startFreeTrial activates (or resets) the trial via the backend, then syncs state.
   const startFreeTrial = useCallback(async () => {
-    return refreshSubscription()
-  }, [refreshSubscription])
+    const sub = await activateTrial()
+    setSubscription(sub)
+    if (sub) localStorage.setItem('subscription', JSON.stringify(sub))
+    else localStorage.removeItem('subscription')
+    return sub
+  }, [])
 
   const isActive = subscription?.isActive === true
 

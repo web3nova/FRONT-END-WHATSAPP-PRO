@@ -106,6 +106,25 @@ export async function fetchSubscription() {
 }
 
 /**
+ * Activate (or reset) the free trial for the current tenant.
+ * POST /billing/trial
+ * Returns the updated subscription object with isActive: true on success.
+ */
+export async function activateTrial() {
+  const token = localStorage.getItem('accessToken')
+  if (!token) throw new Error('Not authenticated')
+
+  const res = await fetch(`${API_BASE}/billing/trial`, {
+    method: 'POST',
+    headers: { accept: 'application/json', ...authHeaders() },
+  })
+
+  const body = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(body?.message || 'Could not activate trial')
+  return body?.data ?? null
+}
+
+/**
  * ⚠️ NOT YET BACKED BY A REAL ENDPOINT.
  *
  * There is currently no confirmed GET /billing/status/:reference (or
