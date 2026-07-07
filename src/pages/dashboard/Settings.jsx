@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   User, MessageCircle, Bot, Bell, Users, CreditCard, Check, Plus, Trash2,
   ToggleLeft, ToggleRight, Eye, EyeOff, Loader2, Upload, AlertCircle, X, Save
@@ -230,6 +231,7 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
 export default function Settings() {
   const { getProfile, saveProfile, updateProfile, uploadLogo } = useBusinessProfile()
   const { user, subscription } = useAuth()
+  const navigate = useNavigate()
 
   const [activeTab, setActiveTab] = useState('profile')
   const [showKey, setShowKey] = useState(false)
@@ -618,7 +620,7 @@ export default function Settings() {
                 <div className="rounded-2xl p-4 border border-gray-100 bg-gray-50">
                   <div className="font-semibold text-gray-900 mb-0.5">Upgrade to Pro</div>
                   <div className="text-xs text-gray-400 mb-3">Unlimited AI messages · Multiple WhatsApp numbers · Priority support</div>
-                  <button className="text-sm font-semibold text-white px-4 py-2.5 sm:py-2 rounded-xl hover:opacity-90 w-full sm:w-auto" style={{ background: PRIMARY }}>
+                  <button onClick={() => navigate('/billing')} className="text-sm font-semibold text-white px-4 py-2.5 sm:py-2 rounded-xl hover:opacity-90 w-full sm:w-auto" style={{ background: PRIMARY }}>
                     View Plans
                   </button>
                 </div>
