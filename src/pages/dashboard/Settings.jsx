@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import { useBusinessProfile } from '../../hooks/useBusinessProfile'
 import { useAuth } from '../../context/AuthContext'
-import { fetchWhatsappBusinessProfile, updateWhatsappBusinessProfile } from '../../api/whatsappApi'
+import { fetchWhatsappBusinessProfile, updateWhatsappBusinessProfile, disconnectWhatsapp } from '../../api/whatsappApi'
 import { getNotificationPrefs, patchNotificationPrefs } from '../../api/notificationsApi'
 
 const PRIMARY = '#4166F5'
@@ -69,9 +69,22 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
   const [waProfile, setWaProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [form, setForm] = useState({ about: '', address: '', description: '', email: '', website: '' })
+
+  const handleDisconnect = async () => {
+    if (!window.confirm('Disconnect WhatsApp? Your AI will stop responding to customer messages.')) return
+    setDisconnecting(true)
+    try {
+      await disconnectWhatsapp()
+      window.location.reload()
+    } catch (err) {
+      setError(err.message || 'Failed to disconnect')
+      setDisconnecting(false)
+    }
+  }
 
   useEffect(() => {
     fetchWhatsappBusinessProfile()
@@ -127,8 +140,12 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
             <div className="text-xs font-medium" style={{ color: PRIMARY }}>● Connected via WhatsApp Business API</div>
           </div>
         </div>
-        <button className="text-sm font-semibold text-red-400 border border-red-200 bg-white px-3 py-2.5 sm:py-1.5 rounded-lg hover:bg-red-50 transition w-full sm:w-auto flex-shrink-0">
-          Disconnect
+        <button
+          onClick={handleDisconnect}
+          disabled={disconnecting}
+          className="text-sm font-semibold text-red-400 border border-red-200 bg-white px-3 py-2.5 sm:py-1.5 rounded-lg hover:bg-red-50 transition w-full sm:w-auto flex-shrink-0 disabled:opacity-50"
+        >
+          {disconnecting ? 'Disconnecting…' : 'Disconnect'}
         </button>
       </div>
 

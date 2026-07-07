@@ -38,6 +38,17 @@ export async function updateWhatsappBusinessProfile(fields) {
   return body?.data ?? body
 }
 
+/** DELETE /whatsapp/disconnect — remove WhatsApp account */
+export async function disconnectWhatsapp() {
+  const res = await fetch(`${API_BASE}/whatsapp/disconnect`, {
+    method: 'DELETE',
+    headers: { accept: 'application/json', ...authHeaders() },
+  })
+  const body = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(body?.message || 'Failed to disconnect WhatsApp')
+  return body?.data ?? body
+}
+
 /** POST /whatsapp/connect — exchange OAuth code for long-lived token */
 export async function connectWhatsapp({ code, redirectUri, wabaId, phoneNumberId }) {
   const res = await fetch(`${API_BASE}/whatsapp/connect`, {

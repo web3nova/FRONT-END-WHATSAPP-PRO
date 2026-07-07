@@ -17,7 +17,7 @@ const navItems = [
   { label: 'Orders', icon: ShoppingBag, path: '/dashboard/orders' },
   { label: 'Products', icon: Package, path: '/dashboard/products' },
   { label: 'Customers', icon: Users, path: '/dashboard/customers' },
-  { label: 'WhatsApp AI', icon: MessageCircle, path: '/dashboard/whatsapp' },
+  { label: 'WhatsApp', icon: MessageCircle, path: '/dashboard/whatsapp' },
   { label: 'Website', icon: Globe, path: '/dashboard/website' },
   { label: 'Analytics', icon: BarChart3, path: '/dashboard/analytics' },
   { label: 'Knowledge Base', icon: BookOpen, path: '/dashboard/knowledge' },

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Search, Send, Bot, UserCheck, Phone, MoreHorizontal,
   Zap, CheckCheck, AlertCircle, FileText, ShoppingBag, ChevronLeft, X,
-  Link2, Loader2, RefreshCw, CheckCircle2,
+  Link2, Loader2, CheckCircle2,
 } from 'lucide-react'
 import { fetchWhatsappAccount, connectWhatsapp } from '../../api/whatsappApi'
 import { listConversations, getConversationMessages, resolveConversation } from '../../api/conversationsApi'
@@ -164,7 +164,7 @@ const STATUS_STYLES = {
   RATE_LIMITED: { color: '#d97706', label: 'Rate Limited' },
 }
 
-function ConnectedBadge({ account, onDisconnect }) {
+function ConnectedBadge({ account }) {
   const statusStyle = STATUS_STYLES[account.status] ?? STATUS_STYLES.CONNECTED
 
   return (
@@ -184,13 +184,6 @@ function ConnectedBadge({ account, onDisconnect }) {
           {statusStyle.label}
         </span>
       )}
-      <button
-        onClick={onDisconnect}
-        className="ml-auto text-xs text-gray-400 hover:text-gray-600 transition"
-        title="Reconnect"
-      >
-        <RefreshCw size={12} />
-      </button>
     </div>
   )
 }
@@ -406,7 +399,7 @@ export default function WhatsAppPage() {
     <>
       <div className="flex flex-col min-h-[600px] lg:h-[calc(100vh-64px-48px)] rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-sm">
 
-        <ConnectedBadge account={account} onDisconnect={() => setAccount(null)} />
+        <ConnectedBadge account={account} />
 
         <div className="flex flex-1 min-h-0">
 

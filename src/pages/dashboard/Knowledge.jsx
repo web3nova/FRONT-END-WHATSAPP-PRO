@@ -55,8 +55,14 @@ export default function Knowledge() {
 
   const fileInputRef = useRef(null)
   const chatEndRef = useRef(null)
-  // Stable conversation ID for the test chat — one per page session
-  const conversationId = useRef(`test-${crypto.randomUUID()}`)
+  // Persist conversation ID in sessionStorage so history survives page navigation
+  const conversationId = useRef(
+    sessionStorage.getItem('kb-test-conv') || (() => {
+      const id = `test-${crypto.randomUUID()}`
+      sessionStorage.setItem('kb-test-conv', id)
+      return id
+    })()
+  )
 
   const loadDocs = useCallback(async () => {
     setDocsLoading(true)
@@ -133,7 +139,28 @@ export default function Knowledge() {
       const msg = err.name === 'AbortError'
         ? 'The AI took too long to respond. Please try again.'
         : 'Something went wrong. Please try again in a moment.'
-      setChat(prev => [...prev, { from: 'ai', text: msg, error: true }])
+      setChat(prev => [...prev, { from: 'ai', text: msg, error: true, retryMsg: message }])
+      setAiError(msg)
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const handleRetry = async (message) => {
+    setAiError('')
+    setChat(prev => prev.filter(m => !(m.error && m.retryMsg === message)))
+    setAiLoading(true)
+    try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 55000)
+      const res = await sendChatMessage({ conversationId: conversationId.current, message, signal: controller.signal })
+      clearTimeout(timeout)
+      setChat(prev => [...prev, { from: 'ai', text: res.reply || 'No response received.' }])
+    } catch (err) {
+      const msg = err.name === 'AbortError'
+        ? 'The AI took too long to respond. Please try again.'
+        : 'Something went wrong. Please try again in a moment.'
+      setChat(prev => [...prev, { from: 'ai', text: msg, error: true, retryMsg: message }])
       setAiError(msg)
     } finally {
       setAiLoading(false)
@@ -365,7 +392,7 @@ export default function Knowledge() {
             )}
 
             {chat.map((m, i) => (
-              <div key={i} className={`flex ${m.from === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div key={i} className={`flex flex-col ${m.from === 'user' ? 'items-end' : 'items-start'}`}>
                 <div
                   className="max-w-[85%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed"
                   style={
@@ -390,6 +417,15 @@ export default function Knowledge() {
                   )}
                   {m.text}
                 </div>
+                {m.error && m.retryMsg && !aiLoading && (
+                  <button
+                    onClick={() => handleRetry(m.retryMsg)}
+                    className="flex items-center gap-1 mt-1 text-xs text-gray-400 hover:text-gray-600 transition"
+                  >
+                    <RefreshCw size={10} />
+                    Retry
+                  </button>
+                )}
               </div>
             ))}
 
