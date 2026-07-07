@@ -258,10 +258,12 @@ export default function BusinessLayout() {
         <div className="flex-shrink-0 border-t border-gray-100 p-4">
           <div className="flex items-center gap-3">
             <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-              style={{ background: PRIMARY }}
+              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 overflow-hidden"
+              style={logoUrl ? {} : { background: PRIMARY }}
             >
-              {initials}
+              {logoUrl
+                ? <img src={logoUrl} alt="avatar" className="w-full h-full object-cover" />
+                : initials}
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-gray-900 truncate">{displayName}</div>
