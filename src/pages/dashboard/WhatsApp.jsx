@@ -98,10 +98,9 @@ function ConnectBanner({ onConnected }) {
           }
         )
       }).then(async (code) => {
-        const redirectUri = window.location.origin + window.location.pathname
         await connectWhatsapp({
           code,
-          redirectUri,
+          redirectUri: '',
           wabaId: sessionInfo.waba_id ?? '',
           phoneNumberId: sessionInfo.phone_number_id ?? '',
         })
