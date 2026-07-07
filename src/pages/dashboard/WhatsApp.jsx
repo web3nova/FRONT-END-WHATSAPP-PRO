@@ -163,7 +163,9 @@ function ConnectedBadge({ account, onDisconnect }) {
         <CheckCircle2 size={13} />
         WhatsApp Connected
       </div>
-      <span className="text-xs text-gray-400">Phone ID: {account.phoneNumberId}</span>
+      <span className="text-xs text-gray-400">
+        {account.phoneNumber || `ID: ${account.phoneNumberId}`}
+      </span>
       <button
         onClick={onDisconnect}
         className="ml-auto text-xs text-gray-400 hover:text-gray-600 transition"
