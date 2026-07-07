@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   User, MessageCircle, Bot, Bell, Users, CreditCard, Check, Plus, Trash2,
@@ -7,6 +7,7 @@ import {
 import { useBusinessProfile } from '../../hooks/useBusinessProfile'
 import { useAuth } from '../../context/AuthContext'
 import { fetchWhatsappBusinessProfile, updateWhatsappBusinessProfile } from '../../api/whatsappApi'
+import { getNotificationPrefs, patchNotificationPrefs } from '../../api/notificationsApi'
 
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
@@ -250,8 +251,28 @@ export default function Settings() {
   const [profile, setProfile] = useState(null)
   const fileRef = useRef(null)
 
+  const NOTIF_PREF_KEYS = ['orderNotif', 'whatsappNotif', 'emailNotif', 'weeklyReport']
+
+  // Load notification preferences from backend on mount
+  useEffect(() => {
+    getNotificationPrefs().then(prefs => {
+      if (prefs && Object.keys(prefs).length) {
+        setToggles(p => ({ ...p, ...prefs }))
+      }
+    }).catch(() => {})
+  }, [])
+
   function tog(key) {
-    setToggles(p => ({ ...p, [key]: !p[key] }))
+    setToggles(p => {
+      const next = { ...p, [key]: !p[key] }
+      // Persist notification prefs to backend immediately
+      if (NOTIF_PREF_KEYS.includes(key)) {
+        const prefsToSave = {}
+        NOTIF_PREF_KEYS.forEach(k => { prefsToSave[k] = next[k] })
+        patchNotificationPrefs(prefsToSave).catch(() => {})
+      }
+      return next
+    })
   }
 
   useEffect(() => {

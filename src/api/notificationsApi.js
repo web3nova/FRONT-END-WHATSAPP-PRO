@@ -30,3 +30,19 @@ export async function markAllRead() {
 export async function markOneRead(id) {
   await apiFetch(`/notifications/${id}/read`, { method: 'PATCH' })
 }
+
+export async function getNotificationPrefs() {
+  const res = await apiFetch('/notifications/preferences')
+  const body = await res.json().catch(() => null)
+  return body?.data ?? {}
+}
+
+export async function patchNotificationPrefs(prefs) {
+  const res = await apiFetch('/notifications/preferences', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(prefs),
+  })
+  const body = await res.json().catch(() => null)
+  return body?.data ?? prefs
+}
