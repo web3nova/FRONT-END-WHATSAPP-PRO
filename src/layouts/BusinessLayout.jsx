@@ -35,10 +35,25 @@ function userInitials(name, email) {
   return (email || '?').slice(0, 2).toUpperCase()
 }
 
+function TrialBanner({ subscription }) {
+  if (!subscription || subscription.status !== 'TRIAL' || !subscription.trialEndsAt) return null
+  const daysLeft = Math.max(0, Math.ceil((new Date(subscription.trialEndsAt) - Date.now()) / 86400000))
+  const color = daysLeft <= 2 ? '#dc2626' : daysLeft <= 5 ? '#d97706' : PRIMARY
+  const bg = daysLeft <= 2 ? '#fee2e2' : daysLeft <= 5 ? '#fef3c7' : '#dce5fd'
+  return (
+    <div className="mx-3 mb-3 rounded-xl px-3 py-2.5 flex-shrink-0" style={{ background: bg }}>
+      <div className="text-xs font-semibold" style={{ color }}>
+        {daysLeft === 0 ? 'Trial expires today' : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left on trial`}
+      </div>
+      <div className="text-xs mt-0.5" style={{ color, opacity: 0.75 }}>Upgrade to keep access</div>
+    </div>
+  )
+}
+
 export default function BusinessLayout() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user } = useAuth()
+  const { user, subscription } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [checking, setChecking] = useState(true)
   const [businessName, setBusinessName] = useState('')
@@ -141,6 +156,8 @@ export default function BusinessLayout() {
             </NavLink>
           ))}
         </nav>
+
+        <TrialBanner subscription={subscription} />
 
         {/* User + logout at bottom */}
         <div className="flex-shrink-0 border-t border-gray-100 p-4">
