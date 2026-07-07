@@ -620,7 +620,7 @@ export default function Settings() {
                 <div className="rounded-2xl p-4 border border-gray-100 bg-gray-50">
                   <div className="font-semibold text-gray-900 mb-0.5">Upgrade to Pro</div>
                   <div className="text-xs text-gray-400 mb-3">Unlimited AI messages · Multiple WhatsApp numbers · Priority support</div>
-                  <button onClick={() => navigate('/billing')} className="text-sm font-semibold text-white px-4 py-2.5 sm:py-2 rounded-xl hover:opacity-90 w-full sm:w-auto" style={{ background: PRIMARY }}>
+                  <button onClick={() => navigate('/subscribe')} className="text-sm font-semibold text-white px-4 py-2.5 sm:py-2 rounded-xl hover:opacity-90 w-full sm:w-auto" style={{ background: PRIMARY }}>
                     View Plans
                   </button>
                 </div>
