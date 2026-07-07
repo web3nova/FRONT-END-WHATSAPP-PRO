@@ -67,6 +67,33 @@ export default function StorefrontPage() {
   const whatsapp = business?.whatsappNumber || ''
   const domain = data?.tenant?.domain || ''
 
+  // Inject SEO meta tags into <head> once data is loaded
+  useEffect(() => {
+    if (!data) return
+    const seo = settings?.seo || {}
+    const appName = import.meta.env.VITE_APP_NAME || 'Web3nova'
+
+    const title = seo.title || business.displayName || appName
+    document.title = title
+
+    const setMeta = (name, content, prop = false) => {
+      if (!content) return
+      const attr = prop ? 'property' : 'name'
+      let tag = document.querySelector(`meta[${attr}="${name}"]`)
+      if (!tag) { tag = document.createElement('meta'); tag.setAttribute(attr, name); document.head.appendChild(tag) }
+      tag.content = content
+    }
+
+    setMeta('description', seo.description || business.description || `Shop ${title}`)
+    setMeta('og:title', title, true)
+    setMeta('og:description', seo.description || business.description, true)
+    setMeta('og:image', seo.ogImage || business.logoUrl, true)
+    setMeta('og:type', 'website', true)
+    if (domain) setMeta('og:url', `https://${domain}`, true)
+
+    return () => { document.title = appName }
+  }, [data, business, settings, domain])
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Top bar */}
@@ -75,24 +102,16 @@ export default function StorefrontPage() {
         <span className="text-xs text-gray-400">{business?.displayName || 'Storefront'}</span>
       </div>
 
-      {/* Preview canvas */}
-      <div className="flex-1 flex justify-center p-4 sm:p-6 md:p-8">
-        <div className="bg-white shadow-sm overflow-hidden w-full" style={{ maxWidth: 1100, borderRadius: 16 }}>
-          <StorefrontPreview
-            business={business}
-            products={products}
-            whatsapp={whatsapp}
-            domain={domain}
-            device="desktop"
-            settings={settings}
-          />
-          {/* Footer */}
-          <div className="border-t border-gray-100 px-8 py-3 text-center">
-            <p className="text-xs text-gray-400">
-              Powered by <span className="font-semibold" style={{ color: '#4166F5' }}>{import.meta.env.VITE_APP_NAME || 'Web3nova'}</span>
-            </p>
-          </div>
-        </div>
+      {/* Storefront canvas */}
+      <div className="flex-1 bg-white">
+        <StorefrontPreview
+          business={business}
+          products={products}
+          whatsapp={whatsapp}
+          domain={domain}
+          device="desktop"
+          settings={settings}
+        />
       </div>
     </div>
   )
