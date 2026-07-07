@@ -42,10 +42,10 @@ export default function BusinessLayout() {
 
       try {
         const statusData = await onboardingApi.checkStatus()
-        const isOnboarded = statusData?.completed === true || statusData?.steps?.business === true
+        const onboardingDone = statusData?.allPanelsDone === true
 
         if (!cancelled) {
-          navigate(isOnboarded ? '/business-profile' : '/onboarding', { replace: true })
+          navigate(onboardingDone ? '/business-profile' : '/onboarding', { replace: true })
         }
       } catch {
         // API unavailable — let user through to dashboard

@@ -139,18 +139,28 @@ export default function LoginPage() {
 
       // Navigate to intended destination — RequireSubscription handles redirect
       // to /subscribe if the subscription is not active.
+      // Check business profile first: if it exists, onboarding is complete.
       try {
-        const statusData = await onboardingApi.checkStatus()
-        const isOnboarded = statusData?.completed === true || statusData?.steps?.business === true
-        if (!isOnboarded) {
-          navigate('/onboarding', { replace: true })
+        const profile = await onboardingApi.getProfile()
+        if (profile?.displayName || profile?.id) {
+          navigate(from, { replace: true })
           return
         }
       } catch {
-        // onboarding check failed — proceed to destination
+        // No business profile — check onboarding status below
       }
 
-      navigate(from, { replace: true })
+      try {
+        const statusData = await onboardingApi.checkStatus()
+        const onboardingDone = statusData?.allPanelsDone === true
+        if (!onboardingDone) {
+          navigate('/onboarding', { replace: true })
+          return
+        }
+        navigate(from, { replace: true })
+      } catch {
+        navigate(from, { replace: true })
+      }
     } catch (err) {
       setError(err.message || 'Login failed. Please try again.')
     } finally {
