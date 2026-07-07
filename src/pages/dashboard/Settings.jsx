@@ -515,21 +515,8 @@ export default function Settings() {
                   <option>Hausa</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5">API Key</label>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <div className="relative flex-1 min-w-0">
-                    <input
-                      type={showKey ? 'text' : 'password'}
-                      placeholder="Enter your API key"
-                      className="w-full px-4 py-3 sm:py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none pr-10"
-                    />
-                    <button onClick={() => setShowKey(v => !v)} aria-label={showKey ? 'Hide API key' : 'Show API key'} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 p-1">
-                      {showKey ? <EyeOff size={15} /> : <Eye size={15} />}
-                    </button>
-                  </div>
-                  <button className="px-4 py-3 sm:py-2.5 text-sm font-semibold text-white rounded-xl hover:opacity-90 flex-shrink-0" style={{ background: PRIMARY }}>Save</button>
-                </div>
+              <div className="rounded-xl border border-dashed border-gray-200 px-4 py-3 text-xs text-gray-400 text-center">
+                Custom AI API key configuration coming soon
               </div>
             </div>
           )}
