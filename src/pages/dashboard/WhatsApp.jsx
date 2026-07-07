@@ -1,15 +1,40 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Search, Send, Bot, UserCheck, Phone, MoreHorizontal,
   Zap, CheckCheck, AlertCircle, FileText, ShoppingBag, ChevronLeft, X,
   Link2, Loader2, RefreshCw, CheckCircle2,
 } from 'lucide-react'
 import { fetchWhatsappAccount, connectWhatsapp } from '../../api/whatsappApi'
+import { listConversations, getConversationMessages, resolveConversation } from '../../api/conversationsApi'
+import { sendNotification } from '../../api/notificationsApi'
+import { createOrder } from '../../api/ordersApi'
+import { createQuote } from '../../api/quotesApi'
 
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
 
-// ─── Facebook SDK ────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function initials(name, phone) {
+  if (name) return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+  return (phone || '??').slice(-2).toUpperCase()
+}
+
+function formatTime(iso) {
+  return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+}
+
+function formatTimeAgo(iso) {
+  const diff = Date.now() - new Date(iso).getTime()
+  const m = Math.floor(diff / 60000)
+  if (m < 1) return 'just now'
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+}
+
+// ─── Facebook SDK ─────────────────────────────────────────────────────────────
 
 function loadFbSdk(appId) {
   return new Promise((resolve) => {
@@ -25,65 +50,6 @@ function loadFbSdk(appId) {
     document.body.appendChild(script)
   })
 }
-
-// ─── Hardcoded inbox demo data (until real conversation API is wired) ────────
-
-const conversations = [
-  { id: 1, customer: 'Emeka Nwosu', phone: '+234 801 234 5678', avatar: 'EN', lastMessage: "I'll make the transfer now", time: '2m ago', unread: 1, aiHandling: true, stage: 'ordering', interest: 'Corset Dress', size: 'Size 12', budget: '₦80,000', delivery: 'July 15, 2026' },
-  { id: 2, customer: 'Sarah Adeyemi', phone: '+234 802 345 6789', avatar: 'SA', lastMessage: 'What sizes are available for the bridal gown?', time: '15m ago', unread: 0, aiHandling: true, stage: 'gathering', interest: 'Bridal Gown', size: null, budget: null, delivery: null },
-  { id: 3, customer: 'David Okonkwo', phone: '+234 803 456 7890', avatar: 'DO', lastMessage: 'Can I see some native attire samples?', time: '1h ago', unread: 0, aiHandling: false, stage: 'gathering', interest: 'Native Attire', size: 'XL', budget: '₦45,000', delivery: null },
-  { id: 4, customer: 'Grace Eze', phone: '+234 804 567 8901', avatar: 'GE', lastMessage: 'Thank you! I got the confirmation.', time: '2h ago', unread: 0, aiHandling: true, stage: 'complete', interest: 'Senator Wear', size: 'M', budget: '₦50,000', delivery: 'Jun 30, 2026' },
-  { id: 5, customer: 'Blessing Osei', phone: '+234 805 678 9012', avatar: 'BO', lastMessage: 'My budget is flexible, what do you recommend?', time: '3h ago', unread: 0, aiHandling: true, stage: 'gathering', interest: 'Bridal Gown', size: null, budget: null, delivery: 'August 10, 2026' },
-]
-
-const chatHistory = {
-  1: [
-    { id: 1, from: 'customer', text: "Hello, I need a corset dress for my wife's birthday", time: '10:32 AM', read: true },
-    { id: 2, from: 'ai', text: "Hello! 👋 Welcome to Perfect Style Edits. I'd be happy to help you find the perfect corset dress!\n\nTo get you the best option, I have a few quick questions:\n• When is her birthday?\n• What size does she wear?\n• Do you have a budget in mind?", time: '10:32 AM', read: true },
-    { id: 3, from: 'customer', text: 'Her birthday is July 15. She wears size 12. Budget is around 80k', time: '10:34 AM', read: true },
-    { id: 4, from: 'ai', text: "Perfect! I've noted everything 📝\n\n✅ Delivery by: July 15\n✅ Size: 12\n✅ Budget: ₦80,000\n\nGreat news — our Corset Dress starts at exactly ₦80,000 and we can deliver well before July 15!\n\nWould you like me to generate a formal quotation?", time: '10:35 AM', read: true },
-    { id: 5, from: 'customer', text: 'Yes please generate the quote', time: '10:36 AM', read: true },
-    { id: 6, from: 'system', text: '📄 AI generated Quotation #QT-0089 · ₦80,000', time: '10:36 AM' },
-    { id: 7, from: 'ai', text: "I've generated your quotation! 🎉\n\n📋 Quotation #QT-0089\n• Item: Corset Dress (Size 12)\n• Amount: ₦80,000\n• Ready by: July 10, 2026\n\nTo confirm your order, please pay a 50% deposit (₦40,000):\n\nAcc Name: Perfect Style Edits\nBank: GT Bank · 0123456789\n\nShall I confirm your order once payment is made?", time: '10:36 AM', read: true },
-    { id: 8, from: 'customer', text: "I'll make the transfer now", time: '10:38 AM', read: false },
-  ],
-  2: [
-    { id: 1, from: 'customer', text: 'Hi, I want to inquire about bridal gowns', time: '10:20 AM', read: true },
-    { id: 2, from: 'ai', text: "Hello! 💍 Congratulations on your upcoming wedding! We have a beautiful collection of custom bridal gowns.\n\nWhat sizes are available? We make sizes 8–22, all fully customised to your measurements.\n\nWhen is your wedding date?", time: '10:20 AM', read: true },
-    { id: 3, from: 'customer', text: 'What sizes are available for the bridal gown?', time: '10:21 AM', read: true },
-  ],
-  3: [
-    { id: 1, from: 'customer', text: 'Good afternoon, I need native attire for an event', time: '9:15 AM', read: true },
-    { id: 2, from: 'ai', text: "Good afternoon! 🎊 We make beautiful custom native attire for all occasions.\n\nWhat type of event is it? And do you have a preferred fabric or style in mind?", time: '9:15 AM', read: true },
-    { id: 3, from: 'customer', text: "It's a traditional wedding. XL size. Budget around 45k", time: '9:18 AM', read: true },
-    { id: 4, from: 'ai', text: 'Perfect for a traditional wedding! We have amazing native attire options at ₦40,000–₦55,000 for XL.\n\nCan I see some native attire samples?', time: '9:19 AM', read: true },
-    { id: 5, from: 'customer', text: 'Can I see some native attire samples?', time: '9:45 AM', read: true },
-    { id: 6, from: 'system', text: '👤 Staff took over this conversation', time: '9:46 AM' },
-  ],
-  4: [
-    { id: 1, from: 'customer', text: 'I need a senator wear for my husband', time: '8:10 AM', read: true },
-    { id: 2, from: 'ai', text: 'Great choice! Our Senator Wear starts at ₦50,000. What size is your husband?', time: '8:10 AM', read: true },
-    { id: 3, from: 'customer', text: 'Size M, budget 50k, need it by June 30', time: '8:12 AM', read: true },
-    { id: 4, from: 'ai', text: "Perfect! I'll generate a quotation for you right away.", time: '8:12 AM', read: true },
-    { id: 5, from: 'system', text: '📄 AI generated Quotation #QT-0086 · ₦50,000', time: '8:13 AM' },
-    { id: 6, from: 'system', text: '🛍️ Order #ORD-1044 created', time: '8:14 AM' },
-    { id: 7, from: 'ai', text: "Your order is confirmed! 🎉\n\nOrder #ORD-1044 · Senator Wear (M) · ₦50,000\nDelivery: June 30, 2026\n\nWe'll send you updates as we progress. Thank you!", time: '8:14 AM', read: true },
-    { id: 8, from: 'customer', text: 'Thank you! I got the confirmation.', time: '8:20 AM', read: true },
-  ],
-  5: [
-    { id: 1, from: 'customer', text: 'Hello, I need a bridal gown for August', time: '7:30 AM', read: true },
-    { id: 2, from: 'ai', text: "Hello! 💍 August is a wonderful time for a wedding! We'd love to create your perfect gown.\n\nWhat's your size and do you have a style in mind?", time: '7:30 AM', read: true },
-    { id: 3, from: 'customer', text: 'My budget is flexible, what do you recommend?', time: '7:45 AM', read: true },
-  ],
-}
-
-const stages = [
-  { key: 'gathering', label: 'Collecting Info', step: 1 },
-  { key: 'quoting', label: 'Quoting', step: 2 },
-  { key: 'ordering', label: 'Ordering', step: 3 },
-  { key: 'complete', label: 'Complete', step: 4 },
-]
-const stageStep = { gathering: 1, quoting: 2, ordering: 3, complete: 4 }
 
 // ─── Connect Banner ───────────────────────────────────────────────────────────
 
@@ -106,7 +72,6 @@ function ConnectBanner({ onConnected }) {
     try {
       const FB = await loadFbSdk(META_APP_ID)
 
-      // Listen for session info from the Meta popup (gives us wabaId + phoneNumberId)
       let sessionInfo = {}
       const messageListener = (e) => {
         if (typeof e.data === 'string') {
@@ -190,7 +155,7 @@ function ConnectBanner({ onConnected }) {
   )
 }
 
-// ─── Connected Banner (top of inbox) ─────────────────────────────────────────
+// ─── Connected Badge ──────────────────────────────────────────────────────────
 
 function ConnectedBadge({ account, onDisconnect }) {
   return (
@@ -214,15 +179,43 @@ function ConnectedBadge({ account, onDisconnect }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function WhatsAppPage() {
+  // WhatsApp account connection
   const [account, setAccount] = useState(undefined) // undefined = loading, null = not connected
   const [accountLoading, setAccountLoading] = useState(true)
 
-  const [selectedId, setSelectedId] = useState(1)
-  const [inputText, setInputText] = useState('')
-  const [aiHandling, setAiHandling] = useState(true)
+  // Conversations
+  const [conversations, setConversations] = useState([])
+  const [convsLoading, setConvsLoading] = useState(true)
+  const [convsError, setConvsError] = useState('')
+
+  // Active conversation
+  const [selectedId, setSelectedId] = useState(null)
+  const [messages, setMessages] = useState([])
+  const [msgsLoading, setMsgsLoading] = useState(false)
+
+  // UI state
   const [filter, setFilter] = useState('all')
   const [mobilePanel, setMobilePanel] = useState('list')
+  const [staffMode, setStaffMode] = useState(false)
+  const [inputText, setInputText] = useState('')
+  const [sending, setSending] = useState(false)
+  const [resolving, setResolving] = useState(false)
 
+  // Generate Quotation modal
+  const [showQuoteModal, setShowQuoteModal] = useState(false)
+  const [quoteForm, setQuoteForm] = useState({ description: '', amountNaira: '' })
+  const [quoteSubmitting, setQuoteSubmitting] = useState(false)
+  const [quoteError, setQuoteError] = useState('')
+
+  // Create Order modal
+  const [showOrderModal, setShowOrderModal] = useState(false)
+  const [orderForm, setOrderForm] = useState({ product: '', size: '', amountNaira: '', status: 'pending' })
+  const [orderSubmitting, setOrderSubmitting] = useState(false)
+  const [orderError, setOrderError] = useState('')
+
+  const messagesEndRef = useRef(null)
+
+  // Load WhatsApp account status
   const loadAccount = useCallback(async () => {
     setAccountLoading(true)
     try {
@@ -237,15 +230,144 @@ export default function WhatsAppPage() {
 
   useEffect(() => { loadAccount() }, [loadAccount])
 
+  // Load conversations once account is confirmed connected
+  useEffect(() => {
+    if (!account?.verified) return
+    let ignore = false
+    setConvsLoading(true)
+    listConversations({ limit: 50 })
+      .then(({ data }) => {
+        if (!ignore) {
+          setConversations(data)
+          if (data.length) setSelectedId(data[0].id)
+        }
+      })
+      .catch(err => { if (!ignore) setConvsError(err.message) })
+      .finally(() => { if (!ignore) setConvsLoading(false) })
+    return () => { ignore = true }
+  }, [account])
+
+  // Load messages when selected conversation changes
+  useEffect(() => {
+    if (!selectedId) { setMessages([]); return }
+    let ignore = false
+    setMsgsLoading(true)
+    getConversationMessages(selectedId, { limit: 100 })
+      .then(({ data }) => { if (!ignore) setMessages(data) })
+      .catch(() => { if (!ignore) setMessages([]) })
+      .finally(() => { if (!ignore) setMsgsLoading(false) })
+    return () => { ignore = true }
+  }, [selectedId])
+
+  // Scroll to bottom when messages update
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
   const selected = conversations.find(c => c.id === selectedId)
-  const messages = chatHistory[selectedId] || []
-  const currentStep = stageStep[selected?.stage] || 1
 
   const filteredConvs = conversations.filter(c => {
-    if (filter === 'ai') return c.aiHandling
-    if (filter === 'staff') return !c.aiHandling
+    if (filter === 'open') return c.status === 'open'
+    if (filter === 'closed') return c.status === 'closed'
     return true
   })
+
+  const handleConvSelect = (id) => {
+    setSelectedId(id)
+    setMobilePanel('chat')
+    setStaffMode(false)
+  }
+
+  const handleResolve = async () => {
+    if (!selectedId || resolving) return
+    setResolving(true)
+    try {
+      await resolveConversation(selectedId)
+      setConversations(prev =>
+        prev.map(c => c.id === selectedId ? { ...c, status: 'closed' } : c)
+      )
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setResolving(false)
+    }
+  }
+
+  const handleSend = async () => {
+    const text = inputText.trim()
+    if (!text || !selected?.customer?.phone || sending) return
+    setSending(true)
+    try {
+      await sendNotification({ channel: 'whatsapp', to: selected.customer.phone, text })
+      setInputText('')
+      setMessages(prev => [...prev, {
+        id: `tmp-${Date.now()}`,
+        conversationId: selectedId,
+        role: 'staff',
+        content: text,
+        createdAt: new Date().toISOString(),
+        meta: {},
+      }])
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const handleCreateQuote = async e => {
+    e.preventDefault()
+    if (!quoteForm.amountNaira || isNaN(Number(quoteForm.amountNaira))) {
+      setQuoteError('Enter a valid amount.')
+      return
+    }
+    setQuoteSubmitting(true)
+    setQuoteError('')
+    try {
+      await createQuote({
+        customerId: selected?.customer?.id,
+        status: 'draft',
+        amountMinor: Math.round(Number(quoteForm.amountNaira) * 100),
+        currency: 'NGN',
+        details: { item: quoteForm.description },
+      })
+      setShowQuoteModal(false)
+      setQuoteForm({ description: '', amountNaira: '' })
+    } catch (err) {
+      setQuoteError(err.message)
+    } finally {
+      setQuoteSubmitting(false)
+    }
+  }
+
+  const handleCreateOrder = async e => {
+    e.preventDefault()
+    if (!orderForm.amountNaira || isNaN(Number(orderForm.amountNaira))) {
+      setOrderError('Enter a valid amount.')
+      return
+    }
+    setOrderSubmitting(true)
+    setOrderError('')
+    try {
+      await createOrder({
+        customerId: selected?.customer?.id,
+        status: orderForm.status,
+        totalMinor: Math.round(Number(orderForm.amountNaira) * 100),
+        items: orderForm.product
+          ? [{ name: orderForm.product, ...(orderForm.size ? { size: orderForm.size } : {}) }]
+          : [],
+        ...(orderForm.size ? { measurements: { size: orderForm.size } } : {}),
+      })
+      setShowOrderModal(false)
+      setOrderForm({ product: '', size: '', amountNaira: '', status: 'pending' })
+    } catch (err) {
+      setOrderError(err.message)
+    } finally {
+      setOrderSubmitting(false)
+    }
+  }
+
+  // ── Loading / not connected states ──────────────────────────────────────────
 
   if (accountLoading) {
     return (
@@ -259,286 +381,467 @@ export default function WhatsAppPage() {
     return <ConnectBanner onConnected={loadAccount} />
   }
 
+  // ── Main inbox UI ────────────────────────────────────────────────────────────
+
   return (
-    <div className="flex flex-col min-h-[600px] lg:h-[calc(100vh-64px-48px)] rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-sm">
+    <>
+      <div className="flex flex-col min-h-[600px] lg:h-[calc(100vh-64px-48px)] rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-sm">
 
-      <ConnectedBadge account={account} onDisconnect={() => setAccount(null)} />
+        <ConnectedBadge account={account} onDisconnect={() => setAccount(null)} />
 
-      <div className="flex flex-1 min-h-0">
-        {/* Left — Conversation List */}
-        <div
-          className={`${mobilePanel === 'list' ? 'flex' : 'hidden'} lg:flex w-full lg:w-72 flex-col border-r border-gray-100 flex-shrink-0`}
-          style={{ background: CREAM }}
-        >
-          <div className="px-4 pt-4 pb-3 border-b border-gray-200">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-bold text-gray-900 text-base">WhatsApp Inbox</h2>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full text-white" style={{ background: PRIMARY }}>
-                {conversations.filter(c => c.unread > 0).length} new
-              </span>
-            </div>
-            <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                className="w-full pl-8 pr-3 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-1"
-                placeholder="Search conversations..."
-              />
-            </div>
-            <div className="flex gap-1 mt-2">
-              {[['all', 'All'], ['ai', 'AI'], ['staff', 'Staff']].map(([key, label]) => (
-                <button
-                  key={key}
-                  onClick={() => setFilter(key)}
-                  className="flex-1 py-1.5 text-xs font-semibold rounded-lg transition"
-                  style={filter === key ? { background: PRIMARY, color: '#fff' } : { background: 'white', color: '#6b7280' }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
+        <div className="flex flex-1 min-h-0">
 
-          <div className="flex-1 overflow-y-auto">
-            {filteredConvs.map(conv => (
-              <button
-                key={conv.id}
-                onClick={() => { setSelectedId(conv.id); setMobilePanel('chat') }}
-                className="w-full text-left px-4 py-3.5 border-b border-gray-100 transition-colors"
-                style={selectedId === conv.id ? { background: '#dce5fd' } : { background: 'transparent' }}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ background: PRIMARY }}>
-                    {conv.avatar}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1 mb-0.5">
-                      <span className="text-sm font-semibold text-gray-900 truncate">{conv.customer}</span>
-                      <span className="text-xs text-gray-400 flex-shrink-0">{conv.time}</span>
-                    </div>
-                    <div className="text-xs text-gray-500 truncate mb-1.5">{conv.lastMessage}</div>
-                    <div className="flex items-center justify-between">
-                      <div
-                        className="flex items-center gap-1 text-xs font-medium rounded-full px-2 py-0.5"
-                        style={conv.aiHandling ? { background: '#dce5fd', color: PRIMARY } : { background: '#f3f4f6', color: '#6b7280' }}
-                      >
-                        {conv.aiHandling ? <Bot size={10} /> : <UserCheck size={10} />}
-                        {conv.aiHandling ? 'AI' : 'Staff'}
-                      </div>
-                      {conv.unread > 0 && (
-                        <span className="text-xs font-bold text-white rounded-full w-5 h-5 flex items-center justify-center" style={{ background: PRIMARY }}>
-                          {conv.unread}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Middle — Chat Window */}
-        <div className={`${mobilePanel === 'chat' ? 'flex' : 'hidden'} lg:flex flex-1 flex-col min-w-0`}>
-          <div className="h-14 flex items-center justify-between px-3 lg:px-5 border-b border-gray-100 flex-shrink-0 bg-white">
-            <div className="flex items-center gap-2 lg:gap-3">
-              <button className="lg:hidden p-1.5 text-gray-500 hover:bg-gray-100 rounded-xl" onClick={() => setMobilePanel('list')}>
-                <ChevronLeft size={18} />
-              </button>
-              <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: PRIMARY }}>
-                {selected?.avatar}
+          {/* ── Left: Conversation list ── */}
+          <div
+            className={`${mobilePanel === 'list' ? 'flex' : 'hidden'} lg:flex w-full lg:w-72 flex-col border-r border-gray-100 flex-shrink-0`}
+            style={{ background: CREAM }}
+          >
+            <div className="px-4 pt-4 pb-3 border-b border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-bold text-gray-900 text-base">WhatsApp Inbox</h2>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full text-white" style={{ background: PRIMARY }}>
+                  {conversations.filter(c => c.status === 'open').length} open
+                </span>
               </div>
-              <div>
-                <div className="text-sm font-semibold text-gray-900">{selected?.customer}</div>
-                <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                  <Phone size={10} />
-                  {selected?.phone}
-                </div>
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  className="w-full pl-8 pr-3 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none"
+                  placeholder="Search conversations…"
+                />
+              </div>
+              <div className="flex gap-1 mt-2">
+                {[['all', 'All'], ['open', 'Open'], ['closed', 'Closed']].map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setFilter(key)}
+                    className="flex-1 py-1.5 text-xs font-semibold rounded-lg transition"
+                    style={filter === key
+                      ? { background: PRIMARY, color: '#fff' }
+                      : { background: 'white', color: '#6b7280' }}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setAiHandling(v => !v)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition"
-                style={aiHandling
-                  ? { background: '#dce5fd', color: PRIMARY, borderColor: '#c7d2fb' }
-                  : { background: '#f9fafb', color: '#6b7280', borderColor: '#e5e7eb' }}
-              >
-                {aiHandling ? <Bot size={13} /> : <UserCheck size={13} />}
-                {aiHandling ? 'AI Handling' : 'Staff Handling'}
-              </button>
-              <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition">
-                <MoreHorizontal size={17} />
-              </button>
-            </div>
-          </div>
 
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3" style={{ background: '#f9fafb' }}>
-            {messages.map(msg => {
-              if (msg.from === 'system') {
-                return (
-                  <div key={msg.id} className="flex justify-center">
-                    <span className="text-xs text-gray-400 bg-white border border-gray-100 px-3 py-1.5 rounded-full shadow-sm">{msg.text}</span>
-                  </div>
-                )
-              }
-              const isCustomer = msg.from === 'customer'
-              return (
-                <div key={msg.id} className={`flex ${isCustomer ? 'justify-start' : 'justify-end'}`}>
-                  <div className={`max-w-[72%] ${isCustomer ? 'order-2' : ''}`}>
-                    {!isCustomer && (
-                      <div className="flex items-center justify-end gap-1 mb-1">
-                        <Bot size={11} style={{ color: PRIMARY }} />
-                        <span className="text-xs font-medium" style={{ color: PRIMARY }}>AI Agent</span>
-                      </div>
-                    )}
-                    <div
-                      className="px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-line shadow-sm"
-                      style={isCustomer
-                        ? { background: CREAM, color: '#1e293b', borderBottomLeftRadius: 4 }
-                        : { background: PRIMARY, color: '#ffffff', borderBottomRightRadius: 4 }}
+            <div className="flex-1 overflow-y-auto">
+              {convsLoading ? (
+                <div className="px-4 py-6 text-center text-sm text-gray-400">Loading…</div>
+              ) : convsError ? (
+                <div className="px-4 py-6 text-center text-sm text-red-400">{convsError}</div>
+              ) : filteredConvs.length === 0 ? (
+                <div className="px-4 py-6 text-center text-sm text-gray-400">No conversations.</div>
+              ) : (
+                filteredConvs.map(conv => {
+                  const displayName = conv.customer?.name || conv.customer?.phone || 'Unknown'
+                  const isOpen = conv.status === 'open'
+                  return (
+                    <button
+                      key={conv.id}
+                      onClick={() => handleConvSelect(conv.id)}
+                      className="w-full text-left px-4 py-3.5 border-b border-gray-100 transition-colors"
+                      style={selectedId === conv.id ? { background: '#dce5fd' } : { background: 'transparent' }}
                     >
-                      {msg.text}
+                      <div className="flex items-start gap-3">
+                        <div
+                          className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                          style={{ background: PRIMARY }}
+                        >
+                          {initials(conv.customer?.name, conv.customer?.phone)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1 mb-0.5">
+                            <span className="text-sm font-semibold text-gray-900 truncate">{displayName}</span>
+                            <span className="text-xs text-gray-400 flex-shrink-0">{formatTimeAgo(conv.updatedAt)}</span>
+                          </div>
+                          <div className="text-xs text-gray-400 truncate mb-1.5">{conv.customer?.phone}</div>
+                          <div
+                            className="inline-flex items-center gap-1 text-xs font-medium rounded-full px-2 py-0.5"
+                            style={isOpen
+                              ? { background: '#dce5fd', color: PRIMARY }
+                              : { background: '#f3f4f6', color: '#6b7280' }}
+                          >
+                            {isOpen ? <Bot size={10} /> : <UserCheck size={10} />}
+                            {isOpen ? 'Open' : 'Closed'}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  )
+                })
+              )}
+            </div>
+          </div>
+
+          {/* ── Middle: Chat window ── */}
+          <div className={`${mobilePanel === 'chat' ? 'flex' : 'hidden'} lg:flex flex-1 flex-col min-w-0`}>
+            {!selected ? (
+              <div className="flex-1 flex items-center justify-center text-sm text-gray-400">
+                Select a conversation
+              </div>
+            ) : (
+              <>
+                {/* Header */}
+                <div className="h-14 flex items-center justify-between px-3 lg:px-5 border-b border-gray-100 flex-shrink-0 bg-white">
+                  <div className="flex items-center gap-2 lg:gap-3">
+                    <button
+                      className="lg:hidden p-1.5 text-gray-500 hover:bg-gray-100 rounded-xl"
+                      onClick={() => setMobilePanel('list')}
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                    <div
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                      style={{ background: PRIMARY }}
+                    >
+                      {initials(selected.customer?.name, selected.customer?.phone)}
                     </div>
-                    <div className={`flex items-center gap-1 mt-1 ${isCustomer ? 'justify-start' : 'justify-end'}`}>
-                      <span className="text-xs text-gray-400">{msg.time}</span>
-                      {!isCustomer && <CheckCheck size={12} className={msg.read ? 'text-blue-400' : 'text-gray-300'} />}
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">
+                        {selected.customer?.name || 'Unknown'}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                        <Phone size={10} />
+                        {selected.customer?.phone}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setStaffMode(v => !v)}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition"
+                      style={!staffMode
+                        ? { background: '#dce5fd', color: PRIMARY, borderColor: '#c7d2fb' }
+                        : { background: '#f9fafb', color: '#6b7280', borderColor: '#e5e7eb' }}
+                    >
+                      {!staffMode ? <Bot size={13} /> : <UserCheck size={13} />}
+                      {!staffMode ? 'AI Handling' : 'Staff Handling'}
+                    </button>
+
+                    {selected.status === 'open' && (
+                      <button
+                        onClick={handleResolve}
+                        disabled={resolving}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition text-red-400 border-red-100 bg-red-50 hover:bg-red-100 disabled:opacity-50"
+                      >
+                        <X size={13} />
+                        {resolving ? 'Closing…' : 'Resolve'}
+                      </button>
+                    )}
+
+                    <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition">
+                      <MoreHorizontal size={17} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3" style={{ background: '#f9fafb' }}>
+                  {msgsLoading ? (
+                    <div className="flex items-center justify-center h-full text-sm text-gray-400">
+                      Loading messages…
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-sm text-gray-400">
+                      No messages yet.
+                    </div>
+                  ) : (
+                    messages.map(msg => {
+                      const isCustomer = msg.role === 'customer'
+                      const isAi = msg.role === 'ai'
+                      return (
+                        <div key={msg.id} className={`flex ${isCustomer ? 'justify-start' : 'justify-end'}`}>
+                          <div className="max-w-[72%]">
+                            {!isCustomer && (
+                              <div className="flex items-center justify-end gap-1 mb-1">
+                                {isAi
+                                  ? <Bot size={11} style={{ color: PRIMARY }} />
+                                  : <UserCheck size={11} className="text-gray-400" />}
+                                <span
+                                  className="text-xs font-medium"
+                                  style={{ color: isAi ? PRIMARY : '#6b7280' }}
+                                >
+                                  {isAi ? 'AI Agent' : 'Staff'}
+                                </span>
+                              </div>
+                            )}
+                            <div
+                              className="px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-line shadow-sm"
+                              style={isCustomer
+                                ? { background: CREAM, color: '#1e293b', borderBottomLeftRadius: 4 }
+                                : { background: isAi ? PRIMARY : '#374151', color: '#fff', borderBottomRightRadius: 4 }}
+                            >
+                              {msg.content}
+                            </div>
+                            <div className={`flex items-center gap-1 mt-1 ${isCustomer ? 'justify-start' : 'justify-end'}`}>
+                              <span className="text-xs text-gray-400">{formatTime(msg.createdAt)}</span>
+                              {!isCustomer && <CheckCheck size={12} className="text-blue-400" />}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Input */}
+                <div className="border-t border-gray-100 px-4 py-3 bg-white flex-shrink-0">
+                  {!staffMode && (
+                    <div className="flex items-center gap-2 mb-2 px-1">
+                      <Bot size={13} style={{ color: PRIMARY }} />
+                      <span className="text-xs" style={{ color: PRIMARY }}>AI is handling this conversation · </span>
+                      <button
+                        onClick={() => setStaffMode(true)}
+                        className="text-xs font-semibold underline"
+                        style={{ color: PRIMARY }}
+                      >
+                        Take over as Staff
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex items-end gap-2">
+                    <textarea
+                      rows={1}
+                      value={inputText}
+                      onChange={e => setInputText(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
+                      }}
+                      placeholder={!staffMode ? 'AI is responding automatically…' : 'Type a message…'}
+                      disabled={!staffMode || sending}
+                      className="flex-1 resize-none px-4 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ maxHeight: 100 }}
+                    />
+                    <button
+                      disabled={!staffMode || !inputText.trim() || sending}
+                      onClick={handleSend}
+                      className="p-2.5 rounded-xl text-white transition disabled:opacity-40 flex-shrink-0"
+                      style={{ background: PRIMARY }}
+                    >
+                      <Send size={16} />
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* ── Right: Context panel ── */}
+          <div className="hidden xl:flex w-72 flex-col border-l border-gray-100 flex-shrink-0 overflow-y-auto bg-white">
+            {selected ? (
+              <>
+                {/* Customer info */}
+                <div className="px-4 pt-4 pb-3 border-b border-gray-100">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div
+                      className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold"
+                      style={{ background: PRIMARY }}
+                    >
+                      {initials(selected.customer?.name, selected.customer?.phone)}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-gray-900">{selected.customer?.name || 'Unknown'}</div>
+                      <div className="text-xs text-gray-400">{selected.customer?.phone}</div>
+                      <div className="text-xs mt-0.5 capitalize" style={{ color: PRIMARY }}>
+                        {selected.status}
+                      </div>
                     </div>
                   </div>
                 </div>
-              )
-            })}
-          </div>
 
-          <div className="border-t border-gray-100 px-4 py-3 bg-white flex-shrink-0">
-            {aiHandling && (
-              <div className="flex items-center gap-2 mb-2 px-1">
-                <Bot size={13} style={{ color: PRIMARY }} />
-                <span className="text-xs" style={{ color: PRIMARY }}>AI is handling this conversation · </span>
-                <button onClick={() => setAiHandling(false)} className="text-xs font-semibold underline" style={{ color: PRIMARY }}>
-                  Take over as Staff
-                </button>
+                {/* Conversation info */}
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                    Conversation Info
+                  </div>
+                  <div className="space-y-2">
+                    {[
+                      { label: 'Channel',  value: selected.channel || 'whatsapp' },
+                      { label: 'Status',   value: selected.status },
+                      { label: 'Messages', value: messages.length },
+                      { label: 'Updated',  value: formatTimeAgo(selected.updatedAt) },
+                    ].map(item => (
+                      <div key={item.label} className="flex items-center justify-between">
+                        <span className="text-xs text-gray-400">{item.label}</span>
+                        <span className="text-xs font-semibold text-gray-900 capitalize">{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Quick actions */}
+                <div className="px-4 py-3">
+                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                    Quick Actions
+                  </div>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => { setQuoteForm({ description: '', amountNaira: '' }); setQuoteError(''); setShowQuoteModal(true) }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-white transition hover:opacity-90"
+                      style={{ background: PRIMARY }}
+                    >
+                      <FileText size={15} />
+                      Generate Quotation
+                    </button>
+                    <button
+                      onClick={() => { setOrderForm({ product: '', size: '', amountNaira: '', status: 'pending' }); setOrderError(''); setShowOrderModal(true) }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition hover:opacity-90"
+                      style={{ background: '#dce5fd', color: PRIMARY }}
+                    >
+                      <ShoppingBag size={15} />
+                      Create Order
+                    </button>
+                    {selected.status === 'open' && (
+                      <button
+                        onClick={handleResolve}
+                        disabled={resolving}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-red-400 border border-red-100 bg-red-50 transition hover:bg-red-100 disabled:opacity-50"
+                      >
+                        <X size={15} />
+                        {resolving ? 'Closing…' : 'End Conversation'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* AI status */}
+                <div className="px-4 pb-4 mt-auto">
+                  <div className="rounded-xl p-3 border border-gray-100" style={{ background: CREAM }}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Zap size={13} style={{ color: PRIMARY }} />
+                      <span className="text-xs font-semibold" style={{ color: PRIMARY }}>AI Status</span>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {selected.status === 'open'
+                        ? 'Conversation is active. AI is monitoring incoming messages.'
+                        : 'This conversation has been closed.'}
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-sm text-gray-400 px-4 text-center">
+                Select a conversation to see details
               </div>
             )}
-            <div className="flex items-end gap-2">
-              <textarea
-                rows={1}
-                value={inputText}
-                onChange={e => setInputText(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); setInputText('') } }}
-                placeholder={aiHandling ? 'AI is responding automatically...' : 'Type a message...'}
-                disabled={aiHandling}
-                className="flex-1 resize-none px-4 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ maxHeight: 100 }}
-              />
-              <button
-                disabled={aiHandling || !inputText.trim()}
-                className="p-2.5 rounded-xl text-white transition disabled:opacity-40 flex-shrink-0"
-                style={{ background: PRIMARY }}
-                onClick={() => setInputText('')}
-              >
-                <Send size={16} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Right — Customer Context */}
-        <div className="hidden xl:flex w-72 flex-col border-l border-gray-100 flex-shrink-0 overflow-y-auto bg-white">
-          <div className="px-4 pt-4 pb-3 border-b border-gray-100">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold" style={{ background: PRIMARY }}>
-                {selected?.avatar}
-              </div>
-              <div>
-                <div className="font-semibold text-gray-900">{selected?.customer}</div>
-                <div className="text-xs text-gray-400">{selected?.phone}</div>
-                <div className="text-xs mt-0.5" style={{ color: PRIMARY }}>
-                  {conversations.indexOf(selected) === 0 ? 'New customer' : 'Returning customer'}
-                </div>
-              </div>
-            </div>
           </div>
 
-          <div className="px-4 py-3 border-b border-gray-100">
-            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Conversation Stage</div>
-            <div className="space-y-2">
-              {stages.map((stage) => {
-                const done = currentStep > stage.step
-                const active = currentStep === stage.step
-                return (
-                  <div key={stage.key} className="flex items-center gap-2.5">
-                    <div
-                      className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
-                      style={done
-                        ? { background: PRIMARY, color: '#fff' }
-                        : active
-                          ? { background: '#dce5fd', color: PRIMARY, border: `2px solid ${PRIMARY}` }
-                          : { background: '#f1f5f9', color: '#9ca3af' }}
-                    >
-                      {done ? '✓' : stage.step}
-                    </div>
-                    <span className="text-sm" style={{ color: active ? PRIMARY : done ? '#374151' : '#9ca3af', fontWeight: active || done ? 600 : 400 }}>
-                      {stage.label}
-                    </span>
-                    {active && <div className="w-1.5 h-1.5 rounded-full ml-auto animate-pulse" style={{ background: PRIMARY }} />}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className="px-4 py-3 border-b border-gray-100">
-            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Extracted Info</div>
-            <div className="space-y-2">
-              {[
-                { label: 'Product', value: selected?.interest },
-                { label: 'Size', value: selected?.size },
-                { label: 'Budget', value: selected?.budget },
-                { label: 'Delivery', value: selected?.delivery },
-              ].map(item => (
-                <div key={item.label} className="flex items-center justify-between">
-                  <span className="text-xs text-gray-400">{item.label}</span>
-                  {item.value
-                    ? <span className="text-xs font-semibold text-gray-900">{item.value}</span>
-                    : <span className="text-xs text-gray-300 italic">Not collected</span>
-                  }
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="px-4 py-3">
-            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Quick Actions</div>
-            <div className="space-y-2">
-              <button className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-white transition hover:opacity-90" style={{ background: PRIMARY }}>
-                <FileText size={15} />Generate Quotation
-              </button>
-              <button className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition hover:opacity-90" style={{ background: '#dce5fd', color: PRIMARY }}>
-                <ShoppingBag size={15} />Create Order
-              </button>
-              <button className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-gray-600 border border-gray-200 bg-white transition hover:bg-gray-50" onClick={() => setAiHandling(false)}>
-                <UserCheck size={15} />Escalate to Staff
-              </button>
-              <button className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-red-400 border border-red-100 bg-red-50 transition hover:bg-red-100">
-                <X size={15} />End Conversation
-              </button>
-            </div>
-          </div>
-
-          <div className="px-4 pb-4 mt-auto">
-            <div className="rounded-xl p-3 border border-gray-100" style={{ background: CREAM }}>
-              <div className="flex items-center gap-2 mb-2">
-                <Zap size={13} style={{ color: PRIMARY }} />
-                <span className="text-xs font-semibold" style={{ color: PRIMARY }}>AI Confidence</span>
-              </div>
-              <div className="h-1.5 bg-blue-100 rounded-full overflow-hidden mb-1">
-                <div className="h-full rounded-full" style={{ width: '92%', background: PRIMARY }} />
-              </div>
-              <div className="text-xs text-gray-500">92% — Based on uploaded knowledge base</div>
-            </div>
-          </div>
         </div>
       </div>
-    </div>
+
+      {/* Generate Quotation Modal */}
+      {showQuoteModal && selected && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.4)' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowQuoteModal(false) }}
+        >
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div>
+                <h2 className="text-base font-semibold text-gray-900">Generate Quotation</h2>
+                <p className="text-xs text-gray-400 mt-0.5">For: {selected.customer?.name || selected.customer?.phone}</p>
+              </div>
+              <button onClick={() => setShowQuoteModal(false)} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition">
+                <X size={17} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateQuote} className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Item / Description</label>
+                <input
+                  type="text"
+                  value={quoteForm.description}
+                  onChange={e => setQuoteForm(f => ({ ...f, description: e.target.value }))}
+                  placeholder="e.g. Bridal Gown with beadwork"
+                  className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-300"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Amount (₦) <span className="text-red-400">*</span></label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">₦</span>
+                  <input
+                    type="number" min="0" step="any" required
+                    value={quoteForm.amountNaira}
+                    onChange={e => setQuoteForm(f => ({ ...f, amountNaira: e.target.value }))}
+                    placeholder="0"
+                    className="w-full pl-7 pr-4 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-300"
+                  />
+                </div>
+              </div>
+              {quoteError && (
+                <div className="text-xs text-red-600 bg-red-50 border border-red-100 px-3 py-2 rounded-xl">{quoteError}</div>
+              )}
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setShowQuoteModal(false)} className="flex-1 py-2.5 text-sm font-semibold text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 transition">Cancel</button>
+                <button type="submit" disabled={quoteSubmitting} className="flex-1 py-2.5 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition disabled:opacity-60" style={{ background: PRIMARY }}>
+                  {quoteSubmitting ? 'Saving…' : 'Save Quote'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create Order Modal */}
+      {showOrderModal && selected && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.4)' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowOrderModal(false) }}
+        >
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div>
+                <h2 className="text-base font-semibold text-gray-900">Create Order</h2>
+                <p className="text-xs text-gray-400 mt-0.5">For: {selected.customer?.name || selected.customer?.phone}</p>
+              </div>
+              <button onClick={() => setShowOrderModal(false)} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition">
+                <X size={17} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateOrder} className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Product / Item</label>
+                <input type="text" value={orderForm.product} onChange={e => setOrderForm(f => ({ ...f, product: e.target.value }))} placeholder="e.g. Corset Dress" className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-300" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Size <span className="text-gray-300 font-normal">(optional)</span></label>
+                <input type="text" value={orderForm.size} onChange={e => setOrderForm(f => ({ ...f, size: e.target.value }))} placeholder="e.g. M, L, 42" className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-300" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Amount (₦) <span className="text-red-400">*</span></label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">₦</span>
+                  <input type="number" min="0" step="any" required value={orderForm.amountNaira} onChange={e => setOrderForm(f => ({ ...f, amountNaira: e.target.value }))} placeholder="0" className="w-full pl-7 pr-4 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-300" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Status</label>
+                <select value={orderForm.status} onChange={e => setOrderForm(f => ({ ...f, status: e.target.value }))} className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-300">
+                  {[['pending','Pending'],['confirmed','Confirmed'],['paid','Paid'],['fulfilled','Fulfilled'],['cancelled','Cancelled']].map(([v,l]) => (
+                    <option key={v} value={v}>{l}</option>
+                  ))}
+                </select>
+              </div>
+              {orderError && (
+                <div className="text-xs text-red-600 bg-red-50 border border-red-100 px-3 py-2 rounded-xl">{orderError}</div>
+              )}
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setShowOrderModal(false)} className="flex-1 py-2.5 text-sm font-semibold text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 transition">Cancel</button>
+                <button type="submit" disabled={orderSubmitting} className="flex-1 py-2.5 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition disabled:opacity-60" style={{ background: PRIMARY }}>
+                  {orderSubmitting ? 'Creating…' : 'Create Order'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

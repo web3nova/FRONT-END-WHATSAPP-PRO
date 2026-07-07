@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar
@@ -6,11 +7,17 @@ import {
   Users, ShoppingBag, DollarSign, Globe, MessageCircle,
   TrendingUp, Package, ArrowRight, Bot, FileText
 } from 'lucide-react'
+import { useAuth } from '../../context/AuthContext'
+import { listCustomers } from '../../api/customersApi'
+import { listOrders } from '../../api/ordersApi'
+import { listConversations } from '../../api/conversationsApi'
+import { listQuotes } from '../../api/quotesApi'
 
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
 const BLUE_LIGHT = '#dce5fd'
 
+// Charts stay illustrative — backend has no time-series analytics endpoint
 const monthlyData = [
   { month: 'Jan', revenue: 1800, orders: 42 },
   { month: 'Feb', revenue: 2400, orders: 58 },
@@ -22,49 +29,59 @@ const monthlyData = [
 
 const customerSources = [
   { name: 'WhatsApp', value: 64, color: PRIMARY },
-  { name: 'Website', value: 22, color: '#7b96f8' },
-  { name: 'Referral', value: 9, color: '#1e3fc2' },
-  { name: 'Direct', value: 5, color: '#c7d2fb' },
+  { name: 'Website',  value: 22, color: '#7b96f8' },
+  { name: 'Referral', value: 9,  color: '#1e3fc2' },
+  { name: 'Direct',   value: 5,  color: '#c7d2fb' },
 ]
 
 const topProducts = [
-  { name: 'Corset Dress', sales: 52, revenue: 4160000 },
-  { name: 'Bridal Gown', sales: 38, revenue: 2280000 },
+  { name: 'Corset Dress',  sales: 52, revenue: 4160000 },
+  { name: 'Bridal Gown',   sales: 38, revenue: 2280000 },
   { name: 'Native Attire', sales: 41, revenue: 1640000 },
-  { name: 'Senator Wear', sales: 29, revenue: 1450000 },
+  { name: 'Senator Wear',  sales: 29, revenue: 1450000 },
 ]
 
-const recentOrders = [
-  { id: '#ORD-1047', customer: 'Amara Johnson', product: 'Bridal Gown', amount: '₦60,000', status: 'pending', date: 'Jun 24' },
-  { id: '#ORD-1046', customer: 'Chioma Obi', product: 'Corset Dress', amount: '₦80,000', status: 'in-progress', date: 'Jun 23' },
-  { id: '#ORD-1045', customer: 'Fatima Bello', product: 'Native Attire', amount: '₦40,000', status: 'completed', date: 'Jun 23' },
-  { id: '#ORD-1044', customer: 'Ngozi Peters', product: 'Senator Wear', amount: '₦50,000', status: 'completed', date: 'Jun 22' },
-  { id: '#ORD-1043', customer: 'Aisha Mohammed', product: 'Corset Dress', amount: '₦80,000', status: 'completed', date: 'Jun 21' },
-]
-
-const recentChats = [
-  { customer: 'Emeka Nwosu', avatar: 'EN', message: "I need a corset dress for my wife's birthday", time: '2m ago', unread: true, aiHandled: true },
-  { customer: 'Sarah Adeyemi', avatar: 'SA', message: 'What sizes are available for the bridal gown?', time: '15m ago', unread: true, aiHandled: true },
-  { customer: 'David Okonkwo', avatar: 'DO', message: 'Can I get a quote for a native attire?', time: '1h ago', unread: false, aiHandled: false },
-  { customer: 'Grace Eze', avatar: 'GE', message: 'Is my order #ORD-1043 ready for pickup?', time: '2h ago', unread: false, aiHandled: true },
-]
-
-const recentQuotes = [
-  { id: '#QT-0089', customer: 'Mrs Adaeze', item: 'Bridal Gown', amount: '₦120,000', status: 'awaiting' },
-  { id: '#QT-0088', customer: 'Tolu Bakare', item: 'Corset Dress', amount: '₦80,000', status: 'accepted' },
-  { id: '#QT-0087', customer: 'Kemi Lawson', item: 'Senator Wear x2', amount: '₦95,000', status: 'rejected' },
-]
-
-const statusConfig = {
-  pending: { label: 'Pending', bg: CREAM, color: '#92400e' },
-  'in-progress': { label: 'In Progress', bg: BLUE_LIGHT, color: PRIMARY },
-  completed: { label: 'Completed', bg: BLUE_LIGHT, color: '#1e3fc2' },
-  awaiting: { label: 'Awaiting', bg: CREAM, color: '#78350f' },
-  accepted: { label: 'Accepted', bg: BLUE_LIGHT, color: PRIMARY },
-  rejected: { label: 'Rejected', bg: '#fee2e2', color: '#dc2626' },
+const ORDER_STATUS = {
+  pending:   { label: 'Pending',   bg: '#FEF3C7', color: '#D97706' },
+  confirmed: { label: 'Confirmed', bg: BLUE_LIGHT,  color: PRIMARY },
+  paid:      { label: 'Paid',      bg: BLUE_LIGHT,  color: '#1e3fc2' },
+  fulfilled: { label: 'Fulfilled', bg: '#D1FAE5',   color: '#059669' },
+  cancelled: { label: 'Cancelled', bg: '#FEE2E2',   color: '#DC2626' },
 }
 
-function StatCard({ label, value, sub, positive, icon: Icon, className = "" }) {
+const QUOTE_STATUS = {
+  draft:     { label: 'Draft',     bg: '#f3f4f6', color: '#6b7280' },
+  sent:      { label: 'Awaiting',  bg: CREAM,     color: '#78350f' },
+  accepted:  { label: 'Accepted',  bg: BLUE_LIGHT, color: PRIMARY },
+  rejected:  { label: 'Rejected',  bg: '#fee2e2', color: '#dc2626' },
+  cancelled: { label: 'Cancelled', bg: '#fee2e2', color: '#dc2626' },
+}
+
+function formatAmount(minor = 0) {
+  return `₦${(minor / 100).toLocaleString()}`
+}
+
+function shortId(uuid = '') {
+  return `#${uuid.slice(0, 8).toUpperCase()}`
+}
+
+function extractProduct(items) {
+  if (!Array.isArray(items) || !items.length) return '—'
+  return items[0]?.name || items[0]?.productName || '—'
+}
+
+function relativeTime(iso) {
+  if (!iso) return ''
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
+
+function StatCard({ label, value, sub, positive, icon: Icon, className = '' }) {
   return (
     <div className={`bg-white rounded-2xl p-5 shadow-sm border border-gray-100 ${className}`}>
       <div className="flex items-start justify-between mb-4">
@@ -105,13 +122,60 @@ const CustomTooltip = ({ active, payload, label }) => {
 const avatarColors = [PRIMARY, '#1e3fc2', '#7b96f8', '#4166F5', '#2952d9', '#3457e8']
 
 export default function BusinessOverview() {
+  const { user } = useAuth()
+  const businessName = user?.businessName || user?.name || user?.email || 'your business'
+
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({ customers: 0, orders: 0, revenue: 0, conversations: 0 })
+  const [recentOrders, setRecentOrders] = useState([])
+  const [recentChats, setRecentChats] = useState([])
+  const [recentQuotes, setRecentQuotes] = useState([])
+
+  useEffect(() => {
+    let ignore = false
+    const monthStart = new Date()
+    monthStart.setDate(1)
+    monthStart.setHours(0, 0, 0, 0)
+
+    Promise.all([
+      listCustomers({ limit: 1 }),
+      listOrders({ limit: 100 }),
+      listConversations({ limit: 4 }),
+      listQuotes({ limit: 3 }),
+    ]).then(([custRes, ordRes, convRes, quoteRes]) => {
+      if (ignore) return
+
+      const allOrders = ordRes.data
+      const monthOrders = allOrders.filter(o => new Date(o.createdAt) >= monthStart)
+      const monthRevenue = monthOrders.reduce((sum, o) => sum + (o.totalMinor || 0), 0)
+
+      setStats({
+        customers: custRes.meta?.total ?? 0,
+        orders: monthOrders.length,
+        revenue: monthRevenue,
+        conversations: convRes.meta?.total ?? convRes.data.length,
+      })
+      setRecentOrders(allOrders.slice(0, 5))
+      setRecentChats(convRes.data)
+      setRecentQuotes(quoteRes.data.slice(0, 3))
+    }).catch(() => {
+      // silently fail — page renders with zeroes
+    }).finally(() => {
+      if (!ignore) setLoading(false)
+    })
+
+    return () => { ignore = true }
+  }, [])
+
+  const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+
   return (
     <div className="space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Welcome back, Perfect Style Edits</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Here's what's happening with your business today · June 24, 2026</p>
+          <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Welcome back, {businessName}</h1>
+          <p className="text-sm text-gray-400 mt-0.5">Here's what's happening with your business today · {today}</p>
         </div>
         <div className="flex items-center gap-2">
           <button className="hidden sm:block px-4 py-2 text-sm font-medium border border-gray-200 bg-white text-gray-600 rounded-xl hover:bg-gray-50 transition">
@@ -128,21 +192,20 @@ export default function BusinessOverview() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <StatCard label="Total Customers" value="3,481" sub="+23 this week" positive icon={Users} />
-        <StatCard label="Orders This Month" value="186" sub="+18% vs last month" positive icon={ShoppingBag} />
-        <StatCard label="Monthly Revenue" value="₦14.8M" sub="+22% growth" positive icon={DollarSign} />
-        <StatCard label="Website Visits" value="12,400" sub="this month" positive={false} icon={Globe} />
-        <StatCard label="WhatsApp Messages" value="2,847" sub="AI handled 94%" positive icon={MessageCircle} className="col-span-2 md:col-span-1 lg:col-span-1" />
+        <StatCard label="Total Customers"   value={loading ? '…' : stats.customers.toLocaleString()} sub="all time"   positive icon={Users} />
+        <StatCard label="Orders This Month" value={loading ? '…' : stats.orders}                     sub="this month" positive icon={ShoppingBag} />
+        <StatCard label="Monthly Revenue"   value={loading ? '…' : formatAmount(stats.revenue)}      sub="this month" positive icon={DollarSign} />
+        <StatCard label="Website Visits"    value="—"                                                 sub="no data"    positive={false} icon={Globe} />
+        <StatCard label="Conversations"     value={loading ? '…' : stats.conversations.toLocaleString()} sub="total"  positive icon={MessageCircle} className="col-span-2 md:col-span-1 lg:col-span-1" />
       </div>
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Revenue + Orders */}
         <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100 min-w-0 overflow-hidden">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="font-semibold text-gray-900">Revenue & Orders Trend</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Monthly performance overview</p>
+              <p className="text-xs text-gray-400 mt-0.5">Illustrative monthly overview</p>
             </div>
             <div className="flex items-center gap-4 text-xs">
               <div className="flex items-center gap-1.5">
@@ -169,16 +232,15 @@ export default function BusinessOverview() {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <YAxis yAxisId="left" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+              <YAxis yAxisId="left"  tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
               <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} />
-              <Area yAxisId="left" type="monotone" dataKey="revenue" name="Revenue (₦K)" stroke={PRIMARY} strokeWidth={2.5} fill="url(#revGrad2)" dot={false} activeDot={{ r: 5, fill: PRIMARY, strokeWidth: 0 }} />
-              <Area yAxisId="right" type="monotone" dataKey="orders" name="Orders" stroke="#7b96f8" strokeWidth={2} fill="url(#ordGrad)" dot={false} activeDot={{ r: 4, fill: '#7b96f8', strokeWidth: 0 }} />
+              <Area yAxisId="left"  type="monotone" dataKey="revenue" name="Revenue (₦K)" stroke={PRIMARY}   strokeWidth={2.5} fill="url(#revGrad2)" dot={false} activeDot={{ r: 5, fill: PRIMARY,   strokeWidth: 0 }} />
+              <Area yAxisId="right" type="monotone" dataKey="orders"  name="Orders"       stroke="#7b96f8" strokeWidth={2}   fill="url(#ordGrad)"  dot={false} activeDot={{ r: 4, fill: '#7b96f8', strokeWidth: 0 }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Customer sources */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 min-w-0 overflow-hidden">
           <div className="mb-4">
             <h2 className="font-semibold text-gray-900">Customer Sources</h2>
@@ -208,9 +270,8 @@ export default function BusinessOverview() {
         </div>
       </div>
 
-      {/* Orders + Chats row */}
+      {/* Recent Orders + Chats */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Recent Orders */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <div>
@@ -222,22 +283,29 @@ export default function BusinessOverview() {
             </button>
           </div>
           <div className="divide-y divide-gray-50">
-            {recentOrders.map(order => {
-              const s = statusConfig[order.status]
+            {loading ? (
+              <div className="px-5 py-8 text-center text-sm text-gray-400">Loading…</div>
+            ) : recentOrders.length === 0 ? (
+              <div className="px-5 py-8 text-center text-sm text-gray-400">No orders yet.</div>
+            ) : recentOrders.map(order => {
+              const s = ORDER_STATUS[order.status] || { label: order.status, bg: '#f3f4f6', color: '#6b7280' }
+              const name = order.customer?.name || 'Unknown'
+              const product = extractProduct(order.items)
+              const date = new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
               return (
                 <div key={order.id} className="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors">
                   <div
                     className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
                     style={{ background: PRIMARY }}
                   >
-                    {order.customer.charAt(0)}
+                    {name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900">{order.customer}</div>
-                    <div className="text-xs text-gray-400">{order.product} · {order.date}</div>
+                    <div className="text-sm font-medium text-gray-900">{name}</div>
+                    <div className="text-xs text-gray-400">{product} · {date}</div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <div className="text-sm font-semibold text-gray-900">{order.amount}</div>
+                    <div className="text-sm font-semibold text-gray-900">{formatAmount(order.totalMinor)}</div>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-lg" style={{ background: s.bg, color: s.color }}>
                       {s.label}
                     </span>
@@ -248,12 +316,11 @@ export default function BusinessOverview() {
           </div>
         </div>
 
-        {/* WhatsApp Chats */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <div>
               <h2 className="font-semibold text-gray-900">WhatsApp Conversations</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Recent AI-handled chats</p>
+              <p className="text-xs text-gray-400 mt-0.5">Recent conversations</p>
             </div>
             <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: PRIMARY }}>
               <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: PRIMARY }}></div>
@@ -261,50 +328,59 @@ export default function BusinessOverview() {
             </div>
           </div>
           <div className="divide-y divide-gray-50">
-            {recentChats.map((chat, i) => (
-              <div key={chat.customer} className="flex items-start gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors cursor-pointer">
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                  style={{ background: avatarColors[i % avatarColors.length] }}
-                >
-                  {chat.avatar}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium text-gray-900">{chat.customer}</span>
-                    <span className="text-xs text-gray-400 flex-shrink-0">{chat.time}</span>
+            {loading ? (
+              <div className="px-5 py-8 text-center text-sm text-gray-400">Loading…</div>
+            ) : recentChats.length === 0 ? (
+              <div className="px-5 py-8 text-center text-sm text-gray-400">No conversations yet.</div>
+            ) : recentChats.map((conv, i) => {
+              const name = conv.customer?.name || conv.customer?.phone || 'Unknown'
+              const av = name.slice(0, 2).toUpperCase()
+              return (
+                <div key={conv.id} className="flex items-start gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors cursor-pointer">
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                    style={{ background: avatarColors[i % avatarColors.length] }}
+                  >
+                    {av}
                   </div>
-                  <div className="text-xs text-gray-400 truncate mt-0.5">{chat.message}</div>
-                  {chat.aiHandled && (
-                    <div className="flex items-center gap-1 mt-1">
-                      <Bot size={10} style={{ color: PRIMARY }} />
-                      <span className="text-xs" style={{ color: PRIMARY }}>AI responding</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-gray-900">{name}</span>
+                      <span className="text-xs text-gray-400 flex-shrink-0">{relativeTime(conv.updatedAt)}</span>
                     </div>
+                    <div className="text-xs text-gray-400 truncate mt-0.5">
+                      {conv.status === 'open' ? 'Active conversation' : 'Resolved'}
+                    </div>
+                    {conv.status === 'open' && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <Bot size={10} style={{ color: PRIMARY }} />
+                        <span className="text-xs" style={{ color: PRIMARY }}>AI responding</span>
+                      </div>
+                    )}
+                  </div>
+                  {conv.status === 'open' && (
+                    <div className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ background: PRIMARY }}></div>
                   )}
                 </div>
-                {chat.unread && (
-                  <div className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ background: PRIMARY }}></div>
-                )}
-              </div>
-            ))}
+              )
+            })}
           </div>
           <div className="px-5 py-3 border-t border-gray-50">
             <div className="flex items-center justify-between text-xs text-gray-400">
-              <span>AI auto-handled: <span className="font-semibold text-gray-700">94%</span></span>
+              <span>Total: <span className="font-semibold text-gray-700">{stats.conversations}</span> conversations</span>
               <button className="font-semibold hover:opacity-70 transition" style={{ color: PRIMARY }}>Open inbox →</button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom row: Products + Quotes */}
+      {/* Top Products + Quotes */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Top Products */}
         <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-5 min-w-0 overflow-hidden">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="font-semibold text-gray-900">Top Products by Revenue</h2>
-              <p className="text-xs text-gray-400 mt-0.5">This month's performance</p>
+              <p className="text-xs text-gray-400 mt-0.5">Illustrative monthly performance</p>
             </div>
             <button className="text-sm font-semibold flex items-center gap-1 hover:opacity-70 transition" style={{ color: PRIMARY }}>
               Manage <ArrowRight size={13} />
@@ -332,7 +408,6 @@ export default function BusinessOverview() {
           </div>
         </div>
 
-        {/* Recent Quotations */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <div>
@@ -342,22 +417,28 @@ export default function BusinessOverview() {
             <FileText size={15} className="text-gray-300" />
           </div>
           <div className="divide-y divide-gray-50">
-            {recentQuotes.map(q => {
-              const s = statusConfig[q.status]
+            {loading ? (
+              <div className="px-5 py-8 text-center text-sm text-gray-400">Loading…</div>
+            ) : recentQuotes.length === 0 ? (
+              <div className="px-5 py-8 text-center text-sm text-gray-400">No quotes yet.</div>
+            ) : recentQuotes.map(q => {
+              const s = QUOTE_STATUS[q.status] || { label: q.status, bg: '#f3f4f6', color: '#6b7280' }
+              const customer = q.customer?.name || 'Unknown'
+              const item = q.details?.item || q.details?.description || '—'
               return (
                 <div key={q.id} className="px-5 py-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-start justify-between mb-1">
                     <div>
-                      <div className="text-sm font-medium text-gray-900">{q.customer}</div>
-                      <div className="text-xs text-gray-400 mt-0.5">{q.item}</div>
+                      <div className="text-sm font-medium text-gray-900">{customer}</div>
+                      <div className="text-xs text-gray-400 mt-0.5">{item}</div>
                     </div>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-lg flex-shrink-0" style={{ background: s.bg, color: s.color }}>
                       {s.label}
                     </span>
                   </div>
                   <div className="flex items-center justify-between mt-2">
-                    <span className="text-xs text-gray-400">{q.id}</span>
-                    <span className="text-sm font-bold text-gray-900">{q.amount}</span>
+                    <span className="text-xs text-gray-400">{shortId(q.id)}</span>
+                    <span className="text-sm font-bold text-gray-900">{formatAmount(q.amountMinor)}</span>
                   </div>
                 </div>
               )
