@@ -42,6 +42,7 @@ export default function Website() {
   const [previewDevice, setPreviewDevice] = useState('desktop')
   const [editingSectionId, setEditingSectionId] = useState(null)
   const [savingSettings, setSavingSettings] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [sectionForm, setSectionForm] = useState({})
 
   // Whether the product data actually has distinct categories — used to let
@@ -102,42 +103,65 @@ export default function Website() {
   const activeTemplateId = settings?.theme?.templateId || 'minimal'
 
   // Persist a toggle immediately so it survives a refresh, not just local state.
+  // Blocked while another save is in flight, and reverted if the request fails,
+  // so the UI never shows a toggle state that isn't actually saved.
   const toggle = async (i) => {
-    const updated = activeSectionFlags.map((v, idx) => idx === i ? !v : v)
+    if (savingSettings) return
+    const previous = activeSectionFlags
+    const updated = previous.map((v, idx) => idx === i ? !v : v)
     setActiveSectionFlags(updated)
     const token = getStoredAccessToken()
     if (!token) return
+    setSavingSettings(true)
+    setSaveError('')
     try {
-      await fetch(`${API_BASE}/website/settings`, {
+      const res = await fetch(`${API_BASE}/website/settings`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ sections: sections.map((s, idx) => ({ id: s.id, name: s.name, active: updated[idx] })) }),
       })
+      if (!res.ok) throw new Error('Save failed')
     } catch (err) {
       console.error('Failed to save section visibility:', err)
+      setActiveSectionFlags(previous)
+      setSaveError('Could not save that change. Please try again.')
+    } finally {
+      setSavingSettings(false)
     }
   }
 
   // Swap the whole visual template. Saves immediately, same pattern as toggle().
+  // Blocked while another save is in flight, and reverted if the request fails.
   const selectTemplate = async (templateId) => {
-    const currentTheme = settings?.theme || {}
-    const updatedTheme = { ...currentTheme, templateId }
+    if (savingSettings) return
+    const previousTheme = settings?.theme || {}
+    const updatedTheme = { ...previousTheme, templateId }
     setSettings(s => ({ ...(s || {}), theme: updatedTheme }))
     const token = getStoredAccessToken()
     if (!token) return
+    setSavingSettings(true)
+    setSaveError('')
     try {
-      await fetch(`${API_BASE}/website/settings`, {
+      const res = await fetch(`${API_BASE}/website/settings`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ theme: updatedTheme }),
       })
+      if (!res.ok) throw new Error('Save failed')
     } catch (err) {
       console.error('Failed to save template:', err)
+      setSettings(s => ({ ...(s || {}), theme: previousTheme }))
+      setSaveError('Could not save that template. Please try again.')
+    } finally {
+      setSavingSettings(false)
     }
   }
 
   // Open / close the inline editor for a section, seeding the form with saved values.
+  // Blocked while a save is in flight — switching sections mid-save reads stale
+  // `settings` state and silently drops whatever the in-flight save just wrote.
   const openEditor = (s) => {
+    if (savingSettings) return
     if (editingSectionId === s.id) {
       setEditingSectionId(null)
       setSectionForm({})
@@ -167,8 +191,14 @@ export default function Website() {
     setEditingSectionId(s.id)
   }
 
+  // Blocked while another save is in flight (see openEditor) so `currentTheme`
+  // is never built from settings that a still-in-flight save hasn't landed yet.
+  // Every request's response is checked — on failure the editor stays open with
+  // the user's input intact instead of silently discarding it.
   const saveSection = async (s) => {
+    if (savingSettings) return
     setSavingSettings(true)
+    setSaveError('')
     const token = getStoredAccessToken()
     if (!token) { setSavingSettings(false); return }
     try {
@@ -185,56 +215,61 @@ export default function Website() {
           bgImage: sectionForm.bgImage ?? hero.bgImage ?? '',
           layout: sectionForm.layout ?? hero.layout ?? 'center',
         }
-        await fetch(`${API_BASE}/website/settings`, {
+        const res = await fetch(`${API_BASE}/website/settings`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ theme: { ...currentTheme, builder } }),
         })
+        if (!res.ok) throw new Error('Save failed')
       } else if (s.id === 2) {
         builder.products = {
           count: sectionForm.productCount ?? builder.products?.count ?? 8,
           title: sectionForm.productsTitle ?? builder.products?.title ?? '',
         }
-        await fetch(`${API_BASE}/website/settings`, {
+        const res = await fetch(`${API_BASE}/website/settings`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ theme: { ...currentTheme, builder } }),
         })
+        if (!res.ok) throw new Error('Save failed')
       } else if (s.id === 3) {
         const desc = sectionForm.about ?? business?.description ?? ''
-        await fetch(`${API_BASE}/business`, {
+        const res = await fetch(`${API_BASE}/business`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ description: desc }),
         })
+        if (!res.ok) throw new Error('Save failed')
         setBusiness(b => ({ ...b, description: desc }))
       } else if (s.id === 4) {
         builder.gallery = {
           title: sectionForm.galleryTitle ?? builder.gallery?.title ?? '',
           images: sectionForm.galleryImages ?? builder.gallery?.images ?? [],
         }
-        await fetch(`${API_BASE}/website/settings`, {
+        const res = await fetch(`${API_BASE}/website/settings`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ theme: { ...currentTheme, builder } }),
         })
+        if (!res.ok) throw new Error('Save failed')
       } else if (s.id === 5) {
         builder.testimonials = {
           title: sectionForm.testimonialsTitle ?? builder.testimonials?.title ?? '',
           items: sectionForm.testimonialItems ?? builder.testimonials?.items ?? [],
         }
-        await fetch(`${API_BASE}/website/settings`, {
+        const res = await fetch(`${API_BASE}/website/settings`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ theme: { ...currentTheme, builder } }),
         })
+        if (!res.ok) throw new Error('Save failed')
       } else if (s.id === 6) {
         const wNum = sectionForm.whatsapp ?? business?.whatsappNumber ?? ''
         builder.contact = {
           address: sectionForm.address ?? builder.contact?.address ?? '',
           instagram: sectionForm.instagram ?? builder.contact?.instagram ?? '',
         }
-        await Promise.all([
+        const [bizRes, wsRes] = await Promise.all([
           fetch(`${API_BASE}/business`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -246,6 +281,7 @@ export default function Website() {
             body: JSON.stringify({ theme: { ...currentTheme, builder } }),
           }),
         ])
+        if (!bizRes.ok || !wsRes.ok) throw new Error('Save failed')
         setBusiness(b => ({ ...b, whatsappNumber: wNum }))
       }
 
@@ -259,6 +295,7 @@ export default function Website() {
       setSectionForm({})
     } catch (err) {
       console.error('Failed to save section:', err)
+      setSaveError('Could not save your changes. Please try again.')
     } finally {
       setSavingSettings(false)
     }
@@ -441,6 +478,11 @@ export default function Website() {
                   </div>
                 )}
               </div>
+              {saveError && (
+                <div className="px-4 py-2.5 border-b border-gray-100 text-xs font-medium text-red-600 bg-red-50">
+                  {saveError}
+                </div>
+              )}
               <div className="divide-y divide-gray-50">
                 {sections.map((s, i) => {
                   const Icon = sectionIcons[i] || Layout
@@ -450,7 +492,7 @@ export default function Website() {
                     <div key={s.id}>
                       {/* Section row (clickable) */}
                       <div
-                        className="flex items-center gap-3 px-4 py-3.5 cursor-pointer hover:bg-gray-50 transition select-none"
+                        className={`flex items-center gap-3 px-4 py-3.5 transition select-none ${savingSettings ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'}`}
                         onClick={() => openEditor(s)}
                       >
                         <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: CREAM }}>
@@ -461,10 +503,10 @@ export default function Website() {
                           <div className="text-xs text-gray-400 truncate">{s.desc}</div>
                         </div>
                         <button
-                          onClick={(e) => { e.stopPropagation(); if (!isCategorySection || hasRealCategories) toggle(i); }}
+                          onClick={(e) => { e.stopPropagation(); if (!savingSettings && (!isCategorySection || hasRealCategories)) toggle(i); }}
                           aria-label={`Toggle ${s.name}`}
                           className="flex-shrink-0 p-1.5 -m-1.5"
-                          disabled={isCategorySection && !hasRealCategories}
+                          disabled={savingSettings || (isCategorySection && !hasRealCategories)}
                         >
                           {activeSectionFlags[i]
                             ? <ToggleRight size={24} style={{ color: PRIMARY }} />
@@ -765,15 +807,17 @@ export default function Website() {
                             {!isCategorySection && (
                               <button
                                 onClick={() => saveSection(s)}
-                                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-lg hover:opacity-90 transition"
+                                disabled={savingSettings}
+                                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-lg hover:opacity-90 transition disabled:opacity-60"
                                 style={{ background: PRIMARY }}
                               >
                                 <Save size={13} /> Save Changes
                               </button>
                             )}
                             <button
-                              onClick={() => { setEditingSectionId(null); setSectionForm({}); }}
-                              className="px-4 py-2 text-xs font-semibold text-gray-500 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition"
+                              onClick={() => { setEditingSectionId(null); setSectionForm({}); setSaveError('') }}
+                              disabled={savingSettings}
+                              className="px-4 py-2 text-xs font-semibold text-gray-500 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition disabled:opacity-60"
                             >
                               {isCategorySection ? 'Close' : 'Cancel'}
                             </button>
@@ -790,7 +834,19 @@ export default function Website() {
           {tab === 'design' && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-5">
               <div>
-                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Template</div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Template</div>
+                  {savingSettings && (
+                    <div className="flex items-center gap-1.5 text-xs" style={{ color: PRIMARY }}>
+                      <Loader size={12} className="animate-spin" /> Saving...
+                    </div>
+                  )}
+                </div>
+                {saveError && (
+                  <div className="mb-3 px-3 py-2 rounded-lg text-xs font-medium text-red-600 bg-red-50">
+                    {saveError}
+                  </div>
+                )}
                 <p className="text-xs text-gray-400 mb-3">Pick the visual style closest to your brand. You can switch anytime — your content stays the same.</p>
                 <div className="grid grid-cols-2 gap-3">
                   {Object.values(THEMES).map(theme => {
@@ -799,7 +855,8 @@ export default function Website() {
                       <button
                         key={theme.id}
                         onClick={() => selectTemplate(theme.id)}
-                        className="text-left rounded-xl border-2 p-3 transition relative"
+                        disabled={savingSettings}
+                        className="text-left rounded-xl border-2 p-3 transition relative disabled:opacity-60"
                         style={{ borderColor: isActive ? PRIMARY : '#e5e7eb' }}
                       >
                         {isActive && (
@@ -856,7 +913,7 @@ export default function Website() {
           </div>
 
           {/* Mockup content */}
-          <div className="overflow-y-auto bg-gray-50 flex justify-center py-4" style={{ maxHeight: 520 }}>
+          <div className="overflow-y-auto bg-gray-50 flex justify-center items-start py-4" style={{ maxHeight: 520 }}>
             <div
               className="bg-white overflow-hidden transition-all duration-300 w-full"
               style={previewDevice === 'mobile' ? { maxWidth: 340, borderRadius: 16 } : { maxWidth: '100%' }}
