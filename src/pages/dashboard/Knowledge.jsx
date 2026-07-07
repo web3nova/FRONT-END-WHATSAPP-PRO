@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Upload, FileText, CheckCircle, Clock, AlertCircle, Trash2, Send, Bot, RefreshCw, X } from 'lucide-react'
-import { fetchDocuments, uploadDocument } from '../../api/knowledgeApi'
+import { fetchDocuments, uploadDocument, retryDocument, deleteDocument } from '../../api/knowledgeApi'
 import { sendChatMessage, clearMemory } from '../../api/aiApi'
 
 const PRIMARY = '#4166F5'
@@ -29,8 +29,11 @@ const ALLOWED_TYPES = [
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'text/plain',
+  'text/markdown',
+  'text/csv',
+  'application/json',
 ]
-const ALLOWED_EXT = '.pdf, .docx, .txt'
+const ALLOWED_EXT = '.pdf, .docx, .txt, .md, .csv, .json'
 const MAX_SIZE_MB = 15
 
 export default function Knowledge() {
@@ -46,6 +49,8 @@ export default function Knowledge() {
   const [chat, setChat] = useState([])
   const [testInput, setTestInput] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
+  const [retrying, setRetrying] = useState({})
+  const [deleting, setDeleting] = useState({})
   const [aiError, setAiError] = useState('')
 
   const fileInputRef = useRef(null)
@@ -78,7 +83,9 @@ export default function Knowledge() {
 
     setUploadError('')
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
+    const ext = file.name.split('.').pop().toLowerCase()
+    const ALLOWED_EXTS = ['pdf', 'docx', 'txt', 'md', 'csv', 'json']
+    if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTS.includes(ext)) {
       setUploadError(`Unsupported file type. Please upload ${ALLOWED_EXT}`)
       return
     }
@@ -124,9 +131,9 @@ export default function Knowledge() {
       setChat(prev => [...prev, { from: 'ai', text: res.reply || 'No response received.' }])
     } catch (err) {
       const msg = err.name === 'AbortError'
-        ? 'Request timed out. The AI took too long to respond.'
-        : (err.message || 'AI failed to respond. Please try again.')
-      setChat(prev => [...prev, { from: 'ai', text: `⚠️ ${msg}`, error: true }])
+        ? 'The AI took too long to respond. Please try again.'
+        : 'Something went wrong. Please try again in a moment.'
+      setChat(prev => [...prev, { from: 'ai', text: msg, error: true }])
       setAiError(msg)
     } finally {
       setAiLoading(false)
@@ -275,9 +282,38 @@ export default function Knowledge() {
                           <Icon size={11} />
                           {s.label}
                         </span>
+                        <button
+                          disabled={deleting[doc.id]}
+                          onClick={async () => {
+                            if (!window.confirm(`Delete "${doc.filename}"?`)) return
+                            setDeleting(p => ({ ...p, [doc.id]: true }))
+                            try { await deleteDocument(doc.id) } catch {}
+                            await loadDocs()
+                            setDeleting(p => ({ ...p, [doc.id]: false }))
+                          }}
+                          className="p-1 text-gray-300 hover:text-red-500 transition disabled:opacity-40"
+                          title="Delete document"
+                        >
+                          <Trash2 size={13} />
+                        </button>
                         {doc.status === 'failed' && (
-                          <button onClick={loadDocs} className="p-1 text-gray-300 hover:text-blue-500 transition">
-                            <RefreshCw size={13} />
+                          <button
+                            disabled={retrying[doc.id]}
+                            onClick={async () => {
+                              setRetrying(p => ({ ...p, [doc.id]: true }))
+                              try {
+                                await retryDocument(doc.id)
+                                await loadDocs()
+                              } catch {
+                                await loadDocs()
+                              } finally {
+                                setRetrying(p => ({ ...p, [doc.id]: false }))
+                              }
+                            }}
+                            className="p-1 text-gray-300 hover:text-blue-500 transition disabled:opacity-40"
+                            title="Retry processing"
+                          >
+                            <RefreshCw size={13} className={retrying[doc.id] ? 'animate-spin' : ''} />
                           </button>
                         )}
                       </div>
@@ -332,14 +368,24 @@ export default function Knowledge() {
               <div key={i} className={`flex ${m.from === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
                   className="max-w-[85%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed"
-                  style={m.from === 'user'
-                    ? { background: PRIMARY, color: '#fff', borderBottomRightRadius: 4 }
-                    : { background: CREAM, color: '#1e293b', borderBottomLeftRadius: 4 }}
+                  style={
+                    m.from === 'user'
+                      ? { background: PRIMARY, color: '#fff', borderBottomRightRadius: 4 }
+                      : m.error
+                      ? { background: '#fff1f2', color: '#9f1239', border: '1px solid #fecdd3', borderBottomLeftRadius: 4 }
+                      : { background: CREAM, color: '#1e293b', borderBottomLeftRadius: 4 }
+                  }
                 >
-                  {m.from === 'ai' && (
+                  {m.from === 'ai' && !m.error && (
                     <div className="flex items-center gap-1 mb-1">
                       <Bot size={11} style={{ color: PRIMARY }} />
                       <span className="text-xs font-semibold" style={{ color: PRIMARY }}>AI Agent</span>
+                    </div>
+                  )}
+                  {m.from === 'ai' && m.error && (
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <AlertCircle size={11} color="#be123c" />
+                      <span className="text-xs font-semibold text-rose-700">Unable to respond</span>
                     </div>
                   )}
                   {m.text}

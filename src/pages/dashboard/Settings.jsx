@@ -316,9 +316,13 @@ export default function Settings() {
     setSaving(true)
     setToast(null)
     try {
+      // Strip empty strings — backend schema rejects '' for optional fields with min(1)
+      const payload = Object.fromEntries(
+        Object.entries(form).filter(([, v]) => typeof v !== 'string' || v.trim() !== '')
+      )
       const result = profileExists
-        ? await updateProfile(form)
-        : await saveProfile(form)
+        ? await updateProfile(payload)
+        : await saveProfile(payload)
       setProfile(result)
       setProfileExists(true)
       setToast({ type: 'success', message: 'Business profile saved successfully.' })

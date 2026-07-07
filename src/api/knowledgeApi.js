@@ -51,6 +51,28 @@ export async function uploadDocument(file, onProgress) {
   })
 }
 
+/** DELETE /knowledge/:id — remove a document and its vectors */
+export async function deleteDocument(id) {
+  const res = await fetch(`${API_BASE}/knowledge/${id}`, {
+    method: 'DELETE',
+    headers: { accept: 'application/json', ...authHeaders() },
+  })
+  const body = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(body?.message || `Delete failed (${res.status})`)
+  return body?.data ?? body
+}
+
+/** POST /knowledge/:id/retry — re-run embedding on a failed document */
+export async function retryDocument(id) {
+  const res = await fetch(`${API_BASE}/knowledge/${id}/retry`, {
+    method: 'POST',
+    headers: { accept: 'application/json', ...authHeaders() },
+  })
+  const body = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(body?.message || `Retry failed (${res.status})`)
+  return body?.data ?? body
+}
+
 /** GET /knowledge/search?q=...&topK=5 — semantic search */
 export async function searchKnowledge(query, topK = 5) {
   const params = new URLSearchParams({ q: query, topK })
