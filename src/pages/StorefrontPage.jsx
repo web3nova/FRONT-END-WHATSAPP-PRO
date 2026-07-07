@@ -20,7 +20,7 @@ export default function StorefrontPage() {
           throw new Error('Could not load storefront.')
         }
         const body = await res.json()
-        if (!ignore) setData(body)
+        if (!ignore) setData(body.data ?? body)
       } catch (err) {
         if (!ignore) setError(err.message)
       } finally {
