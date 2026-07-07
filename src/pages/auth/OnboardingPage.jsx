@@ -16,10 +16,10 @@ const STEPS = [
 ]
 
 const DELIVERY_OPTIONS = [
-  { value: 'self',      label: 'We deliver ourselves' },
-  { value: 'third',     label: 'Third-party logistics' },
-  { value: 'pickup',    label: 'Customer pickup only' },
-  { value: 'hybrid',    label: 'Mixed — delivery + pickup' },
+  { value: 'self',        label: 'We deliver ourselves' },
+  { value: 'third-party', label: 'Third-party logistics' },
+  { value: 'pickup',      label: 'Customer pickup only' },
+  { value: 'mixed',       label: 'Mixed — delivery + pickup' },
 ]
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
