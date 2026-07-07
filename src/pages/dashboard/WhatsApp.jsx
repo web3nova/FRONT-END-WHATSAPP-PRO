@@ -156,16 +156,34 @@ function ConnectBanner({ onConnected }) {
 
 // ─── Connected Badge ──────────────────────────────────────────────────────────
 
+const STATUS_STYLES = {
+  CONNECTED:    { color: '#16a34a', label: 'Connected' },
+  PENDING:      { color: '#d97706', label: 'Pending Review' },
+  FLAGGED:      { color: '#dc2626', label: 'Flagged' },
+  RESTRICTED:   { color: '#dc2626', label: 'Restricted' },
+  RATE_LIMITED: { color: '#d97706', label: 'Rate Limited' },
+}
+
 function ConnectedBadge({ account, onDisconnect }) {
+  const statusStyle = STATUS_STYLES[account.status] ?? STATUS_STYLES.CONNECTED
+
   return (
-    <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 bg-white flex-shrink-0">
-      <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#16a34a' }}>
+    <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 bg-white flex-shrink-0 flex-wrap">
+      <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: statusStyle.color }}>
         <CheckCircle2 size={13} />
         WhatsApp Connected
       </div>
       <span className="text-xs text-gray-400">
         {account.phoneNumber || `ID: ${account.phoneNumberId}`}
       </span>
+      {account.status && (
+        <span
+          className="text-xs font-semibold px-2 py-0.5 rounded-full"
+          style={{ background: `${statusStyle.color}18`, color: statusStyle.color }}
+        >
+          {statusStyle.label}
+        </span>
+      )}
       <button
         onClick={onDisconnect}
         className="ml-auto text-xs text-gray-400 hover:text-gray-600 transition"
