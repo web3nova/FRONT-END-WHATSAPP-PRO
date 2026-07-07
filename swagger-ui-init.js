@@ -17,8 +17,8 @@ window.onload = function() {
     },
     "servers": [
       {
-        "url": "https://back-end-whatsapp-pro.onrender.com/api/v1",
-        "description": "Production (Render)"
+        "url": "http://localhost:4000/api/v1",
+        "description": "Local"
       },
       {
         "url": "http://localhost:4000/api/v1",

@@ -36,6 +36,21 @@ export function useBusinessProfile() {
     }
   }, [])
 
+  const updateProfile = useCallback(async (payload) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await onboardingApi.updateProfile(payload)
+      setData(result)
+      return result
+    } catch (err) {
+      setError(err.message)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   const uploadLogo = useCallback(async (file) => {
     setLoading(true)
     setError(null)
@@ -53,6 +68,7 @@ export function useBusinessProfile() {
   return {
     getProfile,
     saveProfile,
+    updateProfile,
     uploadLogo,
     loading,
     error,

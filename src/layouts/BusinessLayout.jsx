@@ -3,7 +3,7 @@ import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom'
 import onboardingApi from '../services/onboardingService'
 import {
   LayoutDashboard, ShoppingBag, Package, Users, MessageCircle,
-  Globe, BarChart3, BookOpen, Settings, Bell, Search, Zap, ExternalLink, Menu, X
+  Globe, BarChart3, BookOpen, Settings, Bell, Search, Zap, ExternalLink, Menu, X, CreditCard
 } from 'lucide-react'
 
 const PRIMARY = '#4166F5'
@@ -18,6 +18,7 @@ const navItems = [
   { label: 'Website', icon: Globe, path: '/dashboard/website' },
   { label: 'Analytics', icon: BarChart3, path: '/dashboard/analytics' },
   { label: 'Knowledge Base', icon: BookOpen, path: '/dashboard/knowledge' },
+  { label: 'Payments', icon: CreditCard, path: '/dashboard/payments' },
   { label: 'Settings', icon: Settings, path: '/dashboard/settings' },
 ]
 

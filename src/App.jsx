@@ -11,6 +11,7 @@ import {
   RequireAuth,
   RequireSubscription,
 } from './components/ProtectedRoute';
+import OnboardingGate from './components/OnboardingGate';
 
 import AdminLayout from './layouts/AdminLayout';
 import BusinessLayout from './layouts/BusinessLayout';
@@ -24,13 +25,17 @@ import BusinessOrders from './pages/dashboard/Orders';
 import WhatsAppPage from './pages/dashboard/WhatsApp';
 import Products from './pages/dashboard/Products';
 import ProductNew from './pages/dashboard/ProductNew';
+import ProductEdit from './pages/dashboard/ProductEdit';
 import Customers from './pages/dashboard/Customers';
-import Website from './layouts/BusinessWebsite';
+import WebsiteDashboard from './pages/dashboard/Website';
+import WebsitePreview from './pages/dashboard/WebsitePreview';
 import Analytics from './pages/dashboard/Analytics';
 import Knowledge from './pages/dashboard/Knowledge';
 import Settings from './pages/dashboard/Settings';
+import PaymentSettings from './pages/dashboard/PaymentSettings';
 
 import LandingPage from './pages/LandingPage';
+import StorefrontPage from './pages/StorefrontPage';
 
 import SignUpPage from './pages/auth/SignUpPage';
 import LoginPage from './pages/auth/LoginPage';
@@ -102,7 +107,9 @@ export default function App() {
                 path="/onboarding"
                 element={
                   <RequireAuth>
-                    <OnboardingPage />
+                    <OnboardingGate>
+                      <OnboardingPage />
+                    </OnboardingGate>
                   </RequireAuth>
                 }
               />
@@ -111,9 +118,18 @@ export default function App() {
                 path="/business-profile"
                 element={
                   <RequireSubscription>
-                    <BusinessProfilePage />
+                    <OnboardingGate>
+                      <BusinessProfilePage />
+                    </OnboardingGate>
                   </RequireSubscription>
                 }
+              />
+
+              {/* Public Storefront Preview */}
+
+              <Route
+                path="/storefront/:tenantId"
+                element={<StorefrontPage />}
               />
 
               {/* Website Builder */}
@@ -158,6 +174,11 @@ export default function App() {
                 />
 
                 <Route
+                  path="products/:id/edit"
+                  element={<ProductEdit />}
+                />
+
+                <Route
                   path="customers"
                   element={<Customers />}
                 />
@@ -169,7 +190,12 @@ export default function App() {
 
                 <Route
                   path="website"
-                  element={<Website />}
+                  element={<WebsiteDashboard />}
+                />
+
+                <Route
+                  path="website/preview"
+                  element={<WebsitePreview />}
                 />
 
                 <Route
@@ -180,6 +206,11 @@ export default function App() {
                 <Route
                   path="knowledge"
                   element={<Knowledge />}
+                />
+
+                <Route
+                  path="payments"
+                  element={<PaymentSettings />}
                 />
 
                 <Route

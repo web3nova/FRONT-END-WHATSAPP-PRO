@@ -1,5 +1,8 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { ChevronUp, ChevronDown } from "lucide-react";
+import { API_BASE } from "../lib/apiConfig";
+import { getStoredAccessToken } from "../lib/auth";
 
 const COLORS = {
   offWhite: "#F8F4E8",
@@ -155,7 +158,7 @@ function BusinessProfile({ data, setData }) {
     const file = e.target.files[0];
     if (!file) return;
     const url = URL.createObjectURL(file);
-    setData(d => ({ ...d, logoUrl: url, logoName: file.name }));
+    setData(d => ({ ...d, logoUrl: url, logoName: file.name, logoFile: file }));
   };
 
   const addHandle = () => {
@@ -217,6 +220,62 @@ function BusinessProfile({ data, setData }) {
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {(data.socialHandles || []).map((h, i) => (
               <Chip key={i} label={h} onRemove={() => setData(d => ({ ...d, socialHandles: d.socialHandles.filter((_, j) => j !== i) }))} />
+            ))}
+          </div>
+        </Field>
+      </SectionCard>
+
+      <SectionCard title="Hero Section">
+        <p style={{ fontSize: 13, color: COLORS.muted, marginTop: 0, marginBottom: 16 }}>Customise your homepage hero banner</p>
+        <Row>
+          <Field>
+            <Label>Headline</Label>
+            <Input placeholder="Defaults to brand name" value={data.heroHeadline || ""} onChange={e => setData(d => ({ ...d, heroHeadline: e.target.value }))} />
+          </Field>
+          <Field>
+            <Label>Subtitle</Label>
+            <Input placeholder="Defaults to motto" value={data.heroSubtitle || ""} onChange={e => setData(d => ({ ...d, heroSubtitle: e.target.value }))} />
+          </Field>
+        </Row>
+        <Row>
+          <Field>
+            <Label>CTA button text</Label>
+            <Input placeholder="Shop Now" value={data.heroCta || ""} onChange={e => setData(d => ({ ...d, heroCta: e.target.value }))} />
+          </Field>
+          <Field>
+            <Label>Layout</Label>
+            <div style={{ display: "flex", gap: 8 }}>
+              {["center", "left"].map(l => (
+                <button key={l} onClick={() => setData(d => ({ ...d, heroLayout: l }))}
+                  style={{
+                    flex: 1, padding: "8px 12px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 13, textTransform: "capitalize",
+                    background: (data.heroLayout || "center") === l ? COLORS.blue : COLORS.white,
+                    color: (data.heroLayout || "center") === l ? "#fff" : COLORS.text,
+                    border: `1.5px solid ${(data.heroLayout || "center") === l ? COLORS.blue : COLORS.border}`,
+                  }}
+                >{l}</button>
+              ))}
+            </div>
+          </Field>
+        </Row>
+        <Field>
+          <Label>Background colour</Label>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {[
+              { key: "blue", label: "Blue", color: COLORS.blue },
+              { key: "dark", label: "Dark", color: "#1e293b" },
+              { key: "green", label: "Green", color: "#059669" },
+              { key: "purple", label: "Purple", color: "#7c3aed" },
+              { key: "orange", label: "Orange", color: "#ea580c" },
+              { key: "pink", label: "Pink", color: "#db2777" },
+            ].map(p => (
+              <button key={p.key} onClick={() => setData(d => ({ ...d, heroBg: p.color }))}
+                style={{
+                  width: 36, height: 36, borderRadius: 8, background: p.color, border: `2px solid ${(data.heroBg || COLORS.blue) === p.color ? COLORS.blue : "transparent"}`,
+                  cursor: "pointer", outline: "none", boxSizing: "border-box",
+                }}
+                title={p.label}
+              />
             ))}
           </div>
         </Field>
@@ -292,7 +351,7 @@ function BusinessProfile({ data, setData }) {
 
 // Step 2: Products
 
-const categories = ["Fashion & Clothing", "Food & Beverages", "Electronics", "Beauty & Skincare", "Home & Decor", "Services", "Digital Products", "Other"];
+const PRODUCT_CATEGORIES = ["Fashion & Clothing", "Food & Beverages", "Electronics", "Beauty & Skincare", "Home & Decor", "Services", "Digital Products", "Other"];
 const deliveryOptions = [
   { key: "pickup", label: "Store Pickup" },
   { key: "local", label: "Local Delivery" },
@@ -302,7 +361,7 @@ const deliveryOptions = [
 
 function ProductsUpload({ data, setData }) {
   const imgRef = useRef();
-  const [form, setForm] = useState({ name: "", price: "", category: categories[0], description: "", images: [] });
+  const [form, setForm] = useState({ name: "", price: "", category: PRODUCT_CATEGORIES[0], description: "", images: [] });
   const [editIndex, setEditIndex] = useState(null);
   const [checkoutFields, setCheckoutFields] = useState(data.checkoutFields || { name: true, phone: true, address: true, email: false });
 
@@ -321,7 +380,7 @@ function ProductsUpload({ data, setData }) {
       else list.push(product);
       return { ...d, products: list };
     });
-    setForm({ name: "", price: "", category: categories[0], description: "", images: [] });
+    setForm({ name: "", price: "", category: PRODUCT_CATEGORIES[0], description: "", images: [] });
     setEditIndex(null);
   };
 
@@ -333,7 +392,7 @@ function ProductsUpload({ data, setData }) {
   const deleteProduct = (i) => {
     setData(d => ({ ...d, products: d.products.filter((_, j) => j !== i) }));
     if (editIndex === i) {
-      setForm({ name: "", price: "", category: categories[0], description: "", images: [] });
+      setForm({ name: "", price: "", category: PRODUCT_CATEGORIES[0], description: "", images: [] });
       setEditIndex(null);
     }
   };
@@ -366,7 +425,7 @@ function ProductsUpload({ data, setData }) {
           <Field>
             <Label>Category</Label>
             <Select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
-              {categories.map(c => <option key={c}>{c}</option>)}
+              {PRODUCT_CATEGORIES.map(c => <option key={c}>{c}</option>)}
             </Select>
           </Field>
         </Row>
@@ -397,7 +456,7 @@ function ProductsUpload({ data, setData }) {
             {editIndex !== null ? "Update Product" : "+ Save Product"}
           </Btn>
           {editIndex !== null && (
-            <Btn variant="ghost" onClick={() => { setForm({ name: "", price: "", category: categories[0], description: "", images: [] }); setEditIndex(null); }}>
+            <Btn variant="ghost" onClick={() => { setForm({ name: "", price: "", category: PRODUCT_CATEGORIES[0], description: "", images: [] }); setEditIndex(null); }}>
               Cancel
             </Btn>
           )}
@@ -413,8 +472,18 @@ function ProductsUpload({ data, setData }) {
                 <div style={{ padding: "10px 12px" }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: COLORS.text, marginBottom: 2 }}>{p.name}</div>
                   <div style={{ fontSize: 13, color: COLORS.blue, fontWeight: 700, marginBottom: 4 }}>N{Number(p.price).toLocaleString()}</div>
-                  <div style={{ fontSize: 11, color: COLORS.muted, marginBottom: 10, background: COLORS.blueLight, display: "inline-block", padding: "2px 8px", borderRadius: 20 }}>{p.category}</div>
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ fontSize: 11, color: COLORS.muted, marginBottom: 8, background: COLORS.blueLight, display: "inline-block", padding: "2px 8px", borderRadius: 20 }}>{p.category}</div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 1, flexShrink: 0 }}>
+                      <button onClick={() => { if (i > 0) { const list = [...(data.products || [])]; [list[i-1], list[i]] = [list[i], list[i-1]]; setData(d => ({ ...d, products: list })); } }}
+                        disabled={i === 0}
+                        style={{ background: "none", border: "none", cursor: i === 0 ? "default" : "pointer", padding: 0, lineHeight: 1, color: i === 0 ? COLORS.border : COLORS.muted }}
+                      ><ChevronUp size={14} /></button>
+                      <button onClick={() => { if (i < (data.products || []).length - 1) { const list = [...(data.products || [])]; [list[i], list[i+1]] = [list[i+1], list[i]]; setData(d => ({ ...d, products: list })); } }}
+                        disabled={i === (data.products || []).length - 1}
+                        style={{ background: "none", border: "none", cursor: i === (data.products || []).length - 1 ? "default" : "pointer", padding: 0, lineHeight: 1, color: i === (data.products || []).length - 1 ? COLORS.border : COLORS.muted }}
+                      ><ChevronDown size={14} /></button>
+                    </div>
                     <button onClick={() => editProduct(i)} style={{ flex: 1, padding: "6px", fontSize: 12, borderRadius: 8, border: `1.5px solid ${COLORS.blue}`, background: "transparent", color: COLORS.blue, cursor: "pointer", fontWeight: 600 }}>Edit</button>
                     <button onClick={() => deleteProduct(i)} style={{ flex: 1, padding: "6px", fontSize: 12, borderRadius: 8, border: "1.5px solid #ef4444", background: "transparent", color: "#ef4444", cursor: "pointer", fontWeight: 600 }}>Delete</button>
                   </div>
@@ -511,13 +580,15 @@ function WebsitePreview({ data }) {
       </nav>
 
       {/* Hero */}
-      <div style={{ background: `linear-gradient(135deg, ${COLORS.blue} 0%, #2d4fd4 100%)`, padding: "56px 32px", textAlign: "center" }}>
+      <div style={{
+        background: data.heroBg ? `linear-gradient(135deg, ${data.heroBg} 0%, ${data.heroBg}dd 100%)` : `linear-gradient(135deg, ${COLORS.blue} 0%, #2d4fd4 100%)`,
+        padding: "56px 32px", textAlign: data.heroLayout === "left" ? "left" : "center",
+      }}>
         {data.logoUrl && <img src={data.logoUrl} alt="logo" style={{ width: 80, height: 80, borderRadius: 16, objectFit: "cover", marginBottom: 20, border: "3px solid rgba(255,255,255,0.3)" }} />}
-        <h1 style={{ color: "#fff", fontSize: 34, fontWeight: 800, margin: "0 0 12px", lineHeight: 1.2 }}>{data.brandName || "Welcome to Our Store"}</h1>
-        {data.motto && <p style={{ color: "rgba(255,255,255,0.85)", fontSize: 18, margin: "0 0 28px", fontStyle: "italic" }}>"{data.motto}"</p>}
-        <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-          <button style={{ background: COLORS.offWhite, color: COLORS.blue, border: "none", borderRadius: 10, padding: "12px 28px", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>Shop Now</button>
-          <button style={{ background: "transparent", color: "#fff", border: "2px solid rgba(255,255,255,0.5)", borderRadius: 10, padding: "12px 28px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Learn More</button>
+        <h1 style={{ color: "#fff", fontSize: 34, fontWeight: 800, margin: "0 0 12px", lineHeight: 1.2 }}>{data.heroHeadline || data.brandName || "Welcome to Our Store"}</h1>
+        {(data.heroSubtitle || data.motto) && <p style={{ color: "rgba(255,255,255,0.85)", fontSize: 18, margin: "0 0 28px", fontStyle: "italic" }}>"{data.heroSubtitle || data.motto}"</p>}
+        <div style={{ display: "flex", gap: 12, justifyContent: data.heroLayout === "left" ? "flex-start" : "center" }}>
+          <button style={{ background: COLORS.offWhite, color: data.heroBg || COLORS.blue, border: "none", borderRadius: 10, padding: "12px 28px", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>{data.heroCta || "Shop Now"}</button>
         </div>
       </div>
 
@@ -711,13 +782,191 @@ function WebsitePreview({ data }) {
 export default function BusinessWebsiteBuilder() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const logoInputRef = useRef();
   const [data, setData] = useState({ products: [], reviews: [], socialHandles: [], payments: [], delivery: [] });
+
+  useEffect(() => {
+    let ignore = false;
+    async function load() {
+      const token = getStoredAccessToken();
+      if (!token) return;
+      try {
+        const [bizRes, prodRes, wsRes] = await Promise.all([
+          fetch(`${API_BASE}/business`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_BASE}/products?limit=100&sort=sortOrder`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_BASE}/website/settings`, { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+
+        if (bizRes.ok && !ignore) {
+          const body = await bizRes.json();
+          const biz = body?.data || body;
+          if (biz) {
+            setData(d => ({
+              ...d,
+              brandName: biz.displayName || '',
+              logoUrl: biz.logoUrl || '',
+              motto: biz.tagline || '',
+              about: biz.description || '',
+              socialHandles: [
+                biz.instagram ? `@${biz.instagram}` : null,
+                biz.twitter ? `@${biz.twitter}` : null,
+                biz.facebook || null,
+                biz.tiktok ? `@${biz.tiktok}` : null,
+              ].filter(Boolean),
+            }));
+            if (biz.logoStorageKey) logoInputRef.current = biz.logoStorageKey;
+          }
+        }
+
+        if (prodRes.ok && !ignore) {
+          const body = await prodRes.json();
+          const products = body?.data?.items || body?.data || body?.products || [];
+          if (Array.isArray(products) && products.length > 0) {
+            setData(d => ({
+              ...d,
+              products: products.map(p => ({
+                id: p.id,
+                name: p.name,
+                price: String(p.priceMinor ? p.priceMinor / 100 : p.price || 0),
+                category: p.category || PRODUCT_CATEGORIES[0],
+                description: p.description || '',
+                images: p.imageUrl ? [{ url: p.imageUrl, name: '' }] : [],
+              })),
+            }));
+          }
+        }
+
+        if (wsRes.ok && !ignore) {
+          const body = await wsRes.json();
+          const ws = body?.data || body;
+          if (ws?.theme?.builder) {
+            const b = ws.theme.builder;
+            setData(d => ({
+              ...d,
+              payments: b.payments || [],
+              delivery: b.delivery || [],
+              checkoutFields: b.checkoutFields || { name: true, phone: true, address: true, email: false },
+              reviews: b.reviews || [],
+              heroHeadline: b.hero?.headline || '',
+              heroSubtitle: b.hero?.subtitle || '',
+              heroCta: b.hero?.cta || '',
+              heroBg: b.hero?.bg || '',
+              heroLayout: b.hero?.layout || 'center',
+            }));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load builder data:', err);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    }
+    load();
+    return () => { ignore = true };
+  }, []);
+
+  const publish = async () => {
+    const token = getStoredAccessToken();
+    if (!token) return;
+    setSaving(true);
+    try {
+      await fetch(`${API_BASE}/business`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          displayName: data.brandName,
+          tagline: data.motto,
+          description: data.about,
+        }),
+      });
+
+      if (data.logoFile) {
+        const fd = new FormData();
+        fd.append('image', data.logoFile);
+        await fetch(`${API_BASE}/business/logo`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd,
+        });
+      }
+
+      for (let idx = 0; idx < (data.products || []).length; idx++) {
+        const product = data.products[idx];
+        const payload = {
+          name: product.name,
+          price: Number(product.price) || 0,
+          category: product.category?.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'others',
+          description: product.description,
+          sortOrder: idx,
+        };
+        if (typeof product.id === 'string' && product.id.includes('-')) {
+          await fetch(`${API_BASE}/products/${product.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(payload),
+          });
+        } else {
+          await fetch(`${API_BASE}/products`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(payload),
+          });
+        }
+      }
+
+      const themeBuilder = {
+        socialHandles: data.socialHandles,
+        payments: data.payments,
+        delivery: data.delivery,
+        checkoutFields: data.checkoutFields,
+        reviews: data.reviews,
+      };
+      if (data.heroHeadline || data.heroSubtitle || data.heroCta || data.heroBg || data.heroLayout) {
+        themeBuilder.hero = {
+          headline: data.heroHeadline || '',
+          subtitle: data.heroSubtitle || '',
+          cta: data.heroCta || '',
+          bg: data.heroBg || '',
+          layout: data.heroLayout || 'center',
+        };
+      }
+
+      await fetch(`${API_BASE}/website/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          published: true,
+          theme: { builder: themeBuilder },
+        }),
+      });
+
+      navigate('/dashboard/website');
+    } catch (err) {
+      alert('Publish failed: ' + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const completeness = [
     !!data.brandName,
     (data.products || []).length > 0,
     true,
   ];
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", background: COLORS.offWhite, fontFamily: "'Inter', 'Segoe UI', sans-serif", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: 40, height: 40, borderRadius: "50%", border: `3px solid ${COLORS.border}`, borderTopColor: COLORS.blue, animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+          <p style={{ fontSize: 15, color: COLORS.muted }}>Loading your data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: COLORS.offWhite, fontFamily: "'Inter', 'Segoe UI', sans-serif" }}>
@@ -780,12 +1029,9 @@ export default function BusinessWebsiteBuilder() {
           <div style={{ fontSize: 13, color: COLORS.muted }}>{step + 1} of {steps.length}</div>
           {step < steps.length - 1
             ? <Btn onClick={() => setStep(s => s + 1)}>Next: {steps[step + 1]}</Btn>
-            : <Btn onClick={() => {
-                alert("Website published successfully!");
-                navigate("/dashboard/website");
-              }}>
-              Publish Website
-            </Btn>
+            : <Btn onClick={publish} disabled={saving}>
+                {saving ? 'Publishing...' : 'Publish Website'}
+              </Btn>
           }
         </div>
       </div>

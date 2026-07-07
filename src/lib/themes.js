@@ -1,0 +1,42 @@
+export const THEMES = {
+  minimal: {
+    id: 'minimal',
+    name: 'Minimal',
+    description: 'Clean and modern with lots of white space',
+    ink: '#1e293b',
+    accent: '#4166F5',
+    soft: '#F8F4E8',
+  },
+  bold: {
+    id: 'bold',
+    name: 'Bold',
+    description: 'High contrast with strong colours and striking typography',
+    ink: '#0f172a',
+    accent: '#ea580c',
+    soft: '#fef2f2',
+  },
+  elegant: {
+    id: 'elegant',
+    name: 'Elegant',
+    description: 'Refined serif fonts and muted tones for a premium feel',
+    ink: '#292524',
+    accent: '#7c3aed',
+    soft: '#f5f3ff',
+  },
+  playful: {
+    id: 'playful',
+    name: 'Playful',
+    description: 'Bright colours and rounded corners for a friendly look',
+    ink: '#1e293b',
+    accent: '#db2777',
+    soft: '#fdf2f8',
+  },
+  earthy: {
+    id: 'earthy',
+    name: 'Earthy',
+    description: 'Warm, organic tones inspired by nature',
+    ink: '#1c1917',
+    accent: '#059669',
+    soft: '#f0fdf4',
+  },
+}
