@@ -1,4 +1,5 @@
 import { API_BASE } from '../lib/apiConfig'
+import { apiFetch } from '../lib/apiFetch'
 
 function authHeaders() {
   const token = localStorage.getItem('accessToken')
@@ -95,10 +96,7 @@ export async function fetchSubscription() {
   const token = localStorage.getItem('accessToken')
   if (!token) return null
 
-  const res = await fetch(`${API_BASE}/billing/subscription`, {
-    headers: { accept: 'application/json', ...authHeaders() },
-  })
-
+  const res = await apiFetch('/billing/subscription')
   if (!res.ok) return null
 
   const body = await res.json()
@@ -114,11 +112,7 @@ export async function activateTrial() {
   const token = localStorage.getItem('accessToken')
   if (!token) throw new Error('Not authenticated')
 
-  const res = await fetch(`${API_BASE}/billing/trial`, {
-    method: 'POST',
-    headers: { accept: 'application/json', ...authHeaders() },
-  })
-
+  const res = await apiFetch('/billing/trial', { method: 'POST' })
   const body = await res.json().catch(() => null)
   if (!res.ok) throw new Error(body?.message || 'Could not activate trial')
   return body?.data ?? null
