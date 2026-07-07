@@ -128,6 +128,7 @@ export default function BusinessLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [checking, setChecking] = useState(true)
   const [businessName, setBusinessName] = useState('')
+  const [logoUrl, setLogoUrl] = useState('')
 
   const showNewOrder = ORDER_PAGES.includes(location.pathname)
   const initials = userInitials(user?.name, user?.email)
@@ -162,6 +163,7 @@ export default function BusinessLayout() {
         const profile = await onboardingApi.getProfile()
         if (!cancelled) {
           setBusinessName(profile?.displayName || profile?.businessName || '')
+          setLogoUrl(profile?.logoUrl || '')
           setChecking(false)
         }
         return
@@ -209,8 +211,10 @@ export default function BusinessLayout() {
         {/* Logo */}
         <div className="h-16 flex items-center px-5 border-b border-gray-100 flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0" style={{ background: PRIMARY }}>
-              <Zap size={16} className="text-white" />
+            <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center shadow-sm flex-shrink-0" style={{ background: PRIMARY }}>
+              {logoUrl
+                ? <img src={logoUrl} alt="logo" className="w-full h-full object-cover" />
+                : <Zap size={16} className="text-white" />}
             </div>
             <div className="min-w-0">
               <div className="font-bold text-gray-900 text-sm leading-tight truncate">
