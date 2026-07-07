@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Loader, AlertCircle, ArrowLeft } from 'lucide-react'
 import { API_BASE } from '../lib/apiConfig'
+import { THEMES } from '../lib/themes'
 import StorefrontPreview from './dashboard/StorefrontPreview'
 
 export default function StorefrontPage() {
@@ -97,6 +98,7 @@ export default function StorefrontPage() {
   const products = data?.products || []
   const whatsapp = business?.whatsappNumber || ''
   const domain = data?.tenant?.domain || ''
+  const activeTheme = { ...(THEMES[settings?.theme?.templateId] || THEMES.minimal), ...(settings?.theme?.customTheme || {}) }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -115,6 +117,7 @@ export default function StorefrontPage() {
           domain={domain}
           device="desktop"
           settings={settings}
+          theme={activeTheme}
         />
       </div>
     </div>

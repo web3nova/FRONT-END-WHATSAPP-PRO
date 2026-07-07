@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Globe, Eye, CheckCircle, ExternalLink, Layout, Image, Type, ToggleLeft, ToggleRight, Plus, Loader, Monitor, Smartphone, ChevronDown, ChevronUp, Save, Trash2, Star, Grid3x3, Check } from 'lucide-react'
 import { API_BASE } from '../../lib/apiConfig'
 import { getStoredAccessToken } from '../../lib/auth'
-import { THEMES } from '../../lib/themes'
+import { THEMES, FONT_OPTIONS, RADIUS_OPTIONS } from '../../lib/themes'
 import ImageUploadField from '../../components/ImageUploadField'
 import StorefrontPreview from './StorefrontPreview'
 
@@ -44,6 +44,8 @@ export default function Website() {
   const [savingSettings, setSavingSettings] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [sectionForm, setSectionForm] = useState({})
+  const [designForm, setDesignForm] = useState({})
+  const [customThemeForm, setCustomThemeForm] = useState({})
 
   // Whether the product data actually has distinct categories — used to let
   // people know why "Shop by Category" might not show anything yet.
@@ -101,6 +103,9 @@ export default function Website() {
   const domain = storefrontUrl
 
   const activeTemplateId = settings?.theme?.templateId || 'minimal'
+  const presetTheme = THEMES[activeTemplateId] || THEMES.minimal
+  const customThemeOverrides = settings?.theme?.customTheme || {}
+  const activeTheme = { ...presetTheme, ...customThemeOverrides }
 
   // Persist a toggle immediately so it survives a refresh, not just local state.
   // Blocked while another save is in flight, and reverted if the request fails,
@@ -132,10 +137,12 @@ export default function Website() {
 
   // Swap the whole visual template. Saves immediately, same pattern as toggle().
   // Blocked while another save is in flight, and reverted if the request fails.
+  // Switching the base preset also clears any custom overrides — tweaks made on
+  // top of the old preset shouldn't silently bleed into a newly chosen look.
   const selectTemplate = async (templateId) => {
     if (savingSettings) return
     const previousTheme = settings?.theme || {}
-    const updatedTheme = { ...previousTheme, templateId }
+    const updatedTheme = { ...previousTheme, templateId, customTheme: {} }
     setSettings(s => ({ ...(s || {}), theme: updatedTheme }))
     const token = getStoredAccessToken()
     if (!token) return
@@ -152,6 +159,126 @@ export default function Website() {
       console.error('Failed to save template:', err)
       setSettings(s => ({ ...(s || {}), theme: previousTheme }))
       setSaveError('Could not save that template. Please try again.')
+    } finally {
+      setSavingSettings(false)
+    }
+  }
+
+  // Flip the site from draft to live. Same guard/error pattern as selectTemplate.
+  const publish = async () => {
+    if (savingSettings) return
+    const token = getStoredAccessToken()
+    if (!token) return
+    setSavingSettings(true)
+    setSaveError('')
+    try {
+      const res = await fetch(`${API_BASE}/website/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ published: true }),
+      })
+      if (!res.ok) throw new Error('Publish failed')
+      setSettings(s => ({ ...(s || {}), published: true }))
+    } catch (err) {
+      console.error('Failed to publish:', err)
+      setSaveError('Could not publish. Please try again.')
+    } finally {
+      setSavingSettings(false)
+    }
+  }
+
+  // Save SEO + social fields together. Same merge/guard/error pattern as saveSection.
+  const saveSeoSocial = async () => {
+    if (savingSettings) return
+    const token = getStoredAccessToken()
+    if (!token) return
+    setSavingSettings(true)
+    setSaveError('')
+    try {
+      const currentSeo = settings?.seo || {}
+      const currentSocial = settings?.social || {}
+      const seo = {
+        title: designForm.seoTitle ?? currentSeo.title ?? '',
+        description: designForm.seoDescription ?? currentSeo.description ?? '',
+        ogImage: designForm.seoOgImage ?? currentSeo.ogImage ?? '',
+      }
+      const social = {
+        facebook: designForm.socialFacebook ?? currentSocial.facebook ?? '',
+        instagram: designForm.socialInstagram ?? currentSocial.instagram ?? '',
+        twitter: designForm.socialTwitter ?? currentSocial.twitter ?? '',
+        tiktok: designForm.socialTiktok ?? currentSocial.tiktok ?? '',
+        youtube: designForm.socialYoutube ?? currentSocial.youtube ?? '',
+      }
+      const res = await fetch(`${API_BASE}/website/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ seo, social }),
+      })
+      if (!res.ok) throw new Error('Save failed')
+      setSettings(s => ({ ...(s || {}), seo, social }))
+      setDesignForm({})
+    } catch (err) {
+      console.error('Failed to save SEO/social:', err)
+      setSaveError('Could not save SEO/social settings. Please try again.')
+    } finally {
+      setSavingSettings(false)
+    }
+  }
+
+  // Save color/font/shape overrides on top of the selected preset. Same
+  // merge/guard/error pattern as saveSeoSocial — customTheme only ever holds
+  // the fields the user has actually overridden.
+  const saveCustomTheme = async () => {
+    if (savingSettings) return
+    const token = getStoredAccessToken()
+    if (!token) return
+    setSavingSettings(true)
+    setSaveError('')
+    try {
+      const currentTheme = settings?.theme || {}
+      const customTheme = {
+        ink: customThemeForm.ink ?? customThemeOverrides.ink ?? presetTheme.ink,
+        accent: customThemeForm.accent ?? customThemeOverrides.accent ?? presetTheme.accent,
+        soft: customThemeForm.soft ?? customThemeOverrides.soft ?? presetTheme.soft,
+        font: customThemeForm.font ?? customThemeOverrides.font ?? presetTheme.font,
+        radius: customThemeForm.radius ?? customThemeOverrides.radius ?? presetTheme.radius,
+      }
+      const res = await fetch(`${API_BASE}/website/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ theme: { ...currentTheme, customTheme } }),
+      })
+      if (!res.ok) throw new Error('Save failed')
+      setSettings(s => ({ ...(s || {}), theme: { ...currentTheme, customTheme } }))
+      setCustomThemeForm({})
+    } catch (err) {
+      console.error('Failed to save custom theme:', err)
+      setSaveError('Could not save your theme customization. Please try again.')
+    } finally {
+      setSavingSettings(false)
+    }
+  }
+
+  // Revert to the pure preset — clears any color/font/shape overrides.
+  const resetCustomTheme = async () => {
+    if (savingSettings) return
+    const token = getStoredAccessToken()
+    if (!token) return
+    setSavingSettings(true)
+    setSaveError('')
+    try {
+      const currentTheme = settings?.theme || {}
+      const res = await fetch(`${API_BASE}/website/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ theme: { ...currentTheme, customTheme: {} } }),
+      })
+      if (!res.ok) throw new Error('Reset failed')
+      setSettings(s => ({ ...(s || {}), theme: { ...currentTheme, customTheme: {} } }))
+      setCustomThemeForm({})
+    } catch (err) {
+      console.error('Failed to reset custom theme:', err)
+      setSaveError('Could not reset your theme customization. Please try again.')
     } finally {
       setSavingSettings(false)
     }
@@ -370,8 +497,14 @@ export default function Website() {
           >
             <Eye size={15} /> Preview
           </button>
-          <button className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 sm:py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90 active:opacity-80 transition" style={{ background: PRIMARY }}>
-            <Globe size={15} /> Publish Changes
+          <button
+            onClick={publish}
+            disabled={savingSettings || settings?.published}
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 sm:py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90 active:opacity-80 transition disabled:opacity-60"
+            style={{ background: PRIMARY }}
+          >
+            {savingSettings ? <Loader size={15} className="animate-spin" /> : <Globe size={15} />}
+            {settings?.published ? 'Published' : savingSettings ? 'Publishing...' : 'Publish Changes'}
           </button>
         </div>
       </div>
@@ -573,7 +706,7 @@ export default function Website() {
                               <ImageUploadField
                                 label="Background image (optional)"
                                 value={sectionForm.bgImage ?? settings?.theme?.builder?.hero?.bgImage ?? ''}
-                                onChange={val => setSectionForm(f => ({ ...f, bgImage: val }))}
+                                onChange={val => setSectionForm(f => ({ ...f, bgImage: typeof val === 'string' ? val : val.url }))}
                                 hint="A dark overlay is applied automatically so the headline stays readable. Leave empty to use a solid colour instead."
                               />
 
@@ -649,9 +782,20 @@ export default function Website() {
                                 <div className="grid grid-cols-4 gap-2 mb-3">
                                   {(sectionForm.galleryImages || []).map((img, idx) => (
                                     <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group">
-                                      <img src={img} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover" />
+                                      <img src={img?.url ?? img} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover" />
                                       <button
-                                        onClick={() => setSectionForm(f => ({ ...f, galleryImages: f.galleryImages.filter((_, j) => j !== idx) }))}
+                                        onClick={() => {
+                                          setSectionForm(f => ({ ...f, galleryImages: f.galleryImages.filter((_, j) => j !== idx) }))
+                                          // Best-effort cleanup — only real uploads (not pasted URLs) have a storageKey.
+                                          if (img?.storageKey) {
+                                            const token = getStoredAccessToken()
+                                            fetch(`${API_BASE}/website/image`, {
+                                              method: 'DELETE',
+                                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                                              body: JSON.stringify({ storageKey: img.storageKey }),
+                                            }).catch(err => console.error('Failed to delete gallery image from storage:', err))
+                                          }
+                                        }}
                                         aria-label="Remove photo"
                                         className="absolute top-1 right-1 bg-black/60 text-white rounded-md p-1 opacity-0 group-hover:opacity-100 transition"
                                       >
@@ -662,17 +806,19 @@ export default function Website() {
                                 </div>
                                 <ImageUploadField
                                   label="Add a photo"
-                                  value={sectionForm.newImage ?? ''}
-                                  onChange={val => setSectionForm(f => ({ ...f, newImage: val }))}
+                                  value={sectionForm.newImage?.url ?? ''}
+                                  onChange={val => setSectionForm(f => ({
+                                    ...f,
+                                    newImage: typeof val === 'string' ? { url: val, storageKey: null } : val,
+                                  }))}
                                   aspect="square"
                                 />
                                 <button
                                   onClick={() => {
-                                    const img = (sectionForm.newImage || '').trim()
-                                    if (!img) return
-                                    setSectionForm(f => ({ ...f, galleryImages: [...(f.galleryImages || []), img], newImage: '' }))
+                                    if (!sectionForm.newImage?.url) return
+                                    setSectionForm(f => ({ ...f, galleryImages: [...(f.galleryImages || []), f.newImage], newImage: null }))
                                   }}
-                                  disabled={!sectionForm.newImage}
+                                  disabled={!sectionForm.newImage?.url}
                                   className="mt-2 px-3 py-2 text-xs font-semibold text-white rounded-lg flex items-center gap-1 disabled:opacity-40"
                                   style={{ background: PRIMARY }}
                                 >
@@ -876,6 +1022,175 @@ export default function Website() {
                   })}
                 </div>
               </div>
+
+              <div className="pt-5 border-t border-gray-100 space-y-3">
+                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Customize</div>
+                <p className="text-xs text-gray-400">Fine-tune the colors, font, and shape of the selected template. Switching templates resets these.</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1.5">Ink (text)</label>
+                    <input
+                      type="color"
+                      className="w-9 h-9 rounded-lg border border-gray-200 cursor-pointer"
+                      value={customThemeForm.ink ?? customThemeOverrides.ink ?? presetTheme.ink}
+                      onChange={e => setCustomThemeForm(f => ({ ...f, ink: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1.5">Accent</label>
+                    <input
+                      type="color"
+                      className="w-9 h-9 rounded-lg border border-gray-200 cursor-pointer"
+                      value={customThemeForm.accent ?? customThemeOverrides.accent ?? presetTheme.accent}
+                      onChange={e => setCustomThemeForm(f => ({ ...f, accent: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1.5">Soft (background)</label>
+                    <input
+                      type="color"
+                      className="w-9 h-9 rounded-lg border border-gray-200 cursor-pointer"
+                      value={customThemeForm.soft ?? customThemeOverrides.soft ?? presetTheme.soft}
+                      onChange={e => setCustomThemeForm(f => ({ ...f, soft: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Heading font</label>
+                  <select
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                    value={customThemeForm.font ?? customThemeOverrides.font ?? presetTheme.font}
+                    onChange={e => setCustomThemeForm(f => ({ ...f, font: e.target.value }))}
+                  >
+                    {FONT_OPTIONS.map(f => (
+                      <option key={f.id} value={f.family}>{f.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Card shape</label>
+                  <div className="flex gap-2">
+                    {RADIUS_OPTIONS.map(r => {
+                      const currentRadius = customThemeForm.radius ?? customThemeOverrides.radius ?? presetTheme.radius
+                      const isActive = currentRadius === r.value
+                      return (
+                        <button
+                          key={r.id}
+                          onClick={() => setCustomThemeForm(f => ({ ...f, radius: r.value }))}
+                          className="flex-1 py-2 text-xs font-semibold rounded-lg border transition"
+                          style={isActive ? { background: PRIMARY, color: '#fff', borderColor: PRIMARY } : { borderColor: '#e5e7eb', color: '#6b7280' }}
+                        >
+                          {r.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={saveCustomTheme}
+                    disabled={savingSettings}
+                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-lg hover:opacity-90 transition disabled:opacity-60"
+                    style={{ background: PRIMARY }}
+                  >
+                    <Save size={13} /> Save Customization
+                  </button>
+                  <button
+                    onClick={resetCustomTheme}
+                    disabled={savingSettings}
+                    className="px-4 py-2 text-xs font-semibold text-gray-500 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition disabled:opacity-60"
+                  >
+                    Reset to Preset
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-5 border-t border-gray-100 space-y-3">
+                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">SEO</div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Page title</label>
+                  <input
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                    placeholder={brandName}
+                    value={designForm.seoTitle ?? settings?.seo?.title ?? ''}
+                    onChange={e => setDesignForm(f => ({ ...f, seoTitle: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Meta description</label>
+                  <textarea
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                    rows={2}
+                    placeholder={`Shop ${brandName}`}
+                    value={designForm.seoDescription ?? settings?.seo?.description ?? ''}
+                    onChange={e => setDesignForm(f => ({ ...f, seoDescription: e.target.value }))}
+                  />
+                </div>
+                <ImageUploadField
+                  label="Social share image (optional)"
+                  value={designForm.seoOgImage ?? settings?.seo?.ogImage ?? ''}
+                  onChange={val => setDesignForm(f => ({ ...f, seoOgImage: val }))}
+                  hint="Shown when your storefront link is shared on social media or WhatsApp."
+                />
+
+                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1 pt-2">Social links</div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1">Facebook</label>
+                    <input
+                      className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                      placeholder="yourbrand"
+                      value={designForm.socialFacebook ?? settings?.social?.facebook ?? ''}
+                      onChange={e => setDesignForm(f => ({ ...f, socialFacebook: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1">Instagram</label>
+                    <input
+                      className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                      placeholder="yourbrand"
+                      value={designForm.socialInstagram ?? settings?.social?.instagram ?? ''}
+                      onChange={e => setDesignForm(f => ({ ...f, socialInstagram: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1">Twitter / X</label>
+                    <input
+                      className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                      placeholder="yourbrand"
+                      value={designForm.socialTwitter ?? settings?.social?.twitter ?? ''}
+                      onChange={e => setDesignForm(f => ({ ...f, socialTwitter: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1">TikTok</label>
+                    <input
+                      className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                      placeholder="yourbrand"
+                      value={designForm.socialTiktok ?? settings?.social?.tiktok ?? ''}
+                      onChange={e => setDesignForm(f => ({ ...f, socialTiktok: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1">YouTube</label>
+                    <input
+                      className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                      placeholder="yourbrand"
+                      value={designForm.socialYoutube ?? settings?.social?.youtube ?? ''}
+                      onChange={e => setDesignForm(f => ({ ...f, socialYoutube: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={saveSeoSocial}
+                  disabled={savingSettings}
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-lg hover:opacity-90 transition disabled:opacity-60"
+                  style={{ background: PRIMARY }}
+                >
+                  <Save size={13} /> Save SEO & Social
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -918,7 +1233,7 @@ export default function Website() {
               className="bg-white overflow-hidden transition-all duration-300 w-full"
               style={previewDevice === 'mobile' ? { maxWidth: 340, borderRadius: 16 } : { maxWidth: '100%' }}
             >
-              <StorefrontPreview business={business} products={products} whatsapp={previewWhatsapp} domain={domain} device={previewDevice} settings={previewSettings} />
+              <StorefrontPreview business={business} products={products} whatsapp={previewWhatsapp} domain={domain} device={previewDevice} settings={previewSettings} theme={activeTheme} />
             </div>
           </div>
         </div>

@@ -1,3 +1,8 @@
+// `font` is a Google Fonts family name (must support italic — the storefront
+// leans on italic display type throughout) used for storefront headings.
+// `radius` is the card-corner roundness in px, applied via a CSS variable in
+// StorefrontPreview.jsx — pill/circular shapes (nav, CTAs, category circles)
+// stay round regardless of theme.
 export const THEMES = {
   minimal: {
     id: 'minimal',
@@ -6,6 +11,8 @@ export const THEMES = {
     ink: '#1e293b',
     accent: '#4166F5',
     soft: '#F8F4E8',
+    font: 'Inter',
+    radius: 16,
   },
   bold: {
     id: 'bold',
@@ -14,6 +21,8 @@ export const THEMES = {
     ink: '#0f172a',
     accent: '#ea580c',
     soft: '#fef2f2',
+    font: 'Archivo',
+    radius: 8,
   },
   elegant: {
     id: 'elegant',
@@ -22,6 +31,8 @@ export const THEMES = {
     ink: '#292524',
     accent: '#7c3aed',
     soft: '#f5f3ff',
+    font: 'Playfair Display',
+    radius: 4,
   },
   playful: {
     id: 'playful',
@@ -30,6 +41,8 @@ export const THEMES = {
     ink: '#1e293b',
     accent: '#db2777',
     soft: '#fdf2f8',
+    font: 'Poppins',
+    radius: 28,
   },
   earthy: {
     id: 'earthy',
@@ -38,5 +51,107 @@ export const THEMES = {
     ink: '#1c1917',
     accent: '#059669',
     soft: '#f0fdf4',
+    font: 'Merriweather',
+    radius: 20,
+  },
+  luxury: {
+    id: 'luxury',
+    name: 'Luxury',
+    description: 'Black and gold with a sharp, premium edge',
+    ink: '#1a1a1a',
+    accent: '#C9A227',
+    soft: '#FAF7F0',
+    font: 'Cormorant Garamond',
+    radius: 2,
+  },
+  ocean: {
+    id: 'ocean',
+    name: 'Ocean',
+    description: 'Breezy blues and teals for a fresh, coastal feel',
+    ink: '#0c2d48',
+    accent: '#0891b2',
+    soft: '#ecfeff',
+    font: 'Nunito',
+    radius: 24,
+  },
+  sunset: {
+    id: 'sunset',
+    name: 'Sunset',
+    description: 'Warm oranges on a soft glow, easygoing and inviting',
+    ink: '#451a03',
+    accent: '#f97316',
+    soft: '#fff7ed',
+    font: 'DM Serif Display',
+    radius: 20,
+  },
+  monochrome: {
+    id: 'monochrome',
+    name: 'Monochrome',
+    description: 'Pure grayscale for a sharp, architectural look',
+    ink: '#111111',
+    accent: '#525252',
+    soft: '#fafafa',
+    font: 'Space Grotesk',
+    radius: 6,
+  },
+  vintage: {
+    id: 'vintage',
+    name: 'Vintage',
+    description: 'Sepia tones and classic serif for a timeless feel',
+    ink: '#3f2e1e',
+    accent: '#a16207',
+    soft: '#fdf6ec',
+    font: 'Libre Baskerville',
+    radius: 10,
+  },
+  tropical: {
+    id: 'tropical',
+    name: 'Tropical',
+    description: 'Vivid coral and green, playful and full of energy',
+    ink: '#064e3b',
+    accent: '#fb7185',
+    soft: '#f0fdfa',
+    font: 'Baloo 2',
+    radius: 32,
+  },
+  midnight: {
+    id: 'midnight',
+    name: 'Midnight',
+    description: 'Deep indigo tones with a sleek, modern typeface',
+    ink: '#030712',
+    accent: '#6366f1',
+    soft: '#eef2ff',
+    font: 'Sora',
+    radius: 14,
   },
 }
+
+// Broader font list for the custom-override dropdown — includes every theme
+// font above plus a few extra well-paired Google Fonts (all support italic).
+export const FONT_OPTIONS = [
+  { id: 'inter', label: 'Inter', family: 'Inter' },
+  { id: 'archivo', label: 'Archivo', family: 'Archivo' },
+  { id: 'playfair-display', label: 'Playfair Display', family: 'Playfair Display' },
+  { id: 'poppins', label: 'Poppins', family: 'Poppins' },
+  { id: 'merriweather', label: 'Merriweather', family: 'Merriweather' },
+  { id: 'cormorant-garamond', label: 'Cormorant Garamond', family: 'Cormorant Garamond' },
+  { id: 'nunito', label: 'Nunito', family: 'Nunito' },
+  { id: 'dm-serif-display', label: 'DM Serif Display', family: 'DM Serif Display' },
+  { id: 'space-grotesk', label: 'Space Grotesk', family: 'Space Grotesk' },
+  { id: 'libre-baskerville', label: 'Libre Baskerville', family: 'Libre Baskerville' },
+  { id: 'baloo-2', label: 'Baloo 2', family: 'Baloo 2' },
+  { id: 'sora', label: 'Sora', family: 'Sora' },
+  { id: 'lora', label: 'Lora', family: 'Lora' },
+  { id: 'josefin-sans', label: 'Josefin Sans', family: 'Josefin Sans' },
+  { id: 'crimson-text', label: 'Crimson Text', family: 'Crimson Text' },
+  { id: 'fraunces', label: 'Fraunces', family: 'Fraunces' },
+  { id: 'outfit', label: 'Outfit', family: 'Outfit' },
+  { id: 'quicksand', label: 'Quicksand', family: 'Quicksand' },
+]
+
+// Named shape presets for the custom-override radius picker.
+export const RADIUS_OPTIONS = [
+  { id: 'sharp', label: 'Sharp', value: 6 },
+  { id: 'soft', label: 'Soft', value: 16 },
+  { id: 'round', label: 'Round', value: 28 },
+]

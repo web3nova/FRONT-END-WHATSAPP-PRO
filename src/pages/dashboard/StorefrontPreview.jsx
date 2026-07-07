@@ -31,11 +31,12 @@ const TikTok = ({ size = 16, className = '' }) => (
 import { useState, useRef, useEffect, useMemo } from 'react'
 
 // ── Design tokens ──────────────────────────────────────────────────────────
-const INK = '#14110F'
-const CREAM = '#FBF3E1'
-const GOLD = '#E8A93D'
-const PASTELS = ['#FBEAE6', '#E7F1EF', '#FCF2DA', '#EFEAF6', '#E9F0FB']
-const DISPLAY = "'Playfair Display', ui-serif, Georgia, serif"
+// Fallbacks when no template theme is passed (e.g. templateId not set yet).
+const DEFAULT_INK = '#14110F'
+const DEFAULT_CREAM = '#FBF3E1'
+const DEFAULT_GOLD = '#E8A93D'
+const DEFAULT_FONT = 'Playfair Display'
+const DEFAULT_RADIUS = 16
 const BODY = "'Inter', ui-sans-serif, system-ui, sans-serif"
 const DEFAULT_ACTIVE = { 1: true, 2: true, 3: true, 4: false, 5: true, 6: true }
 
@@ -44,7 +45,20 @@ function isSectionActive(settings, id) {
   return found ? !!found.active : (DEFAULT_ACTIVE[id] ?? true)
 }
 
-function Stars({ value = 5, size = 12, color = INK }) {
+// Lighten a hex color toward white by `ratio` (0..1, higher = lighter) — used
+// to derive pastel product/category tile backgrounds from the theme's accent,
+// instead of a fixed palette unrelated to the chosen theme.
+function mixHexWithWhite(hex, ratio) {
+  const clean = hex.replace('#', '')
+  const num = parseInt(clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean, 16)
+  const r = (num >> 16) & 255
+  const g = (num >> 8) & 255
+  const b = num & 255
+  const lighten = c => Math.round(c + (255 - c) * ratio)
+  return `#${[lighten(r), lighten(g), lighten(b)].map(c => c.toString(16).padStart(2, '0')).join('')}`
+}
+
+function Stars({ value = 5, size = 12, color = DEFAULT_INK }) {
   return (
     <div className="flex gap-0.5 justify-center">
       {Array.from({ length: 5 }).map((_, i) => (
@@ -76,15 +90,38 @@ function isSoldOut(p) {
   return typeof p.stock === 'number' && p.stock <= 0
 }
 
-export default function StorefrontPreview({ business, products, whatsapp, domain, device = 'desktop', settings }) {
+export default function StorefrontPreview({ business, products, whatsapp, domain, device = 'desktop', settings, theme }) {
+  // Colors + heading font + card shape driven by the selected template
+  // (Website.jsx Design tab); fall back to the original hardcoded look when no
+  // theme is set.
+  const INK = theme?.ink || DEFAULT_INK
+  const GOLD = theme?.accent || DEFAULT_GOLD
+  const CREAM = theme?.soft || DEFAULT_CREAM
+  const fontName = theme?.font || DEFAULT_FONT
+  const radius = theme?.radius ?? DEFAULT_RADIUS
+  const DISPLAY = `'${fontName}', ui-serif, Georgia, serif`
+
+  // Product/category tile tints derived from the theme's own accent color,
+  // instead of a fixed palette unrelated to whichever theme is active.
+  const PASTELS = [
+    mixHexWithWhite(GOLD, 0.92),
+    mixHexWithWhite(GOLD, 0.86),
+    mixHexWithWhite(INK, 0.94),
+    mixHexWithWhite(GOLD, 0.9),
+    mixHexWithWhite(CREAM, 0.4),
+  ]
+
+  // Load the active template's heading font on demand — each theme keys its
+  // own <link> so switching templates doesn't refetch a font already loaded.
   useEffect(() => {
-    if (document.getElementById('sf-display-font')) return
+    const linkId = `sf-display-font-${fontName.replace(/\s+/g, '-')}`
+    if (document.getElementById(linkId)) return
     const link = document.createElement('link')
-    link.id = 'sf-display-font'
+    link.id = linkId
     link.rel = 'stylesheet'
-    link.href = 'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,500;1,600;1,700&display=swap'
+    link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/\s+/g, '+')}:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&display=swap`
     document.head.appendChild(link)
-  }, [])
+  }, [fontName])
 
   // ── State ────────────────────────────────────────────────────────────────
   const [navOpen, setNavOpen] = useState(false)
@@ -232,7 +269,7 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
     return (
       <div className="group cursor-pointer" onClick={() => openProduct(p)}>
         <div
-          className="rounded-2xl overflow-hidden flex items-center justify-center mb-3 relative"
+          className="rounded-[var(--sf-radius)] overflow-hidden flex items-center justify-center mb-3 relative"
           style={{ background: PASTELS[i % PASTELS.length], aspectRatio: '1 / 1' }}
         >
           {p.imageUrl
@@ -282,7 +319,7 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="bg-white relative" style={{ fontFamily: BODY }}>
+    <div className="bg-white relative" style={{ fontFamily: BODY, '--sf-radius': `${radius}px` }}>
 
       {/* ── Product Detail Modal ── */}
       {selectedProduct && (
@@ -293,7 +330,7 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
         >
           <div
             className="bg-white w-full sm:max-w-2xl overflow-y-auto"
-            style={{ maxHeight: '92vh', borderRadius: isMobile ? '20px 20px 0 0' : 20 }}
+            style={{ maxHeight: '92vh', borderRadius: isMobile ? 'var(--sf-radius) var(--sf-radius) 0 0' : 'var(--sf-radius)' }}
           >
             {/* Image */}
             <div className="relative flex items-center justify-center" style={{ background: PASTELS[0], minHeight: 220 }}>
@@ -687,8 +724,8 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
               <div className="mb-5" style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700, fontSize: isMobile ? 18 : 24 }}>{galleryTitle}</div>
               <div className={`grid gap-2 sm:gap-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-4'}`}>
                 {galleryImages.slice(0, isMobile ? 6 : 8).map((src, i) => (
-                  <div key={i} className="rounded-2xl overflow-hidden aspect-square" style={{ background: PASTELS[i % PASTELS.length] }}>
-                    <img src={src} alt={`${brandName} gallery ${i + 1}`} className="w-full h-full object-cover" />
+                  <div key={i} className="rounded-[var(--sf-radius)] overflow-hidden aspect-square" style={{ background: PASTELS[i % PASTELS.length] }}>
+                    <img src={src?.url ?? src} alt={`${brandName} gallery ${i + 1}`} className="w-full h-full object-cover" />
                   </div>
                 ))}
               </div>
@@ -705,7 +742,7 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
                 </div>
                 <p className="text-sm text-gray-600 leading-relaxed">{aboutText}</p>
               </div>
-              <div className="rounded-3xl overflow-hidden aspect-video flex items-center justify-center bg-white">
+              <div className="rounded-[var(--sf-radius)] overflow-hidden aspect-video flex items-center justify-center bg-white">
                 {logoUrl
                   ? <img src={logoUrl} alt={brandName} className="w-full h-full object-cover" />
                   : <div style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700 }} className="text-4xl opacity-20">{brandName.slice(0, 2).toUpperCase()}</div>}
@@ -728,9 +765,9 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
                 </button>
                 <div className={`grid gap-4 flex-1 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
                   {visibleTesti.map((t, i) => (
-                    <div key={t.id || i} className="rounded-2xl p-6 text-center" style={{ background: '#F4F4F2' }}>
+                    <div key={t.id || i} className="rounded-[var(--sf-radius)] p-6 text-center" style={{ background: '#F4F4F2' }}>
                       <div className="flex justify-center mb-2"><GoogleMark size={20} /></div>
-                      <Stars value={t.rating || 5} size={13} />
+                      <Stars value={t.rating || 5} size={13} color={INK} />
                       <div className="text-sm font-semibold mt-3 mb-2" style={{ fontFamily: DISPLAY, fontStyle: 'italic' }}>
                         "{t.name || 'Happy customer'}"
                       </div>
@@ -759,7 +796,7 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
           {/* Contact / WhatsApp CTA */}
           {showContact && (
             <div id={sectionId('contact')} className={isMobile ? 'px-5 py-8' : 'px-8 py-12'}>
-              <div className="rounded-3xl text-center p-6 sm:p-10" style={{ background: INK }}>
+              <div className="rounded-[var(--sf-radius)] text-center p-6 sm:p-10" style={{ background: INK }}>
                 <div className="text-white mb-2" style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700, fontSize: isMobile ? 20 : 28 }}>
                   Ready to order?
                 </div>

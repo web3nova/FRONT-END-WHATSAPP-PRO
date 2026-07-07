@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Monitor, Smartphone, ExternalLink, Loader, AlertCircle } from 'lucide-react'
 import { API_BASE } from '../../lib/apiConfig'
 import { getStoredAccessToken } from '../../lib/auth'
+import { THEMES } from '../../lib/themes'
 import StorefrontPreview from './StorefrontPreview'
 
 const PRIMARY = '#4166F5'
@@ -56,6 +57,7 @@ export default function WebsitePreview() {
   const brandName = business?.displayName || 'Your Brand'
   const whatsapp = business?.whatsappNumber || ''
   const domain = business?.domain || `${brandName.toLowerCase().replace(/\s+/g, '')}.web3nova.com`
+  const activeTheme = { ...(THEMES[settings?.theme?.templateId] || THEMES.minimal), ...(settings?.theme?.customTheme || {}) }
 
   return (
     <div className="fixed inset-0 z-40 bg-gray-100 flex flex-col">
@@ -126,7 +128,7 @@ export default function WebsitePreview() {
       </div>
 
       {/* Preview canvas */}
-      <div className="flex-1 overflow-y-auto p-0 sm:p-6 flex justify-center">
+      <div className="flex-1 overflow-y-auto p-0 sm:p-6 flex justify-center items-start">
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-gray-500 py-16">
             <Loader size={16} className="animate-spin" />
@@ -145,7 +147,7 @@ export default function WebsitePreview() {
             className="bg-white shadow-sm overflow-hidden transition-all duration-300 w-full"
             style={device === 'mobile' ? { maxWidth: 400, borderRadius: 24, border: '8px solid #1f2937' } : { maxWidth: 1100, borderRadius: 16 }}
           >
-            <StorefrontPreview business={business} products={products} whatsapp={whatsapp} domain={domain} device={device} settings={settings} />
+            <StorefrontPreview business={business} products={products} whatsapp={whatsapp} domain={domain} device={device} settings={settings} theme={activeTheme} />
           </div>
         )}
       </div>

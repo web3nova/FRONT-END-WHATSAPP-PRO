@@ -30,7 +30,9 @@ export default function ImageUploadField({ label, value, onChange, hint, aspect 
       if (!res.ok) {
         throw new Error(json?.message || 'Could not upload image.')
       }
-      onChange(json?.data?.url || json?.url)
+      // Uploaded files carry a storageKey (for later deletion); URLs pasted into
+      // the text field are plain strings — callers normalize both shapes.
+      onChange(json?.data || json)
     } catch (err) {
       setError(err.message || 'Could not upload image.')
     } finally {
