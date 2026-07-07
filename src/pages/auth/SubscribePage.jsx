@@ -133,13 +133,12 @@ export default function SubscribePage() {
     setStartingTrial(true)
 
     try {
-      // startFreeTrial should be implemented in AuthContext to mark the
-      // tenant as on a trial (locally and/or via a backend call), entirely
-      // separate from the billing/initialize (paid) flow.
-      if (typeof startFreeTrial === 'function') {
-        await startFreeTrial()
+      const sub = typeof startFreeTrial === 'function' ? await startFreeTrial() : null
+      if (sub?.isActive) {
+        navigate('/dashboard')
+      } else {
+        setSelectError('Your trial could not be confirmed. Please refresh and try again.')
       }
-      navigate('/dashboard')
     } catch (err) {
       setSelectError(err.message || 'Could not start your free trial. Please try again.')
     } finally {

@@ -15,7 +15,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [subscriptionLoading, setSubscriptionLoading] = useState(false)
 
-  // Fetch the real subscription from the backend and update state
+  // Fetch the real subscription from the backend, update state, and return the fetched value.
   const refreshSubscription = useCallback(async () => {
     setSubscriptionLoading(true)
     try {
@@ -26,8 +26,10 @@ export function AuthProvider({ children }) {
       } else {
         localStorage.removeItem('subscription')
       }
+      return sub
     } catch {
       // non-fatal — leave existing subscription state as-is
+      return null
     } finally {
       setSubscriptionLoading(false)
     }
@@ -94,12 +96,11 @@ export function AuthProvider({ children }) {
     await refreshSubscription()
   }, [refreshSubscription])
 
-  // startFreeTrial is now a no-op alias for refreshSubscription.
-  // The backend already created the trial on register — just sync state.
+  // startFreeTrial syncs the trial subscription from the backend and returns it.
+  // The backend already created the trial on register — we just need to fetch it.
   const startFreeTrial = useCallback(async () => {
-    await refreshSubscription()
-    return subscription
-  }, [refreshSubscription, subscription])
+    return refreshSubscription()
+  }, [refreshSubscription])
 
   const isActive = subscription?.isActive === true
 
