@@ -16,6 +16,28 @@ export async function fetchWhatsappAccount() {
   return body?.data ?? null
 }
 
+/** GET /whatsapp/business-profile — fetch WhatsApp Business Profile from Meta */
+export async function fetchWhatsappBusinessProfile() {
+  const res = await fetch(`${API_BASE}/whatsapp/business-profile`, {
+    headers: { accept: 'application/json', ...authHeaders() },
+  })
+  const body = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(body?.message || 'Failed to fetch WhatsApp Business Profile')
+  return body?.data ?? null
+}
+
+/** PUT /whatsapp/business-profile — update WhatsApp Business Profile on Meta */
+export async function updateWhatsappBusinessProfile(fields) {
+  const res = await fetch(`${API_BASE}/whatsapp/business-profile`, {
+    method: 'PUT',
+    headers: { accept: 'application/json', 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(fields),
+  })
+  const body = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(body?.message || 'Failed to update WhatsApp Business Profile')
+  return body?.data ?? body
+}
+
 /** POST /whatsapp/connect — exchange OAuth code for long-lived token */
 export async function connectWhatsapp({ code, redirectUri, wabaId, phoneNumberId }) {
   const res = await fetch(`${API_BASE}/whatsapp/connect`, {

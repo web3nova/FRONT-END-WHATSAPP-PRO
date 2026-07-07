@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   User, MessageCircle, Bot, Bell, Users, CreditCard, Check, Plus, Trash2,
-  ToggleLeft, ToggleRight, Eye, EyeOff, Loader2, Upload, AlertCircle, X
+  ToggleLeft, ToggleRight, Eye, EyeOff, Loader2, Upload, AlertCircle, X, Save
 } from 'lucide-react'
 import { useBusinessProfile } from '../../hooks/useBusinessProfile'
+import { fetchWhatsappBusinessProfile, updateWhatsappBusinessProfile } from '../../api/whatsappApi'
 
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
@@ -64,6 +65,170 @@ const INITIAL_FORM = {
   email: '',
   phone: '',
   location: '',
+}
+
+function WhatsAppSettingsTab({ profile, toggles, tog }) {
+  const [waProfile, setWaProfile] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+  const [form, setForm] = useState({ about: '', address: '', description: '', email: '', website: '' })
+
+  useEffect(() => {
+    fetchWhatsappBusinessProfile()
+      .then(p => {
+        if (p) {
+          setWaProfile(p)
+          setForm({
+            about: p.about || '',
+            address: p.address || '',
+            description: p.description || '',
+            email: p.email || '',
+            website: p.websites?.[0] || '',
+          })
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  const handleSave = async () => {
+    setSaving(true)
+    setError('')
+    setSuccess(false)
+    try {
+      await updateWhatsappBusinessProfile({
+        about: form.about || undefined,
+        address: form.address || undefined,
+        description: form.description || undefined,
+        email: form.email || undefined,
+        websites: form.website ? [form.website] : undefined,
+      })
+      setSuccess(true)
+      setTimeout(() => setSuccess(false), 3000)
+    } catch (err) {
+      setError(err.message || 'Failed to update profile')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }))
+
+  return (
+    <div className="space-y-5">
+      <h2 className="font-semibold text-gray-900">WhatsApp Connection</h2>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border border-gray-100 gap-3" style={{ background: CREAM }}>
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#dce5fd' }}>
+            <MessageCircle size={18} style={{ color: PRIMARY }} />
+          </div>
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-gray-900 truncate">{profile?.whatsappNumber || 'WhatsApp Business'}</div>
+            <div className="text-xs font-medium" style={{ color: PRIMARY }}>● Connected via WhatsApp Business API</div>
+          </div>
+        </div>
+        <button className="text-sm font-semibold text-red-400 border border-red-200 bg-white px-3 py-2.5 sm:py-1.5 rounded-lg hover:bg-red-50 transition w-full sm:w-auto flex-shrink-0">
+          Disconnect
+        </button>
+      </div>
+
+      <div>
+        <SettingRow label="AI Auto-Reply" desc="Let AI respond to customer messages automatically">
+          <Toggle on={toggles.aiReply} onToggle={() => tog('aiReply')} label="Toggle AI auto-reply" />
+        </SettingRow>
+      </div>
+
+      {/* WhatsApp Business Profile Editor */}
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100">
+          <h3 className="font-semibold text-gray-900">WhatsApp Business Profile</h3>
+          <p className="text-xs text-gray-400 mt-0.5">This is what customers see when they view your WhatsApp number</p>
+        </div>
+
+        {loading ? (
+          <div className="px-5 py-8 flex items-center justify-center gap-2 text-sm text-gray-400">
+            <Loader2 size={16} className="animate-spin" /> Loading profile…
+          </div>
+        ) : (
+          <div className="px-5 py-5 space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">About <span className="text-gray-400 font-normal">(139 chars max)</span></label>
+              <input
+                value={form.about}
+                onChange={set('about')}
+                maxLength={139}
+                placeholder="e.g. We sell quality fashion items and deliver fast"
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Description</label>
+              <textarea
+                value={form.description}
+                onChange={set('description')}
+                rows={3}
+                placeholder="Tell customers what your business does…"
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 resize-none"
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Address</label>
+                <input
+                  value={form.address}
+                  onChange={set('address')}
+                  placeholder="Lagos, Nigeria"
+                  className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Email</label>
+                <input
+                  value={form.email}
+                  onChange={set('email')}
+                  type="email"
+                  placeholder="hello@yourbusiness.com"
+                  className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Website</label>
+              <input
+                value={form.website}
+                onChange={set('website')}
+                type="url"
+                placeholder="https://www.yourbusiness.com"
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-2.5">
+                <AlertCircle size={14} /> {error}
+              </div>
+            )}
+            {success && (
+              <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-100 rounded-xl px-4 py-2.5">
+                <Check size={14} /> WhatsApp Business Profile updated successfully
+              </div>
+            )}
+
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition disabled:opacity-60"
+              style={{ background: PRIMARY }}
+            >
+              {saving ? <><Loader2 size={14} className="animate-spin" /> Saving…</> : <><Save size={14} /> Save Profile</>}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 export default function Settings() {
@@ -311,39 +476,7 @@ export default function Settings() {
           )}
 
           {/* WhatsApp */}
-          {activeTab === 'whatsapp' && (
-            <div className="space-y-5">
-              <h2 className="font-semibold text-gray-900">WhatsApp Connection</h2>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border border-gray-100 gap-3" style={{ background: CREAM }}>
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#dce5fd' }}>
-                    <MessageCircle size={18} style={{ color: PRIMARY }} />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-gray-900 truncate">{profile?.whatsappNumber || '+234 801 234 5678'}</div>
-                    <div className="text-xs font-medium" style={{ color: PRIMARY }}>● Connected via WhatsApp Business API</div>
-                  </div>
-                </div>
-                <button className="text-sm font-semibold text-red-400 border border-red-200 bg-white px-3 py-2.5 sm:py-1.5 rounded-lg hover:bg-red-50 transition w-full sm:w-auto flex-shrink-0">
-                  Disconnect
-                </button>
-              </div>
-              <div>
-                <SettingRow label="AI Auto-Reply" desc="Let AI respond to customer messages automatically">
-                  <Toggle on={toggles.aiReply} onToggle={() => tog('aiReply')} label="Toggle AI auto-reply" />
-                </SettingRow>
-                <SettingRow label="Welcome Message" desc="Sent when a new customer messages you">
-                  <button className="text-xs font-semibold p-2 -m-2" style={{ color: PRIMARY }}>Edit</button>
-                </SettingRow>
-                <SettingRow label="Business Hours" desc="Only respond during these hours">
-                  <button className="text-xs font-semibold p-2 -m-2" style={{ color: PRIMARY }}>Configure</button>
-                </SettingRow>
-                <SettingRow label="Away Message" desc="Sent outside business hours">
-                  <button className="text-xs font-semibold p-2 -m-2" style={{ color: PRIMARY }}>Edit</button>
-                </SettingRow>
-              </div>
-            </div>
-          )}
+          {activeTab === 'whatsapp' && <WhatsAppSettingsTab profile={profile} toggles={toggles} tog={tog} />}
 
           {/* AI Settings */}
           {activeTab === 'ai' && (
