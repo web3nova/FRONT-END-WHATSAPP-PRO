@@ -117,12 +117,17 @@ export default function Knowledge() {
     setAiLoading(true)
 
     try {
-      const res = await sendChatMessage({ conversationId: conversationId.current, message })
-      setChat(prev => [...prev, { from: 'ai', text: res.reply }])
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 30000)
+      const res = await sendChatMessage({ conversationId: conversationId.current, message, signal: controller.signal })
+      clearTimeout(timeout)
+      setChat(prev => [...prev, { from: 'ai', text: res.reply || 'No response received.' }])
     } catch (err) {
-      setAiError(err.message || 'AI failed to respond. Please try again.')
-      setChat(prev => prev.slice(0, -1)) // remove the user message on error
-      setTestInput(message) // restore input
+      const msg = err.name === 'AbortError'
+        ? 'Request timed out. The AI took too long to respond.'
+        : (err.message || 'AI failed to respond. Please try again.')
+      setChat(prev => [...prev, { from: 'ai', text: `⚠️ ${msg}`, error: true }])
+      setAiError(msg)
     } finally {
       setAiLoading(false)
     }

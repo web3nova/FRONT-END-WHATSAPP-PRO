@@ -9,7 +9,7 @@ function authHeaders() {
  * POST /ai/chat
  * Sends a message and returns { reply, steps, truncated? }
  */
-export async function sendChatMessage({ conversationId, message, customerId }) {
+export async function sendChatMessage({ conversationId, message, customerId, signal }) {
   const res = await fetch(`${API_BASE}/ai/chat`, {
     method: 'POST',
     headers: {
@@ -18,6 +18,7 @@ export async function sendChatMessage({ conversationId, message, customerId }) {
       ...authHeaders(),
     },
     body: JSON.stringify({ conversationId, message, customerId }),
+    signal,
   })
 
   const body = await res.json().catch(() => null)
