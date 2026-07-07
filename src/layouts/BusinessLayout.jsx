@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom'
 import onboardingApi from '../services/onboardingService'
 import { useAuth } from '../context/AuthContext'
+import { apiFetch } from '../lib/apiFetch'
 import {
   LayoutDashboard, ShoppingBag, Package, Users, MessageCircle,
-  Globe, BarChart3, BookOpen, Settings, Bell, Search, Zap, ExternalLink, Menu, X, CreditCard
+  Globe, BarChart3, BookOpen, Settings, Bell, Search, Zap, ExternalLink, Menu, X, CreditCard,
+  MessageSquare, ShoppingCart, CheckCircle, Wifi, CreditCard as CardIcon, AlertCircle
 } from 'lucide-react'
 
 const PRIMARY = '#4166F5'
@@ -35,6 +37,75 @@ function userInitials(name, email) {
   return (email || '?').slice(0, 2).toUpperCase()
 }
 
+const NOTIF_ICONS = {
+  new_message:       { icon: MessageSquare, color: '#4166F5' },
+  new_order:         { icon: ShoppingCart,  color: '#059669' },
+  whatsapp_connected:{ icon: Wifi,          color: '#16a34a' },
+  trial_started:     { icon: CheckCircle,   color: '#4166F5' },
+  payment_received:  { icon: CardIcon,      color: '#059669' },
+  default:           { icon: AlertCircle,   color: '#9ca3af' },
+}
+
+function relTime(iso) {
+  const diff = Date.now() - new Date(iso).getTime()
+  const m = Math.floor(diff / 60000)
+  if (m < 1) return 'just now'
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  return `${Math.floor(h / 24)}d ago`
+}
+
+function NotificationPanel({ onClose }) {
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    try {
+      const res = await apiFetch('/notifications')
+      const body = await res.json().catch(() => null)
+      setItems(body?.data?.items ?? [])
+    } catch { /* silent */ } finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => {
+    load()
+    apiFetch('/notifications/read-all', { method: 'PATCH' }).catch(() => {})
+  }, [load])
+
+  return (
+    <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+        <span className="text-sm font-semibold text-gray-900">Notifications</span>
+        <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 rounded-lg"><X size={14} /></button>
+      </div>
+      <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
+        {loading ? (
+          <div className="px-4 py-8 text-center text-sm text-gray-400">Loading…</div>
+        ) : items.length === 0 ? (
+          <div className="px-4 py-8 text-center text-sm text-gray-400">No notifications yet</div>
+        ) : items.map(n => {
+          const cfg = NOTIF_ICONS[n.type] ?? NOTIF_ICONS.default
+          const Icon = cfg.icon
+          return (
+            <div key={n.id} className={`flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition ${!n.read ? 'bg-blue-50/40' : ''}`}>
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: `${cfg.color}18` }}>
+                <Icon size={14} style={{ color: cfg.color }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-semibold text-gray-900 leading-tight">{n.title}</div>
+                <div className="text-xs text-gray-500 mt-0.5 leading-tight">{n.body}</div>
+                <div className="text-[10px] text-gray-400 mt-1">{relTime(n.createdAt)}</div>
+              </div>
+              {!n.read && <div className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5" style={{ background: '#4166F5' }} />}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function TrialBanner({ subscription }) {
   if (!subscription || subscription.status !== 'TRIAL' || !subscription.trialEndsAt) return null
   const daysLeft = Math.max(0, Math.ceil((new Date(subscription.trialEndsAt) - Date.now()) / 86400000))
@@ -62,6 +133,26 @@ export default function BusinessLayout() {
   const initials = userInitials(user?.name, user?.email)
   const displayName = user?.name || user?.email || 'Account'
   const displayEmail = user?.email || ''
+  const [unread, setUnread] = useState(0)
+  const [notifOpen, setNotifOpen] = useState(false)
+  const notifRef = useRef(null)
+
+  // Poll unread count every 30s
+  useEffect(() => {
+    const fetchUnread = () =>
+      apiFetch('/notifications').then(r => r.json()).then(b => setUnread(b?.data?.unread ?? 0)).catch(() => {})
+    fetchUnread()
+    const t = setInterval(fetchUnread, 30000)
+    return () => clearInterval(t)
+  }, [])
+
+  // Close panel on outside click
+  useEffect(() => {
+    if (!notifOpen) return
+    const handler = (e) => { if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [notifOpen])
 
   useEffect(() => {
     let cancelled = false
@@ -203,10 +294,20 @@ export default function BusinessLayout() {
                 New Order
               </button>
             )}
-            <button className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-xl transition">
-              <Bell size={18} />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-400"></span>
-            </button>
+            <div className="relative" ref={notifRef}>
+              <button
+                onClick={() => { setNotifOpen(v => !v); if (!notifOpen) setUnread(0) }}
+                className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-xl transition"
+              >
+                <Bell size={18} />
+                {unread > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none">
+                    {unread > 9 ? '9+' : unread}
+                  </span>
+                )}
+              </button>
+              {notifOpen && <NotificationPanel onClose={() => setNotifOpen(false)} />}
+            </div>
           </div>
         </header>
 
