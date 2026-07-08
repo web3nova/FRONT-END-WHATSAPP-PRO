@@ -1,80 +1,30 @@
 import { useState } from 'react'
 import { API_BASE } from '../lib/apiConfig'
 
-const API_URL = `${API_BASE}/auth/login`
+async function post(path, body) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  let result
+  try { result = await res.json() } catch { throw new Error('Server returned an unexpected response.') }
+  if (!res.ok) throw new Error(result.message || 'Request failed')
+  return result.data || result
+}
 
 export function useLogin() {
-  const [loading, setLoading] =
-    useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
-  const [error, setError] =
-    useState(null)
-
-  const login = async ({
-    email,
-    password,
-  }) => {
+  // Step 1: email + password → OTP sent
+  const login = async ({ email, password }) => {
     try {
       setLoading(true)
       setError(null)
-
-      const response =
-        await fetch(API_URL, {
-          method: 'POST',
-          headers: {
-            Accept:
-              'application/json',
-            'Content-Type':
-              'application/json',
-          },
-          body: JSON.stringify({
-            email,
-            password,
-          }),
-        })
-
-      let result
-      try {
-        result = await response.json()
-      } catch (err) {
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
-        throw new Error('API server returned a non-JSON response. Please check if your backend server is running.')
-      }
-
-      if (!response.ok) {
-        throw new Error(
-          result.message ||
-          'Login failed'
-        )
-      }
-
-      const authData = result.data || result
-      const accessToken = authData.accessToken || authData.token || authData.access_token || authData.tokens?.accessToken || authData.tokens?.access_token || authData.tokens?.token
-      const refreshToken = authData.refreshToken || authData.refresh_token || authData.tokens?.refreshToken || authData.tokens?.refresh_token
-      const user = authData.user || authData.profile || authData
-
-      if (!accessToken) {
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
-        throw new Error('Login response did not include an access token.')
-      }
-
-      // Save tokens
-      localStorage.setItem('accessToken', accessToken)
-      if (refreshToken) {
-        localStorage.setItem('refreshToken', refreshToken)
-      } else {
-        localStorage.removeItem('refreshToken')
-      }
-
-      return {
-        ...authData,
-        user,
-        accessToken,
-        refreshToken,
-      }
-
+      const data = await post('/auth/login', { email, password })
+      // Returns { requiresOtp: true, userId, email }
+      return data
     } catch (err) {
       setError(err.message)
       throw err
@@ -83,9 +33,43 @@ export function useLogin() {
     }
   }
 
-  return {
-    login,
-    loading,
-    error,
+  // Step 2: userId + 6-digit code → tokens
+  const verifyOtp = async ({ userId, code }) => {
+    try {
+      setLoading(true)
+      setError(null)
+      const authData = await post('/auth/verify-otp', { userId, code })
+
+      const accessToken = authData.accessToken || authData.token
+      const refreshToken = authData.refreshToken
+
+      if (!accessToken) throw new Error('Verification failed — no token returned.')
+
+      localStorage.setItem('accessToken', accessToken)
+      if (refreshToken) localStorage.setItem('refreshToken', refreshToken)
+      else localStorage.removeItem('refreshToken')
+
+      return { ...authData, accessToken, refreshToken, user: authData.user }
+    } catch (err) {
+      setError(err.message)
+      throw err
+    } finally {
+      setLoading(false)
+    }
   }
+
+  const resendOtp = async ({ userId }) => {
+    try {
+      setLoading(true)
+      setError(null)
+      await post('/auth/resend-otp', { userId })
+    } catch (err) {
+      setError(err.message)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return { login, verifyOtp, resendOtp, loading, error }
 }

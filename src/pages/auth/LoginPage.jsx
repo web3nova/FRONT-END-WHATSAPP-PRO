@@ -28,7 +28,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export default function LoginPage() {
   const auth = useAuth()
-  const { login: loginRequest, loading, error: apiError } = useLogin()
+  const { login: loginRequest, verifyOtp, resendOtp, loading, error: apiError } = useLogin()
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams] = useSearchParams()
@@ -49,6 +49,13 @@ export default function LoginPage() {
   const [isPaused, setIsPaused] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // OTP step state
+  const [otpStep, setOtpStep] = useState(false)
+  const [otpUserId, setOtpUserId] = useState('')
+  const [otpEmail, setOtpEmail] = useState('')
+  const [otpCode, setOtpCode] = useState('')
+  const [resent, setResent] = useState(false)
 
   const emailInputRef = useRef(null)
   const passwordInputRef = useRef(null)
@@ -132,9 +139,19 @@ export default function LoginPage() {
     setIsSubmitting(true)
 
     try {
-      const authData = await loginRequest({ email, password })
+      const result = await loginRequest({ email, password })
 
-      // Save user and tokens in AuthContext (also fetches real subscription)
+      // Step 1 succeeded — backend sent OTP, show the code input
+      if (result.requiresOtp) {
+        setOtpUserId(result.userId)
+        setOtpEmail(result.email)
+        setOtpStep(true)
+        setIsSubmitting(false)
+        return
+      }
+
+      // Fallback: no OTP (shouldn't happen but handle gracefully)
+      const authData = result
       await auth.login(authData.user, {
         accessToken: authData.accessToken,
         refreshToken: authData.refreshToken,
@@ -230,7 +247,92 @@ export default function LoginPage() {
 
           {/* Right panel - Form */}
           <div className="auth-panel auth-panel--form">
-          <div className="auth-form-card">   {/* was: auth-form-inner */}
+          <div className="auth-form-card">
+
+            {otpStep ? (
+              /* ── OTP step ── */
+              <>
+                <h2 className="auth-form__heading">Check your email</h2>
+                <p className="auth-form__sub">We sent a 6-digit code to <strong>{otpEmail}</strong></p>
+
+                {(error || apiError) && (
+                  <div className="auth-alert auth-alert--error" role="alert">
+                    <span className="auth-alert__icon">✕</span>
+                    {error || apiError}
+                  </div>
+                )}
+                {resent && (
+                  <div className="auth-alert auth-alert--success" role="status">Code resent — check your inbox.</div>
+                )}
+
+                <form
+                  className="auth-form"
+                  onSubmit={async (e) => {
+                    e.preventDefault()
+                    setError('')
+                    setIsSubmitting(true)
+                    try {
+                      const authData = await verifyOtp({ userId: otpUserId, code: otpCode })
+                      await auth.login(authData.user, { accessToken: authData.accessToken, refreshToken: authData.refreshToken })
+                      try {
+                        const profile = await onboardingApi.getProfile()
+                        navigate(profile?.displayName || profile?.id ? from : '/onboarding')
+                      } catch {
+                        navigate(from)
+                      }
+                    } catch (err) {
+                      setError(err.message)
+                    } finally {
+                      setIsSubmitting(false)
+                    }
+                  }}
+                >
+                  <div className="auth-field">
+                    <label className="auth-field__label">Verification code</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={otpCode}
+                      onChange={e => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="000000"
+                      className="auth-field__input"
+                      style={{ letterSpacing: '0.3em', fontSize: '1.25rem', textAlign: 'center' }}
+                      autoFocus
+                    />
+                  </div>
+
+                  <button type="submit" disabled={otpCode.length < 6 || isSubmitting || loading} className="auth-btn-primary">
+                    {isSubmitting || loading ? <><span className="auth-spinner" aria-hidden="true" /> Verifying…</> : 'Verify & Sign in'}
+                  </button>
+                </form>
+
+                <div style={{ textAlign: 'center', marginTop: '16px' }}>
+                  <button
+                    type="button"
+                    className="auth-link-muted"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem' }}
+                    onClick={async () => {
+                      setResent(false)
+                      try { await resendOtp({ userId: otpUserId }); setResent(true); setTimeout(() => setResent(false), 4000) } catch { /* silent */ }
+                    }}
+                  >
+                    Didn't receive it? Resend code
+                  </button>
+                  <span style={{ margin: '0 8px', color: '#cbd5e1' }}>·</span>
+                  <button
+                    type="button"
+                    className="auth-link-muted"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem' }}
+                    onClick={() => { setOtpStep(false); setOtpCode(''); setError('') }}
+                  >
+                    Back
+                  </button>
+                </div>
+              </>
+            ) : (
+              /* ── Password step ── */
+              <>
             <h2 className="auth-form__heading">Sign in</h2>
               <p className="auth-form__sub">Access your business dashboard</p>
 
@@ -340,6 +442,8 @@ export default function LoginPage() {
                   Create account
                 </Link>
               </p>
+            </>
+            )}
             </div>
           </div>
         </div>
