@@ -4,6 +4,7 @@ import onboardingApi from '../services/onboardingService'
 import { useAuth } from '../context/AuthContext'
 import { apiFetch } from '../lib/apiFetch'
 import { isOwner, isAdmin } from '../utils/permissions'
+import GravatarAvatar from '../components/GravatarAvatar'
 import {
   LayoutDashboard, ShoppingBag, Package, Users, MessageCircle,
   Globe, BarChart3, BookOpen, Settings, Bell, Search, Zap, ExternalLink, Menu, X, CreditCard,
@@ -259,14 +260,7 @@ export default function BusinessLayout() {
         {/* User + logout at bottom */}
         <div className="flex-shrink-0 border-t border-gray-100 p-4">
           <div className="flex items-center gap-3">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 overflow-hidden"
-              style={logoUrl ? {} : { background: PRIMARY }}
-            >
-              {logoUrl
-                ? <img src={logoUrl} alt="avatar" className="w-full h-full object-cover" />
-                : initials}
-            </div>
+            <GravatarAvatar email={user?.email} name={user?.name} size={32} background={PRIMARY} />
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-gray-900 truncate">{displayName}</div>
               <div className="text-xs text-gray-400 truncate">{displayEmail}</div>

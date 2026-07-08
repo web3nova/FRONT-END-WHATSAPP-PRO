@@ -7,6 +7,7 @@ import {
   ToggleLeft, ToggleRight, Eye, EyeOff, Loader2, Upload, AlertCircle, X, Save
 } from 'lucide-react'
 import { useBusinessProfile } from '../../hooks/useBusinessProfile'
+import GravatarAvatar from '../../components/GravatarAvatar'
 import { useAuth } from '../../context/AuthContext'
 import { fetchWhatsappBusinessProfile, updateWhatsappBusinessProfile, disconnectWhatsapp } from '../../api/whatsappApi'
 import { getNotificationPrefs, patchNotificationPrefs } from '../../api/notificationsApi'
@@ -379,9 +380,7 @@ function TeamTab({ currentUser }) {
         ) : members.map(m => (
           <div key={m.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-2xl border border-gray-100">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ background: ROLE_COLORS[m.teamRole] || PRIMARY }}>
-                {memberInitials(m.name, m.email)}
-              </div>
+              <GravatarAvatar email={m.email} name={m.name} size={36} background={ROLE_COLORS[m.teamRole] || PRIMARY} />
               <div className="min-w-0">
                 <div className="text-sm font-medium text-gray-900 truncate">{m.name || m.email}</div>
                 <div className="text-xs text-gray-400 truncate">{m.email}</div>
