@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { isOwner } from '../../utils/permissions'
 import { getTeamMembers, inviteMember, cancelInvite, removeMember } from '../../api/teamApi'
 import {
@@ -488,8 +488,18 @@ export default function Settings() {
   const { getProfile, saveProfile, updateProfile, uploadLogo } = useBusinessProfile()
   const { user, subscription } = useAuth()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
 
-  const [activeTab, setActiveTab] = useState('profile')
+  const VALID_TABS = ALL_TABS.map(t => t.id)
+  const tabFromUrl = searchParams.get('tab')
+  const [activeTab, setActiveTab] = useState(
+    VALID_TABS.includes(tabFromUrl) ? tabFromUrl : 'profile'
+  )
+
+  const switchTab = (id) => {
+    setActiveTab(id)
+    setSearchParams({ tab: id }, { replace: true })
+  }
   const [showKey, setShowKey] = useState(false)
   const [toggles, setToggles] = useState({
     orderNotif: true, whatsappNotif: true, emailNotif: false, weeklyReport: true,
@@ -669,7 +679,7 @@ export default function Settings() {
           {ALL_TABS.filter(t => !t.ownerOnly || isOwner(user)).map(t => (
             <button
               key={t.id}
-              onClick={() => setActiveTab(t.id)}
+              onClick={() => switchTab(t.id)}
               className="flex flex-col md:flex-row items-center justify-center md:justify-start gap-1.5 md:gap-2.5 px-2 py-3 md:px-3.5 md:py-2.5 rounded-xl text-[11px] md:text-sm font-medium transition text-center md:text-left"
               style={activeTab === t.id
                 ? { background: PRIMARY, color: '#fff' }
