@@ -6,7 +6,7 @@ import { apiFetch } from '../lib/apiFetch'
 import { isOwner, isAdmin } from '../utils/permissions'
 import {
   LayoutDashboard, ShoppingBag, Package, Users, MessageCircle,
-  Globe, BarChart3, BookOpen, Settings, Bell, Search, Zap, ExternalLink, Menu, X, CreditCard,
+  Globe, BarChart3, BookOpen, Settings, Bell, Search, ExternalLink, Menu, X, CreditCard,
   MessageSquare, ShoppingCart, CheckCircle, Wifi, CreditCard as CardIcon, AlertCircle, LogOut
 } from 'lucide-react'
 
@@ -27,7 +27,6 @@ const navItems = [
   { label: 'Settings',      icon: Settings,        path: '/dashboard/settings',   minRole: 'admin' },
 ]
 
-const ORDER_PAGES = ['/dashboard', '/dashboard/orders', '/dashboard/products']
 
 function userInitials(name, email) {
   if (name) {
@@ -132,7 +131,6 @@ export default function BusinessLayout() {
   const [businessName, setBusinessName] = useState('')
   const [logoUrl, setLogoUrl] = useState('')
 
-  const showNewOrder = ORDER_PAGES.includes(location.pathname)
   const initials = userInitials(user?.name, user?.email)
   const displayName = user?.name || user?.email || 'Account'
   const displayEmail = user?.email || ''
@@ -298,15 +296,6 @@ export default function BusinessLayout() {
             />
           </div>
           <div className="flex items-center gap-3 ml-auto">
-            {showNewOrder && (
-              <button
-                className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl shadow-sm transition hover:opacity-90"
-                style={{ background: PRIMARY }}
-              >
-                <Zap size={14} />
-                New Order
-              </button>
-            )}
             <div className="relative" ref={notifRef}>
               <button
                 onClick={() => { setNotifOpen(v => !v); if (!notifOpen) setUnread(0) }}
