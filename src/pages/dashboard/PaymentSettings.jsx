@@ -44,14 +44,17 @@ export default function PaymentSettings() {
   const [error, setError] = useState('')
   const [showRouteModal, setShowRouteModal] = useState(false)
 
-  const [config, setConfig] = useState({
+  const EMPTY_CONFIG = {
     manual: { isActive: false, bankAccount: null },
     paystack: { isActive: false, publicKey: '', secretKey: '' },
     monnify: { isActive: false, apiKey: '', secretKey: '', contractCode: '' },
     blockradar: { isActive: false, apiKey: '', webhookUrl: '' },
     otherProviders: [],
     preferredProvider: 'manual',
-  })
+  }
+  const [config, setConfig] = useState(EMPTY_CONFIG)
+  const [savedConfig, setSavedConfig] = useState(null)
+  const isDirty = savedConfig !== null && JSON.stringify(config) !== JSON.stringify(savedConfig)
   const [banks, setBanks] = useState([])
   const [resolving, setResolving] = useState(false)
   const [resolvedName, setResolvedName] = useState('')
@@ -69,8 +72,11 @@ export default function PaymentSettings() {
         if (configRes.ok) {
           const body = await configRes.json()
           const data = body?.data || body
-          if (data?.data && !ignore) setConfig(data.data)
-          else if (data && !ignore) setConfig(data.data || data)
+          const loaded = data?.data || data
+          if (!ignore && loaded) {
+            setConfig(loaded)
+            setSavedConfig(loaded)
+          }
         }
         if (banksRes?.ok) {
           const body = await banksRes.json()
@@ -156,6 +162,7 @@ export default function PaymentSettings() {
       }
 
       setSaved(true)
+      setSavedConfig(payload)
       setShowRouteModal(true)
       setTimeout(() => setSaved(false), 3000)
     } catch (err) {
@@ -198,9 +205,11 @@ export default function PaymentSettings() {
         </div>
         <div className="hidden sm:flex items-center gap-3">
           {saved && <span className="flex items-center gap-1 text-sm text-green-600 flex-shrink-0"><Check size={14} /> Saved</span>}
-          <button onClick={handleSave} disabled={saving} className="px-5 py-2 text-sm font-semibold text-white rounded-xl shadow-sm hover:opacity-90 active:opacity-80 transition disabled:opacity-50" style={{ background: PRIMARY }}>
-            {saving ? 'Saving...' : 'Save Changes'}
-          </button>
+          {isDirty && (
+            <button onClick={handleSave} disabled={saving} className="px-5 py-2 text-sm font-semibold text-white rounded-xl shadow-sm hover:opacity-90 active:opacity-80 transition disabled:opacity-50" style={{ background: PRIMARY }}>
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -410,21 +419,25 @@ export default function PaymentSettings() {
       {/* Save Button — pinned to the bottom of the screen on mobile so it's reachable
           without scrolling back up, wherever you are on the page; a normal inline
           button on desktop where there's no need for it. */}
-      <div className="hidden sm:flex justify-end">
-        <button onClick={handleSave} disabled={saving} className="px-6 py-2.5 text-sm font-semibold text-white rounded-xl shadow-sm hover:opacity-90 active:opacity-80 transition disabled:opacity-50" style={{ background: PRIMARY }}>
-          {saving ? 'Saving...' : 'Save Changes'}
-        </button>
-      </div>
+      {isDirty && (
+        <div className="hidden sm:flex justify-end">
+          <button onClick={handleSave} disabled={saving} className="px-6 py-2.5 text-sm font-semibold text-white rounded-xl shadow-sm hover:opacity-90 active:opacity-80 transition disabled:opacity-50" style={{ background: PRIMARY }}>
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      )}
 
-      <div
-        className="sm:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-100 px-4 py-3 flex items-center gap-3"
-        style={{ boxShadow: '0 -4px 12px rgba(0,0,0,0.06)' }}
-      >
-        {saved && <span className="flex items-center gap-1 text-sm text-green-600 flex-shrink-0"><Check size={14} /> Saved</span>}
-        <button onClick={handleSave} disabled={saving} className="flex-1 px-5 py-3 text-sm font-semibold text-white rounded-xl shadow-sm active:opacity-80 transition disabled:opacity-50" style={{ background: PRIMARY }}>
-          {saving ? 'Saving...' : 'Save Changes'}
-        </button>
-      </div>
+      {isDirty && (
+        <div
+          className="sm:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-100 px-4 py-3 flex items-center gap-3"
+          style={{ boxShadow: '0 -4px 12px rgba(0,0,0,0.06)' }}
+        >
+          {saved && <span className="flex items-center gap-1 text-sm text-green-600 flex-shrink-0"><Check size={14} /> Saved</span>}
+          <button onClick={handleSave} disabled={saving} className="flex-1 px-5 py-3 text-sm font-semibold text-white rounded-xl shadow-sm active:opacity-80 transition disabled:opacity-50" style={{ background: PRIMARY }}>
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      )}
 
       {/* Post-save routing prompt */}
       {showRouteModal && (
