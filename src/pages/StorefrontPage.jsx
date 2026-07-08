@@ -6,8 +6,7 @@ import { THEMES } from '../lib/themes'
 import StorefrontPreview from './dashboard/StorefrontPreview'
 
 export default function StorefrontPage({ domain: domainProp } = {}) {
-  const params = useParams()
-  const tenantId = params.tenantId
+  const { tenantId, pageSlug } = useParams()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [data, setData] = useState(null)
@@ -100,9 +99,10 @@ export default function StorefrontPage({ domain: domainProp } = {}) {
   const business = data?.business || {}
   const settings = data?.settings || {}
   const products = data?.products || []
+  const pages = data?.pages || []
   const whatsapp = business?.whatsappNumber || ''
   const domain = data?.tenant?.domain || ''
-  const activeTheme = { ...(THEMES[settings?.theme?.templateId] || THEMES.minimal), ...(settings?.theme?.customTheme || {}) }
+  const activeTheme = { ...(THEMES[settings?.theme?.templateId] || THEMES.minimal), ...(settings?.theme?.customTheme || {}), sectionStyles: settings?.theme?.sectionStyles || {} }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -122,6 +122,8 @@ export default function StorefrontPage({ domain: domainProp } = {}) {
           device="desktop"
           settings={settings}
           theme={activeTheme}
+          pages={pages}
+          initialPageSlug={pageSlug}
         />
       </div>
     </div>

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Globe, Eye, CheckCircle, ExternalLink, Layout, Image, Type, ToggleLeft, ToggleRight, Plus, Loader, Monitor, Smartphone, ChevronDown, ChevronUp, Save, Trash2, Star, Grid3x3, Check } from 'lucide-react'
+import { Globe, Eye, CheckCircle, ExternalLink, Layout, Image, Type, ToggleLeft, ToggleRight, Plus, Loader, Monitor, Smartphone, ChevronDown, ChevronUp, Save, Trash2, Star, Grid3x3, Check, History, X } from 'lucide-react'
 import { API_BASE } from '../../lib/apiConfig'
 import { getStoredAccessToken } from '../../lib/auth'
 import { THEMES, FONT_OPTIONS, RADIUS_OPTIONS } from '../../lib/themes'
+import { STARTER_TEMPLATES, recommendedStarterTemplateId } from '../../lib/starterTemplates'
 import ImageUploadField from '../../components/ImageUploadField'
 import StorefrontPreview from './StorefrontPreview'
 
@@ -17,7 +18,21 @@ const defaultSections = [
   { id: 4, name: 'Gallery', desc: 'Photo gallery of your work', active: false },
   { id: 5, name: 'Testimonials', desc: 'Customer reviews and feedback', active: true },
   { id: 6, name: 'Contact / WhatsApp CTA', desc: 'Let customers reach you', active: true },
-  { id: 7, name: 'Shop by Category', desc: 'Auto-built from your product categories — only useful once products have 2+ distinct categories', active: false },
+]
+
+const OUTLOOKS = [
+  { id: 'boutique', name: 'Boutique', description: 'Rounded cards, circular categories, italic serif accents — today\'s look.' },
+  { id: 'catalog', name: 'Catalog', description: 'Dense marketplace grid, filter chips, utilitarian sans-serif.' },
+  { id: 'magazine', name: 'Magazine', description: 'Editorial, story-led, oversized imagery and big typography.' },
+]
+
+const SECTION_SLOTS = [
+  { key: 'hero', label: 'Hero' },
+  { key: 'products', label: 'Products' },
+  { key: 'about', label: 'About' },
+  { key: 'gallery', label: 'Gallery' },
+  { key: 'testimonials', label: 'Testimonials' },
+  { key: 'contact', label: 'Contact' },
 ]
 
 const pageList = [
@@ -25,10 +40,152 @@ const pageList = [
   { name: 'Shop / Products', path: '/shop', status: 'published', sectionId: 2 },
   { name: 'About', path: '/about', status: 'published', sectionId: 3 },
   { name: 'Contact', path: '/contact', status: 'published', sectionId: 6 },
-  { name: 'Blog', path: '/blog', status: 'draft', sectionId: null },
 ]
 
 const sectionIcons = { 0: Layout, 1: Image, 2: Type, 3: Image, 4: Type, 5: Globe, 6: Grid3x3 }
+
+function timeAgo(dateStr) {
+  const diffMs = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diffMs / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  if (days < 7) return `${days}d ago`
+  return new Date(dateStr).toLocaleDateString()
+}
+
+function slugify(str) {
+  return (str || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+}
+
+const BLOCK_TYPES = [
+  { type: 'heading', label: 'Heading' },
+  { type: 'paragraph', label: 'Paragraph' },
+  { type: 'image', label: 'Image' },
+]
+
+function newBlockKey() {
+  return Math.random().toString(36).slice(2, 9)
+}
+
+function emptyBlock(type) {
+  return { _key: newBlockKey(), type, text: '', url: '', storageKey: '' }
+}
+
+// Create/edit form for a custom CMS page — shared between the "new page" and
+// "edit page" panels in the Pages tab. Content is a simple ordered list of
+// blocks (heading/paragraph/image) rather than one plain-text field.
+function PageForm({ pageForm, setPageForm, isNew }) {
+  const blocks = pageForm.blocks || []
+  const setBlocks = (next) => setPageForm(f => ({ ...f, blocks: next }))
+  const addBlock = (type) => setBlocks([...blocks, emptyBlock(type)])
+  const updateBlock = (i, patch) => setBlocks(blocks.map((b, idx) => (idx === i ? { ...b, ...patch } : b)))
+  const removeBlock = (i) => setBlocks(blocks.filter((_, idx) => idx !== i))
+  const moveBlock = (i, dir) => {
+    const target = i + dir
+    if (target < 0 || target >= blocks.length) return
+    const next = [...blocks]
+    ;[next[i], next[target]] = [next[target], next[i]]
+    setBlocks(next)
+  }
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 mb-1">Title</label>
+          <input
+            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+            placeholder="FAQ"
+            value={pageForm.title ?? ''}
+            onChange={e => setPageForm(f => ({
+              ...f,
+              title: e.target.value,
+              slug: isNew ? slugify(e.target.value) : f.slug,
+            }))}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 mb-1">Slug</label>
+          <input
+            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white disabled:bg-gray-100 disabled:text-gray-400"
+            placeholder="faq"
+            value={pageForm.slug ?? ''}
+            disabled={!isNew}
+            onChange={e => setPageForm(f => ({ ...f, slug: slugify(e.target.value) }))}
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-gray-500 mb-1.5">Content</label>
+        <div className="space-y-2">
+          {blocks.map((b, i) => (
+            <div key={b._key} className="border border-gray-200 rounded-lg p-2.5 bg-white">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400">{b.type}</span>
+                <div className="flex items-center gap-0.5">
+                  <button type="button" onClick={() => moveBlock(i, -1)} disabled={i === 0} className="p-1 text-gray-300 hover:text-gray-600 disabled:opacity-30 transition"><ChevronUp size={13} /></button>
+                  <button type="button" onClick={() => moveBlock(i, 1)} disabled={i === blocks.length - 1} className="p-1 text-gray-300 hover:text-gray-600 disabled:opacity-30 transition"><ChevronDown size={13} /></button>
+                  <button type="button" onClick={() => removeBlock(i)} className="p-1 text-gray-300 hover:text-red-500 transition"><Trash2 size={13} /></button>
+                </div>
+              </div>
+              {b.type === 'heading' && (
+                <input
+                  className="w-full text-sm font-semibold border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                  placeholder="Heading text"
+                  value={b.text ?? ''}
+                  onChange={e => updateBlock(i, { text: e.target.value })}
+                />
+              )}
+              {b.type === 'paragraph' && (
+                <textarea
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                  rows={3}
+                  placeholder="Paragraph text"
+                  value={b.text ?? ''}
+                  onChange={e => updateBlock(i, { text: e.target.value })}
+                />
+              )}
+              {b.type === 'image' && (
+                <ImageUploadField
+                  label=""
+                  value={b.url ?? ''}
+                  onChange={val => updateBlock(i, typeof val === 'string'
+                    ? { url: val, storageKey: '' }
+                    : { url: val.url, storageKey: val.storageKey || '' })}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2 mt-2">
+          {BLOCK_TYPES.map(bt => (
+            <button
+              key={bt.type}
+              type="button"
+              onClick={() => addBlock(bt.type)}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold text-gray-500 border border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:text-gray-700 transition"
+            >
+              <Plus size={11} /> {bt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <label className="flex items-center gap-2 text-xs font-medium text-gray-600">
+        <input
+          type="checkbox"
+          checked={!!pageForm.published}
+          onChange={e => setPageForm(f => ({ ...f, published: e.target.checked }))}
+        />
+        Published (visible on the live storefront)
+      </label>
+    </>
+  )
+}
 
 export default function Website() {
   const navigate = useNavigate()
@@ -52,10 +209,17 @@ export default function Website() {
   const [domainRemoving, setDomainRemoving] = useState(false)
   const [domainError, setDomainError] = useState('')
   const [domainSuccess, setDomainSuccess] = useState(null) // { domain, cname }
-
-  // Whether the product data actually has distinct categories — used to let
-  // people know why "Shop by Category" might not show anything yet.
-  const hasRealCategories = new Set(products.map(p => p.category).filter(Boolean)).size >= 2
+  const [customPages, setCustomPages] = useState([])
+  const [loadingPages, setLoadingPages] = useState(true)
+  const [editingPageSlug, setEditingPageSlug] = useState(null)
+  const [pageForm, setPageForm] = useState({})
+  const [savingPage, setSavingPage] = useState(false)
+  const [pageError, setPageError] = useState('')
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [revisions, setRevisions] = useState([])
+  const [loadingRevisions, setLoadingRevisions] = useState(false)
+  const [revisionsError, setRevisionsError] = useState('')
+  const [restoringId, setRestoringId] = useState('')
 
   const handleSaveDomain = async () => {
     setDomainError('')
@@ -110,10 +274,11 @@ export default function Website() {
       const token = getStoredAccessToken()
       if (!token) return
       try {
-        const [bizRes, prodRes, wsRes] = await Promise.all([
+        const [bizRes, prodRes, wsRes, pagesRes] = await Promise.all([
           fetch(`${API_BASE}/business`, { headers: { Authorization: `Bearer ${token}` } }),
           fetch(`${API_BASE}/products?limit=100&sort=sortOrder`, { headers: { Authorization: `Bearer ${token}` } }),
           fetch(`${API_BASE}/website/settings`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_BASE}/website/pages?limit=100`, { headers: { Authorization: `Bearer ${token}` } }),
         ])
         if (bizRes.ok && !ignore) {
           const body = await bizRes.json()
@@ -137,10 +302,18 @@ export default function Website() {
             setActiveSectionFlags(merged.map(s => s.active))
           }
         }
+        if (pagesRes.ok && !ignore) {
+          const body = await pagesRes.json()
+          const list = body?.data || []
+          setCustomPages(Array.isArray(list) ? list : [])
+        }
       } catch (err) {
         console.error('Failed to load website data:', err)
       } finally {
-        if (!ignore) setLoading(false)
+        if (!ignore) {
+          setLoading(false)
+          setLoadingPages(false)
+        }
       }
     }
     load()
@@ -158,7 +331,10 @@ export default function Website() {
   const activeTemplateId = settings?.theme?.templateId || 'minimal'
   const presetTheme = THEMES[activeTemplateId] || THEMES.minimal
   const customThemeOverrides = settings?.theme?.customTheme || {}
-  const activeTheme = { ...presetTheme, ...customThemeOverrides }
+  const activeTheme = { ...presetTheme, ...customThemeOverrides, sectionStyles: settings?.theme?.sectionStyles || {} }
+  const sectionStyles = settings?.theme?.sectionStyles || {}
+  const firstSlotStyle = sectionStyles[SECTION_SLOTS[0].key] || 'boutique'
+  const activeOutlook = SECTION_SLOTS.every(s => (sectionStyles[s.key] || 'boutique') === firstSlotStyle) ? firstSlotStyle : null
 
   // Persist a toggle immediately so it survives a refresh, not just local state.
   // Blocked while another save is in flight, and reverted if the request fails,
@@ -183,6 +359,44 @@ export default function Website() {
       console.error('Failed to save section visibility:', err)
       setActiveSectionFlags(previous)
       setSaveError('Could not save that change. Please try again.')
+    } finally {
+      setSavingSettings(false)
+    }
+  }
+
+  // Move a section up/down within the reorderable set (everything except
+  // Hero, which always renders first). Same guarded/optimistic/revert
+  // pattern as toggle() — the array's order is what StorefrontPreview.jsx
+  // actually renders in, so this directly controls homepage layout.
+  const reorderSections = async (index, direction) => {
+    if (savingSettings) return
+    const targetIndex = index + direction
+    if (targetIndex < 0 || targetIndex >= sections.length) return
+    if (sections[index].id === 1 || sections[targetIndex].id === 1) return
+    const previousSections = sections
+    const previousFlags = activeSectionFlags
+    const reordered = [...sections]
+    ;[reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]]
+    const reorderedFlags = [...activeSectionFlags]
+    ;[reorderedFlags[index], reorderedFlags[targetIndex]] = [reorderedFlags[targetIndex], reorderedFlags[index]]
+    setSections(reordered)
+    setActiveSectionFlags(reorderedFlags)
+    const token = getStoredAccessToken()
+    if (!token) return
+    setSavingSettings(true)
+    setSaveError('')
+    try {
+      const res = await fetch(`${API_BASE}/website/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ sections: reordered.map((s, idx) => ({ id: s.id, name: s.name, active: reorderedFlags[idx] })) }),
+      })
+      if (!res.ok) throw new Error('Save failed')
+    } catch (err) {
+      console.error('Failed to reorder sections:', err)
+      setSections(previousSections)
+      setActiveSectionFlags(previousFlags)
+      setSaveError('Could not save that order. Please try again.')
     } finally {
       setSavingSettings(false)
     }
@@ -334,6 +548,286 @@ export default function Website() {
       setSaveError('Could not reset your theme customization. Please try again.')
     } finally {
       setSavingSettings(false)
+    }
+  }
+
+  // Quick-apply one style to all 6 mix-and-match section slots at once. Same
+  // guarded/optimistic/revert pattern as selectTemplate, but — unlike
+  // selectTemplate — doesn't touch color settings, since outlook (structure)
+  // and theme (color/font/radius) are independent axes.
+  const applyOutlookToAll = async (id) => {
+    if (savingSettings) return
+    const previousTheme = settings?.theme || {}
+    const updatedTheme = { ...previousTheme, sectionStyles: Object.fromEntries(SECTION_SLOTS.map(s => [s.key, id])) }
+    setSettings(s => ({ ...(s || {}), theme: updatedTheme }))
+    const token = getStoredAccessToken()
+    if (!token) return
+    setSavingSettings(true)
+    setSaveError('')
+    try {
+      const res = await fetch(`${API_BASE}/website/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ theme: updatedTheme }),
+      })
+      if (!res.ok) throw new Error('Save failed')
+    } catch (err) {
+      console.error('Failed to apply outlook:', err)
+      setSettings(s => ({ ...(s || {}), theme: previousTheme }))
+      setSaveError('Could not apply that look. Please try again.')
+    } finally {
+      setSavingSettings(false)
+    }
+  }
+
+  // Set a single section's style variant, leaving the other 5 untouched —
+  // this is what lets a Magazine hero sit next to a Catalog product grid.
+  const setSectionStyle = async (key, variant) => {
+    if (savingSettings) return
+    const previousTheme = settings?.theme || {}
+    const updatedTheme = { ...previousTheme, sectionStyles: { ...(previousTheme.sectionStyles || {}), [key]: variant } }
+    setSettings(s => ({ ...(s || {}), theme: updatedTheme }))
+    const token = getStoredAccessToken()
+    if (!token) return
+    setSavingSettings(true)
+    setSaveError('')
+    try {
+      const res = await fetch(`${API_BASE}/website/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ theme: updatedTheme }),
+      })
+      if (!res.ok) throw new Error('Save failed')
+    } catch (err) {
+      console.error('Failed to save section style:', err)
+      setSettings(s => ({ ...(s || {}), theme: previousTheme }))
+      setSaveError('Could not save that change. Please try again.')
+    } finally {
+      setSavingSettings(false)
+    }
+  }
+
+  // Apply a curated starter bundle (color theme + section styles + section
+  // order/visibility) in one save. Always an explicit, confirmed action —
+  // never auto-applied — since it overwrites current design choices.
+  const applyStarterTemplate = async (tpl) => {
+    if (savingSettings) return
+    if (!window.confirm(`Apply the "${tpl.name}" starter template? This overwrites your current color theme, section styles, and section order/visibility.`)) return
+    const previousTheme = settings?.theme || {}
+    const previousSections = sections
+    const previousFlags = activeSectionFlags
+    const { templateId, sectionStyles: newSectionStyles, sectionOrder, activeOverrides } = tpl.bundle
+    const updatedTheme = { ...previousTheme, templateId, customTheme: {}, sectionStyles: newSectionStyles }
+    const orderedSections = sectionOrder.map(id => {
+      const base = defaultSections.find(ds => ds.id === id)
+      const active = id in activeOverrides ? activeOverrides[id] : base.active
+      return { ...base, active }
+    })
+    setSettings(s => ({ ...(s || {}), theme: updatedTheme }))
+    setSections(orderedSections)
+    setActiveSectionFlags(orderedSections.map(s => s.active))
+    const token = getStoredAccessToken()
+    if (!token) return
+    setSavingSettings(true)
+    setSaveError('')
+    try {
+      const res = await fetch(`${API_BASE}/website/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          theme: updatedTheme,
+          sections: orderedSections.map(s => ({ id: s.id, name: s.name, active: s.active })),
+        }),
+      })
+      if (!res.ok) throw new Error('Save failed')
+    } catch (err) {
+      console.error('Failed to apply starter template:', err)
+      setSettings(s => ({ ...(s || {}), theme: previousTheme }))
+      setSections(previousSections)
+      setActiveSectionFlags(previousFlags)
+      setSaveError('Could not apply that starter template. Please try again.')
+    } finally {
+      setSavingSettings(false)
+    }
+  }
+
+  // Open / close the inline create-or-edit form for a custom CMS page.
+  // Pass null to open the "new page" form, or an existing page to edit it.
+  const openPageEditor = (p) => {
+    if (savingPage) return
+    if (p && editingPageSlug === p.slug) {
+      setEditingPageSlug(null)
+      setPageForm({})
+      return
+    }
+    if (editingPageSlug === 'new' && !p) {
+      setEditingPageSlug(null)
+      setPageForm({})
+      return
+    }
+    if (p) {
+      // Blocks are the source of truth going forward; a page saved before
+      // this feature existed only has legacy body/image, so synthesize an
+      // equivalent block list the first time it's opened for editing.
+      const existingBlocks = p.content?.blocks?.length
+        ? p.content.blocks.map(b => ({ ...b, _key: newBlockKey() }))
+        : [
+            ...(p.content?.image ? [{ _key: newBlockKey(), type: 'image', url: p.content.image, storageKey: p.content.imageStorageKey || '' }] : []),
+            ...(p.content?.body ? [{ _key: newBlockKey(), type: 'paragraph', text: p.content.body }] : []),
+          ]
+      setPageForm({
+        title: p.title || '',
+        slug: p.slug,
+        blocks: existingBlocks.length ? existingBlocks : [emptyBlock('paragraph')],
+        published: !!p.published,
+      })
+      setEditingPageSlug(p.slug)
+    } else {
+      setPageForm({ title: '', slug: '', blocks: [emptyBlock('paragraph')], published: false })
+      setEditingPageSlug('new')
+    }
+    setPageError('')
+  }
+
+  // Create or update a custom page. Same guarded/error pattern as the section
+  // saves above, but on its own savingPage/pageError lane so page edits can't
+  // race with or get blocked by section/theme saves.
+  const savePage = async () => {
+    if (savingPage) return
+    const token = getStoredAccessToken()
+    if (!token) return
+    const title = (pageForm.title || '').trim()
+    const slug = slugify(pageForm.slug || title)
+    if (!title || !slug) {
+      setPageError('Title is required.')
+      return
+    }
+    setSavingPage(true)
+    setPageError('')
+    try {
+      const isNew = editingPageSlug === 'new'
+      const blocks = (pageForm.blocks || [])
+        .filter(b => (b.type === 'image' ? b.url : (b.text || '').trim()))
+        .map(({ _key, ...b }) => b)
+      const content = { blocks }
+      const res = await fetch(`${API_BASE}/website/pages${isNew ? '' : `/${editingPageSlug}`}`, {
+        method: isNew ? 'POST' : 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(
+          isNew
+            ? { slug, title, content, published: !!pageForm.published }
+            : { title, content, published: !!pageForm.published },
+        ),
+      })
+      const body = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(body?.message || 'Save failed')
+      const saved = body?.data || body
+      setCustomPages(list => (isNew ? [...list, saved] : list.map(p => (p.slug === editingPageSlug ? saved : p))))
+      setEditingPageSlug(null)
+      setPageForm({})
+    } catch (err) {
+      console.error('Failed to save page:', err)
+      setPageError(err.message || 'Could not save that page. Please try again.')
+    } finally {
+      setSavingPage(false)
+    }
+  }
+
+  const deleteCustomPage = async (slug) => {
+    if (savingPage) return
+    if (!window.confirm('Delete this page? This cannot be undone.')) return
+    const token = getStoredAccessToken()
+    if (!token) return
+    setSavingPage(true)
+    setPageError('')
+    try {
+      const res = await fetch(`${API_BASE}/website/pages/${slug}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Delete failed')
+      setCustomPages(list => list.filter(p => p.slug !== slug))
+      if (editingPageSlug === slug) { setEditingPageSlug(null); setPageForm({}) }
+    } catch (err) {
+      console.error('Failed to delete page:', err)
+      setPageError('Could not delete that page. Please try again.')
+    } finally {
+      setSavingPage(false)
+    }
+  }
+
+  const toggleCustomPagePublished = async (p) => {
+    if (savingPage) return
+    const token = getStoredAccessToken()
+    if (!token) return
+    setSavingPage(true)
+    setPageError('')
+    try {
+      const res = await fetch(`${API_BASE}/website/pages/${p.slug}/publish`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ published: !p.published }),
+      })
+      if (!res.ok) throw new Error('Save failed')
+      const body = await res.json()
+      const saved = body?.data || body
+      setCustomPages(list => list.map(item => (item.slug === p.slug ? saved : item)))
+    } catch (err) {
+      console.error('Failed to toggle page publish state:', err)
+      setPageError('Could not update that page. Please try again.')
+    } finally {
+      setSavingPage(false)
+    }
+  }
+
+  const openHistory = async () => {
+    setHistoryOpen(true)
+    setLoadingRevisions(true)
+    setRevisionsError('')
+    try {
+      const token = getStoredAccessToken()
+      const res = await fetch(`${API_BASE}/website/settings/revisions?limit=20`, { headers: { Authorization: `Bearer ${token}` } })
+      const json = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(json?.message || 'Could not load history.')
+      setRevisions(Array.isArray(json?.data) ? json.data : [])
+    } catch (err) {
+      setRevisionsError(err.message || 'Could not load history.')
+    } finally {
+      setLoadingRevisions(false)
+    }
+  }
+
+  // Restoring is itself a normal save server-side, so the current state gets
+  // captured as a new revision before the old one is applied — restoring is
+  // always undoable too.
+  const restoreRevisionAction = async (id) => {
+    if (!window.confirm('Restore this version? Your current settings will be saved to history first, so this can be undone.')) return
+    setRestoringId(id)
+    setRevisionsError('')
+    try {
+      const token = getStoredAccessToken()
+      const res = await fetch(`${API_BASE}/website/settings/revisions/${id}/restore`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(json?.message || 'Could not restore that version.')
+      const restored = json?.data || json
+      setSettings(restored)
+      if (Array.isArray(restored?.sections) && restored.sections.length) {
+        const merged = defaultSections.map(ds => {
+          const found = restored.sections.find(s => s.name === ds.name || s.id === ds.id)
+          return found ? { ...ds, active: found.active ?? ds.active } : ds
+        })
+        setSections(merged)
+        setActiveSectionFlags(merged.map(s => s.active))
+      }
+      setHistoryOpen(false)
+    } catch (err) {
+      console.error('Failed to restore revision:', err)
+      setRevisionsError(err.message || 'Could not restore that version. Please try again.')
+    } finally {
+      setRestoringId('')
     }
   }
 
@@ -545,6 +1039,14 @@ export default function Website() {
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
+            onClick={openHistory}
+            aria-label="Version history"
+            title="Version history"
+            className="flex items-center justify-center p-2.5 sm:p-2 border border-gray-200 bg-white text-gray-600 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition"
+          >
+            <History size={15} />
+          </button>
+          <button
             onClick={() => navigate('/dashboard/website/preview')}
             className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 sm:py-2 text-sm font-medium border border-gray-200 bg-white text-gray-600 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition"
           >
@@ -588,8 +1090,8 @@ export default function Website() {
               onClick={() => {
                 const url = business?.domain
                   ? `https://${business.domain}`
-                  : `/storefront/${business?.tenantId || ''}`
-                window.open(url, '_blank')
+                  : `${window.location.origin}/storefront/${business?.tenantId || ''}`
+                window.open(url, '_blank', 'noopener,noreferrer')
               }}
               className="flex items-center gap-1.5 text-xs font-semibold text-white px-3 py-2 sm:py-1.5 rounded-lg hover:opacity-90 active:opacity-80 transition flex-shrink-0"
               style={{ background: PRIMARY }}
@@ -692,40 +1194,147 @@ export default function Website() {
           </div>
 
           {tab === 'pages' && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                <span className="text-sm font-semibold text-gray-900">Pages</span>
-                <button aria-label="Add page" className="text-gray-400 hover:text-blue-500 active:text-blue-500 transition p-1.5 -m-1.5"><Plus size={15} /></button>
-              </div>
-              <div className="divide-y divide-gray-50">
-                {pageList.map(p => (
-                  <div
-                    key={p.name}
-                    onClick={() => {
-                      if (!p.sectionId) return
-                      const target = sections.find(sec => sec.id === p.sectionId)
-                      if (target) {
-                        setTab('sections')
-                        openEditor(target)
-                      }
-                    }}
-                    className={`flex items-center justify-between gap-3 px-4 py-3.5 transition ${p.sectionId ? 'hover:bg-gray-50 active:bg-gray-50 cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}
-                  >
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium text-gray-900 truncate">{p.name}</div>
-                      <div className="text-xs text-gray-400 truncate">{p.sectionId ? p.path : `${p.path} · coming soon`}</div>
-                    </div>
-                    <span
-                      className="text-xs font-semibold px-2 py-0.5 rounded-lg flex-shrink-0"
-                      style={p.status === 'published' ? { background: '#dce5fd', color: PRIMARY } : { background: CREAM, color: '#92400e' }}
+            <div className="space-y-4">
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <span className="text-sm font-semibold text-gray-900">Home Page</span>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {pageList.map(p => (
+                    <div
+                      key={p.name}
+                      onClick={() => {
+                        const target = sections.find(sec => sec.id === p.sectionId)
+                        if (target) {
+                          setTab('sections')
+                          openEditor(target)
+                        }
+                      }}
+                      className="flex items-center justify-between gap-3 px-4 py-3.5 transition hover:bg-gray-50 active:bg-gray-50 cursor-pointer"
                     >
-                      {p.status}
-                    </span>
-                  </div>
-                ))}
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-gray-900 truncate">{p.name}</div>
+                        <div className="text-xs text-gray-400 truncate">{p.path}</div>
+                      </div>
+                      <span
+                        className="text-xs font-semibold px-2 py-0.5 rounded-lg flex-shrink-0"
+                        style={{ background: '#dce5fd', color: PRIMARY }}
+                      >
+                        {p.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="px-4 py-2.5 border-t border-gray-100 text-xs text-gray-400">
+                  Tap a page to jump straight to its editor.
+                </div>
               </div>
-              <div className="px-4 py-2.5 border-t border-gray-100 text-xs text-gray-400">
-                Tap a page to jump straight to its editor.
+
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-gray-900">Custom Pages</span>
+                  <button
+                    onClick={() => openPageEditor(null)}
+                    aria-label="Add page"
+                    className="text-gray-400 hover:text-blue-500 active:text-blue-500 transition p-1.5 -m-1.5"
+                  >
+                    <Plus size={15} />
+                  </button>
+                </div>
+
+                {pageError && (
+                  <div className="px-4 py-2.5 border-b border-gray-100 text-xs font-medium text-red-600 bg-red-50">
+                    {pageError}
+                  </div>
+                )}
+
+                {loadingPages ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-400 px-4 py-6">
+                    <Loader size={14} className="animate-spin" /> Loading pages...
+                  </div>
+                ) : customPages.length === 0 && editingPageSlug !== 'new' ? (
+                  <div className="px-4 py-6 text-center text-xs text-gray-400">
+                    No custom pages yet — tap + to add one (e.g. FAQ, Shipping Policy).
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-50">
+                    {customPages.map(p => (
+                      <div key={p.slug}>
+                        <div
+                          className="flex items-center justify-between gap-3 px-4 py-3.5 transition hover:bg-gray-50 cursor-pointer"
+                          onClick={() => openPageEditor(p)}
+                        >
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-gray-900 truncate">{p.title}</div>
+                            <div className="text-xs text-gray-400 truncate">/{p.slug}</div>
+                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleCustomPagePublished(p) }}
+                            disabled={savingPage}
+                            className="text-xs font-semibold px-2 py-0.5 rounded-lg flex-shrink-0 disabled:opacity-60"
+                            style={p.published ? { background: '#dce5fd', color: PRIMARY } : { background: CREAM, color: '#92400e' }}
+                          >
+                            {p.published ? 'published' : 'draft'}
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteCustomPage(p.slug) }}
+                            disabled={savingPage}
+                            aria-label={`Delete ${p.title}`}
+                            className="text-gray-300 hover:text-red-500 transition p-1.5 -m-1.5 flex-shrink-0 disabled:opacity-40"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+
+                        {editingPageSlug === p.slug && (
+                          <div className="px-4 pb-4 pt-1 border-t border-gray-50 bg-gray-50/50 space-y-3">
+                            <PageForm pageForm={pageForm} setPageForm={setPageForm} isNew={false} />
+                            <div className="flex gap-2 pt-1">
+                              <button
+                                onClick={savePage}
+                                disabled={savingPage}
+                                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-lg hover:opacity-90 transition disabled:opacity-60"
+                                style={{ background: PRIMARY }}
+                              >
+                                {savingPage ? <Loader size={13} className="animate-spin" /> : <Save size={13} />} Save Changes
+                              </button>
+                              <button
+                                onClick={() => { setEditingPageSlug(null); setPageForm({}); setPageError('') }}
+                                disabled={savingPage}
+                                className="px-4 py-2 text-xs font-semibold text-gray-500 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition disabled:opacity-60"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {editingPageSlug === 'new' && (
+                  <div className="px-4 pb-4 pt-3 border-t border-gray-100 bg-gray-50/50 space-y-3">
+                    <PageForm pageForm={pageForm} setPageForm={setPageForm} isNew />
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        onClick={savePage}
+                        disabled={savingPage}
+                        className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-lg hover:opacity-90 transition disabled:opacity-60"
+                        style={{ background: PRIMARY }}
+                      >
+                        {savingPage ? <Loader size={13} className="animate-spin" /> : <Save size={13} />} Create Page
+                      </button>
+                      <button
+                        onClick={() => { setEditingPageSlug(null); setPageForm({}); setPageError('') }}
+                        disabled={savingPage}
+                        className="px-4 py-2 text-xs font-semibold text-gray-500 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition disabled:opacity-60"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -749,7 +1358,11 @@ export default function Website() {
                 {sections.map((s, i) => {
                   const Icon = sectionIcons[i] || Layout
                   const isEditing = editingSectionId === s.id
-                  const isCategorySection = s.id === 7
+                  const isReorderable = s.id !== 1
+                  const reorderableIndices = sections.map((sec, idx) => (sec.id !== 1 ? idx : null)).filter(idx => idx !== null)
+                  const posInReorderable = reorderableIndices.indexOf(i)
+                  const canMoveUp = isReorderable && posInReorderable > 0
+                  const canMoveDown = isReorderable && posInReorderable < reorderableIndices.length - 1
                   return (
                     <div key={s.id}>
                       {/* Section row (clickable) */}
@@ -764,15 +1377,35 @@ export default function Website() {
                           <div className="text-sm font-medium text-gray-900 truncate">{s.name}</div>
                           <div className="text-xs text-gray-400 truncate">{s.desc}</div>
                         </div>
+                        {isReorderable && (
+                          <div className="flex flex-col flex-shrink-0" onClick={e => e.stopPropagation()}>
+                            <button
+                              onClick={() => reorderSections(i, -1)}
+                              disabled={savingSettings || !canMoveUp}
+                              aria-label={`Move ${s.name} up`}
+                              className="p-0.5 text-gray-300 hover:text-gray-600 disabled:opacity-30 disabled:hover:text-gray-300 transition"
+                            >
+                              <ChevronUp size={13} />
+                            </button>
+                            <button
+                              onClick={() => reorderSections(i, 1)}
+                              disabled={savingSettings || !canMoveDown}
+                              aria-label={`Move ${s.name} down`}
+                              className="p-0.5 text-gray-300 hover:text-gray-600 disabled:opacity-30 disabled:hover:text-gray-300 transition"
+                            >
+                              <ChevronDown size={13} />
+                            </button>
+                          </div>
+                        )}
                         <button
-                          onClick={(e) => { e.stopPropagation(); if (!savingSettings && (!isCategorySection || hasRealCategories)) toggle(i); }}
+                          onClick={(e) => { e.stopPropagation(); if (!savingSettings) toggle(i); }}
                           aria-label={`Toggle ${s.name}`}
                           className="flex-shrink-0 p-1.5 -m-1.5"
-                          disabled={savingSettings || (isCategorySection && !hasRealCategories)}
+                          disabled={savingSettings}
                         >
                           {activeSectionFlags[i]
                             ? <ToggleRight size={24} style={{ color: PRIMARY }} />
-                            : <ToggleLeft size={24} className={isCategorySection && !hasRealCategories ? 'text-gray-200' : 'text-gray-300'} />}
+                            : <ToggleLeft size={24} className="text-gray-300" />}
                         </button>
                         <div className="flex-shrink-0 text-gray-300">
                           {isEditing ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -1069,32 +1702,27 @@ export default function Website() {
                             </>
                           )}
 
-                          {/* --- Shop by Category (no fields — auto-generated) --- */}
-                          {isCategorySection && (
+                          {s.id === 2 && (
                             <p className="text-xs text-gray-500 leading-relaxed">
-                              {hasRealCategories
-                                ? 'This section builds itself from the categories on your products — nothing to configure here.'
-                                : 'Give at least 2 products different categories in your product catalog, and this section will turn on automatically.'}
+                              A "Shop by Category" browse row is included automatically above your product grid — it builds itself from your product categories, nothing to configure.
                             </p>
                           )}
 
                           <div className="flex gap-2 pt-1">
-                            {!isCategorySection && (
-                              <button
-                                onClick={() => saveSection(s)}
-                                disabled={savingSettings}
-                                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-lg hover:opacity-90 transition disabled:opacity-60"
-                                style={{ background: PRIMARY }}
-                              >
-                                <Save size={13} /> Save Changes
-                              </button>
-                            )}
+                            <button
+                              onClick={() => saveSection(s)}
+                              disabled={savingSettings}
+                              className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-lg hover:opacity-90 transition disabled:opacity-60"
+                              style={{ background: PRIMARY }}
+                            >
+                              <Save size={13} /> Save Changes
+                            </button>
                             <button
                               onClick={() => { setEditingSectionId(null); setSectionForm({}); setSaveError('') }}
                               disabled={savingSettings}
                               className="px-4 py-2 text-xs font-semibold text-gray-500 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition disabled:opacity-60"
                             >
-                              {isCategorySection ? 'Close' : 'Cancel'}
+                              Cancel
                             </button>
                           </div>
                         </div>
@@ -1109,6 +1737,33 @@ export default function Website() {
           {tab === 'design' && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-5">
               <div>
+                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Starter Templates</div>
+                <p className="text-xs text-gray-400 mb-3">One-click setup for your kind of business — color theme, section styles, and layout together. Always overwrites current choices, never applied automatically.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {STARTER_TEMPLATES.map(tpl => {
+                    const isRecommended = recommendedStarterTemplateId(business?.category) === tpl.id
+                    return (
+                      <button
+                        key={tpl.id}
+                        onClick={() => applyStarterTemplate(tpl)}
+                        disabled={savingSettings}
+                        className="text-left rounded-xl border-2 p-3 transition relative disabled:opacity-60"
+                        style={{ borderColor: isRecommended ? PRIMARY : '#e5e7eb' }}
+                      >
+                        {isRecommended && (
+                          <span className="absolute top-2 right-2 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded" style={{ background: '#dce5fd', color: PRIMARY }}>
+                            For you
+                          </span>
+                        )}
+                        <div className="text-xs font-bold text-gray-900 pr-12">{tpl.name}</div>
+                        <div className="text-[11px] text-gray-400 mt-0.5 leading-snug">{tpl.description}</div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="pt-5 border-t border-gray-100">
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Template</div>
                   {savingSettings && (
@@ -1147,6 +1802,52 @@ export default function Website() {
                         <div className="text-xs font-bold text-gray-900">{theme.name}</div>
                         <div className="text-[11px] text-gray-400 mt-0.5 leading-snug">{theme.description}</div>
                       </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="pt-5 border-t border-gray-100 space-y-3">
+                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Look &amp; Feel</div>
+                <p className="text-xs text-gray-400">Pick a whole look, or mix styles per section — e.g. a Magazine hero with a Catalog product grid. Independent of your color template above.</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {OUTLOOKS.map(o => (
+                    <button
+                      key={o.id}
+                      onClick={() => applyOutlookToAll(o.id)}
+                      disabled={savingSettings}
+                      className="text-left rounded-xl border-2 p-2.5 transition disabled:opacity-60"
+                      style={{ borderColor: activeOutlook === o.id ? PRIMARY : '#e5e7eb' }}
+                    >
+                      <div className="text-xs font-bold text-gray-900">{o.name}</div>
+                      <div className="text-[10px] text-gray-400 mt-0.5 leading-snug">{o.description}</div>
+                    </button>
+                  ))}
+                </div>
+                <div className="text-[11px] font-medium" style={{ color: activeOutlook ? PRIMARY : '#9ca3af' }}>
+                  {activeOutlook ? `Applied: ${OUTLOOKS.find(o => o.id === activeOutlook)?.name}` : 'Custom mix — sections below use different styles'}
+                </div>
+
+                <div className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden">
+                  {SECTION_SLOTS.map(slot => {
+                    const current = sectionStyles[slot.key] || 'boutique'
+                    return (
+                      <div key={slot.key} className="flex items-center justify-between gap-2 px-3 py-2.5">
+                        <span className="text-xs font-medium text-gray-700">{slot.label}</span>
+                        <div className="flex gap-1">
+                          {OUTLOOKS.map(o => (
+                            <button
+                              key={o.id}
+                              onClick={() => setSectionStyle(slot.key, o.id)}
+                              disabled={savingSettings}
+                              className="px-2 py-1 text-[10px] font-semibold rounded-md border transition disabled:opacity-60"
+                              style={current === o.id ? { background: PRIMARY, color: '#fff', borderColor: PRIMARY } : { borderColor: '#e5e7eb', color: '#6b7280' }}
+                            >
+                              {o.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     )
                   })}
                 </div>
@@ -1362,11 +2063,58 @@ export default function Website() {
               className="bg-white overflow-hidden transition-all duration-300 w-full"
               style={previewDevice === 'mobile' ? { maxWidth: 340, borderRadius: 16 } : { maxWidth: '100%' }}
             >
-              <StorefrontPreview business={business} products={products} whatsapp={previewWhatsapp} domain={domain} device={previewDevice} settings={previewSettings} theme={activeTheme} />
+              <StorefrontPreview business={business} products={products} whatsapp={previewWhatsapp} domain={domain} device={previewDevice} settings={previewSettings} theme={activeTheme} pages={customPages} />
             </div>
           </div>
         </div>
       </div>
+
+      {historyOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.5)' }}
+          onClick={e => { if (e.target === e.currentTarget) setHistoryOpen(false) }}
+        >
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col shadow-xl">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
+              <span className="text-sm font-semibold text-gray-900">Version History</span>
+              <button onClick={() => setHistoryOpen(false)} aria-label="Close" className="text-gray-400 hover:text-gray-600 p-1 -m-1">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1">
+              {revisionsError && (
+                <div className="px-4 py-2.5 border-b border-gray-100 text-xs font-medium text-red-600 bg-red-50">
+                  {revisionsError}
+                </div>
+              )}
+              {loadingRevisions ? (
+                <div className="flex items-center gap-2 text-sm text-gray-400 py-8 justify-center">
+                  <Loader size={14} className="animate-spin" /> Loading...
+                </div>
+              ) : revisions.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-8 px-4">No history yet — every save from here on will be recorded, so you can undo a change.</p>
+              ) : (
+                <div className="divide-y divide-gray-50">
+                  {revisions.map(r => (
+                    <div key={r.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                      <span className="text-xs text-gray-600">{timeAgo(r.createdAt)}</span>
+                      <button
+                        onClick={() => restoreRevisionAction(r.id)}
+                        disabled={restoringId === r.id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-blue-500 hover:text-blue-600 transition disabled:opacity-60"
+                      >
+                        {restoringId === r.id ? <Loader size={12} className="animate-spin" /> : null}
+                        Restore
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

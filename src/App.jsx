@@ -149,7 +149,7 @@ export default function App() {
               {/* Public Storefront Preview */}
 
               <Route
-                path="/storefront/:tenantId"
+                path="/storefront/:tenantId/:pageSlug?"
                 element={<StorefrontPage />}
               />
 

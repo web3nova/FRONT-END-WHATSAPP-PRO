@@ -1,108 +1,44 @@
 import {
-  Menu, X, Star, ShieldCheck, MessageCircle, AtSign, MapPin, ArrowRight,
-  Search, User, ShoppingBag, ChevronLeft, ChevronRight, ChevronDown, ArrowLeft,
+  Menu, X, Star, ShieldCheck, MessageCircle,
+  Search, User, ShoppingBag, ChevronLeft, ChevronRight, ArrowLeft,
 } from 'lucide-react'
-
-const Facebook = ({ size = 16, className = '' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
-  </svg>
-)
-const Instagram = ({ size = 16, className = '' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
-  </svg>
-)
-const Twitter = ({ size = 16, className = '' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-  </svg>
-)
-const Youtube = ({ size = 16, className = '' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.54C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon fill="#fff" points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/>
-  </svg>
-)
-const TikTok = ({ size = 16, className = '' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V9a8.19 8.19 0 0 0 4.78 1.52V7.08a4.85 4.85 0 0 1-1.01-.39z"/>
-  </svg>
-)
 import { useState, useRef, useEffect, useMemo } from 'react'
+import {
+  DEFAULT_INK, DEFAULT_CREAM, DEFAULT_GOLD, DEFAULT_FONT, DEFAULT_RADIUS, BODY,
+  isSectionActive, mixHexWithWhite, socialHref, isSoldOut, useThemeFont,
+  Facebook, Instagram, Twitter, Youtube,
+} from './storefronts/shared'
+import HeroSection from './storefronts/sections/HeroSection'
+import ProductsSection, { ProductCard } from './storefronts/sections/ProductsSection'
+import AboutSection from './storefronts/sections/AboutSection'
+import GallerySection from './storefronts/sections/GallerySection'
+import TestimonialsSection from './storefronts/sections/TestimonialsSection'
+import ContactSection from './storefronts/sections/ContactSection'
 
-// ── Design tokens ──────────────────────────────────────────────────────────
-// Fallbacks when no template theme is passed (e.g. templateId not set yet).
-const DEFAULT_INK = '#14110F'
-const DEFAULT_CREAM = '#FBF3E1'
-const DEFAULT_GOLD = '#E8A93D'
-const DEFAULT_FONT = 'Playfair Display'
-const DEFAULT_RADIUS = 16
-const BODY = "'Inter', ui-sans-serif, system-ui, sans-serif"
-const DEFAULT_ACTIVE = { 1: true, 2: true, 3: true, 4: false, 5: true, 6: true }
-
-function isSectionActive(settings, id) {
-  const found = settings?.sections?.find(s => s.id === id)
-  return found ? !!found.active : (DEFAULT_ACTIVE[id] ?? true)
-}
-
-// Lighten a hex color toward white by `ratio` (0..1, higher = lighter) — used
-// to derive pastel product/category tile backgrounds from the theme's accent,
-// instead of a fixed palette unrelated to the chosen theme.
-function mixHexWithWhite(hex, ratio) {
-  const clean = hex.replace('#', '')
-  const num = parseInt(clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean, 16)
-  const r = (num >> 16) & 255
-  const g = (num >> 8) & 255
-  const b = num & 255
-  const lighten = c => Math.round(c + (255 - c) * ratio)
-  return `#${[lighten(r), lighten(g), lighten(b)].map(c => c.toString(16).padStart(2, '0')).join('')}`
-}
-
-function Stars({ value = 5, size = 12, color = DEFAULT_INK }) {
-  return (
-    <div className="flex gap-0.5 justify-center">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <Star key={i} size={size} fill={i < value ? color : 'none'} style={{ color }} strokeWidth={1.5} />
-      ))}
-    </div>
-  )
-}
-
-function GoogleMark({ size = 16 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
-      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.9 2.5 30.4 0 24 0 14.6 0 6.5 5.4 2.5 13.2l7.8 6.1C12.3 13.1 17.6 9.5 24 9.5z" />
-      <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.5 3-2.2 5.5-4.7 7.2l7.3 5.7c4.3-4 6.7-9.9 6.7-17.4z" />
-      <path fill="#FBBC05" d="M10.3 19.3c-.5 1.4-.7 3-.7 4.7s.3 3.3.7 4.7l-7.8 6.1C.9 31.6 0 27.9 0 24s.9-7.6 2.5-10.8z" />
-      <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.3-5.7c-2 1.4-4.7 2.2-8.6 2.2-6.4 0-11.7-3.6-13.7-8.8l-7.8 6.1C6.5 42.6 14.6 48 24 48z" />
-    </svg>
-  )
-}
-
-function socialHref(platform, value) {
-  if (!value) return null
-  if (value.startsWith('http')) return value
-  const bases = { facebook: 'https://facebook.com/', instagram: 'https://instagram.com/', twitter: 'https://x.com/', tiktok: 'https://tiktok.com/@', youtube: 'https://youtube.com/@' }
-  return (bases[platform] || '') + value.replace(/^@/, '')
-}
-
-function isSoldOut(p) {
-  return typeof p.stock === 'number' && p.stock <= 0
-}
-
-export default function StorefrontPreview({ business, products, whatsapp, domain, device = 'desktop', settings, theme }) {
-  // Colors + heading font + card shape driven by the selected template
-  // (Website.jsx Design tab); fall back to the original hardcoded look when no
-  // theme is set.
+// This component is the storefront's orchestrator: it owns the shared
+// Nav/Footer chrome and all cross-section state (view, selected product,
+// search, shop category, testimonial index), builds a single `ctx` object
+// with every derived value sections need, and delegates each of the 6
+// mix-and-match sections (Hero/Products/About/Gallery/Testimonials/Contact)
+// to its own component under storefronts/sections/, rendered with whichever
+// style variant ('boutique' | 'catalog' | 'magazine') the tenant picked per
+// section (settings.theme.sectionStyles). Nav and Footer are not variant-able
+// — one consistent frame holds together whatever mix of section styles sits
+// between them.
+export default function StorefrontPreview({ business, products, whatsapp, domain, device = 'desktop', settings, theme, pages = [], initialPageSlug }) {
   const INK = theme?.ink || DEFAULT_INK
   const GOLD = theme?.accent || DEFAULT_GOLD
   const CREAM = theme?.soft || DEFAULT_CREAM
   const fontName = theme?.font || DEFAULT_FONT
   const radius = theme?.radius ?? DEFAULT_RADIUS
   const DISPLAY = `'${fontName}', ui-serif, Georgia, serif`
+  const sectionStyles = theme?.sectionStyles || {}
 
-  // Product/category tile tints derived from the theme's own accent color,
-  // instead of a fixed palette unrelated to whichever theme is active.
+  // Homepage section order — driven by settings.sections (array order is
+  // render order, set via the Sections tab's up/down reorder controls).
+  // Hero always renders first regardless; these 5 are the reorderable set.
+  const REORDERABLE_DEFAULT_ORDER = [2, 4, 3, 5, 6]
+
   const PASTELS = [
     mixHexWithWhite(GOLD, 0.92),
     mixHexWithWhite(GOLD, 0.86),
@@ -111,27 +47,29 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
     mixHexWithWhite(CREAM, 0.4),
   ]
 
-  // Load the active template's heading font on demand — each theme keys its
-  // own <link> so switching templates doesn't refetch a font already loaded.
-  useEffect(() => {
-    const linkId = `sf-display-font-${fontName.replace(/\s+/g, '-')}`
-    if (document.getElementById(linkId)) return
-    const link = document.createElement('link')
-    link.id = linkId
-    link.rel = 'stylesheet'
-    link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/\s+/g, '+')}:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&display=swap`
-    document.head.appendChild(link)
-  }, [fontName])
+  useThemeFont(fontName)
 
   // ── State ────────────────────────────────────────────────────────────────
   const [navOpen, setNavOpen] = useState(false)
   const [announceIdx, setAnnounceIdx] = useState(0)
   const [testiIdx, setTestiIdx] = useState(0)
-  const [view, setView] = useState('home')           // 'home' | 'shop'
+  const [view, setView] = useState('home')           // 'home' | 'shop' | 'page'
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [shopCategory, setShopCategory] = useState('all')
   const [selectedAttrs, setSelectedAttrs] = useState({})
+  const [activePage, setActivePage] = useState(null)
+
+  // Direct-link support: if the URL named a custom page slug, jump straight to
+  // it once that page's data has arrived (pages may still be loading on mount).
+  useEffect(() => {
+    if (!initialPageSlug) return
+    const match = pages.find(p => p.slug === initialPageSlug)
+    if (match) {
+      setActivePage(match)
+      setView('page')
+    }
+  }, [initialPageSlug, pages])
 
   const isMobile = device === 'mobile'
 
@@ -258,64 +196,39 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
     { label: 'Shop', action: () => goShop('all') },
     { label: 'About', action: () => scrollToSection('about') },
     { label: 'Contact', action: () => scrollToSection('contact') },
+    ...pages.map(p => ({
+      label: p.title,
+      action: () => { setActivePage(p); setView('page'); setNavOpen(false) },
+    })),
   ]
 
-  // ── Product card (used in both home featured + shop grid) ─────────────────
-  function ProductCard({ p, i, compact = false }) {
-    const soldOut = isSoldOut(p)
-    const attrEntries = Object.entries(p.attributes || {}).filter(([, v]) => v !== null && v !== undefined)
-    const firstArray = attrEntries.find(([, v]) => Array.isArray(v))
-
-    return (
-      <div className="group cursor-pointer" onClick={() => openProduct(p)}>
-        <div
-          className="rounded-[var(--sf-radius)] overflow-hidden flex items-center justify-center mb-3 relative"
-          style={{ background: PASTELS[i % PASTELS.length], aspectRatio: '1 / 1' }}
-        >
-          {p.imageUrl
-            ? <img src={p.imageUrl} alt={p.name} className="w-4/5 h-4/5 object-contain group-hover:scale-105 transition duration-300" />
-            : <div className="text-3xl opacity-30">📦</div>}
-          {soldOut && (
-            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-              <span className="bg-white text-[10px] font-bold px-2.5 py-1 rounded-full text-gray-800">Sold Out</span>
-            </div>
-          )}
-        </div>
-        <div className="text-[10px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: GOLD }}>
-          {p.category || 'Featured'}
-        </div>
-        <div className="leading-snug mb-1" style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700, color: INK, fontSize: compact ? 13 : 14 }}>
-          {p.name}
-        </div>
-        {p.review && (
-          <div className="flex gap-0.5 mb-1">
-            {[1, 2, 3, 4, 5].map(s => <Star key={s} size={9} fill={GOLD} style={{ color: GOLD }} strokeWidth={1} />)}
-          </div>
-        )}
-        {firstArray && (
-          <div className="flex gap-1 flex-wrap mb-1.5">
-            {firstArray[1].slice(0, 3).map(opt => (
-              <span key={opt} className="text-[9px] border border-gray-200 rounded px-1 py-0.5 text-gray-500">{opt}</span>
-            ))}
-            {firstArray[1].length > 3 && <span className="text-[9px] text-gray-400">+{firstArray[1].length - 3}</span>}
-          </div>
-        )}
-        <div className="text-xs font-semibold text-gray-700 mb-2">
-          ₦ {((p.priceMinor || 0) / 100).toLocaleString()}
-        </div>
-        <button
-          onClick={e => { e.stopPropagation(); openProduct(p) }}
-          disabled={soldOut}
-          className="w-full text-center text-[11px] font-semibold py-1.5 rounded-full border transition"
-          style={soldOut
-            ? { borderColor: '#e5e7eb', color: '#9ca3af', cursor: 'not-allowed' }
-            : { borderColor: INK, color: INK }}
-        >
-          {soldOut ? 'Sold Out' : 'View & Order'}
-        </button>
-      </div>
-    )
+  // Everything a section component might need, built once. Keeps section
+  // files to a two-prop signature (`variant`, `ctx`) instead of threading
+  // 15+ individual props through each.
+  const ctx = {
+    INK, GOLD, CREAM, DISPLAY, radius, PASTELS, isMobile,
+    brandName, tagline, logoUrl,
+    heroHeadline, heroSubtitle, heroCta, heroBg, heroLayout, heroBgImage,
+    aboutText, productsTitle, productCount, products, categoryTags, showProducts,
+    galleryImages, galleryTitle,
+    testiIdx, setTestiIdx, testiPages, visibleTesti, testimonialItems,
+    address, instagram, social,
+    whatsapp, waLink, genericOrderMsg,
+    sectionId, goShop, openProduct,
   }
+
+  // Resolve homepage section order + gating in one map, so the render below
+  // is just "walk the order, skip what's hidden."
+  const SECTION_RENDERERS = {
+    2: { Component: ProductsSection, show: true, styleKey: 'products' },
+    4: { Component: GallerySection, show: showGallery, styleKey: 'gallery' },
+    3: { Component: AboutSection, show: showAbout, styleKey: 'about' },
+    5: { Component: TestimonialsSection, show: showTestimonials, styleKey: 'testimonials' },
+    6: { Component: ContactSection, show: showContact, styleKey: 'contact' },
+  }
+  const savedOrder = (settings?.sections || []).map(s => s.id).filter(id => SECTION_RENDERERS[id])
+  const missingIds = REORDERABLE_DEFAULT_ORDER.filter(id => !savedOrder.includes(id))
+  const sectionOrder = [...savedOrder, ...missingIds]
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -474,7 +387,7 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
                   key={l.label}
                   onClick={l.action}
                   className="transition pb-0.5"
-                  style={view === 'shop' && l.label === 'Shop'
+                  style={(view === 'shop' && l.label === 'Shop') || (view === 'page' && l.label === activePage?.title)
                     ? { color: INK, borderBottom: `2px solid ${INK}` }
                     : { color: '#6b7280' }}
                 >
@@ -533,6 +446,61 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
       >
         NGN
       </div>
+
+      {/* ══════════════════════════════════════════ */}
+      {/* CUSTOM PAGE VIEW                           */}
+      {/* ══════════════════════════════════════════ */}
+      {view === 'page' && activePage && (
+        <div className={isMobile ? 'px-5 py-6' : 'px-8 py-8'}>
+          <button
+            onClick={() => { setView('home'); setActivePage(null) }}
+            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition mb-6"
+          >
+            <ArrowLeft size={15} /> Back to Home
+          </button>
+
+          <div className="mb-4" style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700, fontSize: isMobile ? 26 : 34, color: INK }}>
+            {activePage.title}
+          </div>
+
+          <div className="space-y-4 max-w-2xl">
+            {activePage.content?.blocks?.length ? (
+              activePage.content.blocks.map((b, i) => {
+                if (b.type === 'heading') {
+                  return (
+                    <div key={i} style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700, fontSize: isMobile ? 18 : 22, color: INK }}>
+                      {b.text}
+                    </div>
+                  )
+                }
+                if (b.type === 'image' && b.url) {
+                  return (
+                    <img key={i} src={b.url} alt="" className="w-full rounded-[var(--sf-radius)] object-cover" style={{ maxHeight: 360 }} />
+                  )
+                }
+                return (
+                  <p key={i} className="text-sm leading-relaxed text-gray-600">{b.text}</p>
+                )
+              })
+            ) : (
+              // Legacy pages saved before block-based content existed.
+              <>
+                {activePage.content?.image && (
+                  <img
+                    src={activePage.content.image}
+                    alt=""
+                    className="w-full rounded-[var(--sf-radius)] object-cover"
+                    style={{ maxHeight: 360 }}
+                  />
+                )}
+                {(activePage.content?.body || '').split(/\n\s*\n/).filter(Boolean).map((para, i) => (
+                  <p key={i} className="text-sm leading-relaxed text-gray-600">{para}</p>
+                ))}
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ══════════════════════════════════════════ */}
       {/* SHOP VIEW                                  */}
@@ -606,7 +574,9 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
             </div>
           ) : (
             <div className={`grid gap-5 ${isMobile ? 'grid-cols-2' : 'grid-cols-3 xl:grid-cols-4'}`}>
-              {shopProducts.map((p, i) => <ProductCard key={p.id || i} p={p} i={i} compact={isMobile} />)}
+              {shopProducts.map((p, i) => (
+                <ProductCard key={p.id || i} variant={sectionStyles.products || 'boutique'} ctx={ctx} p={p} i={i} compact={isMobile} />
+              ))}
             </div>
           )}
         </div>
@@ -617,213 +587,24 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
       {/* ══════════════════════════════════════════ */}
       {view === 'home' && (
         <>
-          {/* Hero */}
-          <div
-            id={sectionId('hero')}
-            className={`relative overflow-hidden ${isMobile ? 'px-5 py-12' : 'px-8 py-20'}`}
-            style={heroBgImage ? {
-              background: `linear-gradient(180deg, rgba(15,23,42,0.35), rgba(15,23,42,0.6)), url(${heroBgImage}) center/cover no-repeat`,
-              textAlign: heroLayout === 'left' ? 'left' : 'center',
-            } : {
-              background: `linear-gradient(135deg, ${heroBg} 0%, ${heroBg}cc 100%)`,
-              textAlign: heroLayout === 'left' ? 'left' : 'center',
-            }}
-          >
-            {heroBgImage && (
-              <div
-                className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden"
-                style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700, color: 'rgba(255,255,255,0.14)', fontSize: isMobile ? 36 : 72, letterSpacing: 2, whiteSpace: 'nowrap' }}
-              >
-                {(heroSubtitle || heroHeadline).toUpperCase()}
-              </div>
-            )}
-            <div className={`relative ${heroLayout === 'left' ? '' : 'max-w-xl mx-auto'}`}>
-              {heroSubtitle && (
-                <div className="mb-3 text-white/85" style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontSize: isMobile ? 14 : 16 }}>
-                  {heroSubtitle}
-                </div>
-              )}
-              <div className="text-white mb-5 leading-tight" style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700, fontSize: isMobile ? 30 : 48 }}>
-                {heroHeadline}
-              </div>
-              {aboutText && (
-                <div className={`text-sm text-white/70 mb-7 ${heroLayout === 'left' ? 'max-w-md' : 'max-w-md mx-auto'}`}>
-                  {aboutText.slice(0, isMobile ? 90 : 140)}{aboutText.length > (isMobile ? 90 : 140) ? '…' : ''}
-                </div>
-              )}
-              <div className={`flex gap-3 flex-wrap ${heroLayout === 'left' ? '' : 'justify-center'}`}>
-                {whatsapp ? (
-                  <a href={waLink(genericOrderMsg)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold px-6 py-3 rounded-full transition hover:opacity-90" style={{ background: '#fff', color: INK }}>
-                    {heroCta} <ArrowRight size={15} />
-                  </a>
-                ) : (
-                  <button className="text-sm font-semibold px-6 py-3 rounded-full" style={{ background: '#fff', color: INK }}>{heroCta}</button>
-                )}
-                <button onClick={() => goShop('all')} className="inline-flex items-center gap-2 text-sm font-semibold px-6 py-3 rounded-full border border-white/40 text-white/90 hover:bg-white/10 transition">
-                  Browse Shop
-                </button>
-              </div>
-            </div>
-          </div>
+          <HeroSection variant={sectionStyles.hero || 'boutique'} ctx={ctx} />
 
-          {/* Trust strip */}
+          {/* Trust strip — shared chrome, not variant-able */}
           <div className={`flex items-center justify-center gap-1.5 text-gray-500 text-[11px] font-medium border-b border-gray-100 ${isMobile ? 'py-2 px-3' : 'py-2.5 px-4'}`}>
             <ShieldCheck size={12} />
             <span>Verified business · Order directly, no middleman</span>
           </div>
 
-          {/* Shop by Category */}
-          <div className={isMobile ? 'px-5 py-8' : 'px-8 py-12'}>
-            <div className="flex items-end justify-between mb-6">
-              <div style={{ fontFamily: DISPLAY, fontSize: isMobile ? 20 : 28 }}>
-                <span style={{ fontStyle: 'italic' }}>Shop by</span> <span className="font-bold">Category</span>
-              </div>
-              <button onClick={() => goShop('all')} className="text-xs font-medium text-gray-500 underline underline-offset-2 flex-shrink-0">View All</button>
-            </div>
-            <div className={`flex gap-4 sm:gap-6 ${isMobile ? 'overflow-x-auto pb-1 -mx-5 px-5' : 'justify-center flex-wrap'}`}>
-              {categoryTags.map((c, i) => (
-                <div
-                  key={c.label}
-                  onClick={() => goShop(c.label)}
-                  className="flex flex-col items-center gap-2.5 flex-shrink-0 cursor-pointer group"
-                  style={{ width: isMobile ? 84 : 108 }}
-                >
-                  <div
-                    className="rounded-full flex items-center justify-center overflow-hidden group-hover:ring-2 transition"
-                    style={{ width: isMobile ? 84 : 108, height: isMobile ? 84 : 108, background: PASTELS[i % PASTELS.length], ringColor: INK }}
-                  >
-                    {c.img
-                      ? <img src={c.img} alt={c.label} className="w-3/4 h-3/4 object-contain" />
-                      : <div className="text-lg font-bold opacity-20" style={{ fontFamily: DISPLAY }}>{c.label.slice(0, 1)}</div>}
-                  </div>
-                  <span className="text-xs font-medium text-gray-700 text-center">{c.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Best Sellers / Products */}
-          {showProducts && (
-            <div id={sectionId('products')} className={`${isMobile ? 'px-5 py-8' : 'px-8 py-12'}`} style={{ background: CREAM }}>
-              <div className="flex items-end justify-between mb-6">
-                <div style={{ fontFamily: DISPLAY, fontSize: isMobile ? 20 : 28 }}>
-                  <span className="font-bold" style={{ fontStyle: 'italic' }}>{productsTitle}</span>{' '}
-                  <span style={{ fontStyle: 'italic' }} className="text-gray-500">Around The World</span>
-                </div>
-                <button onClick={() => goShop('all')} className="text-xs font-medium text-gray-500 underline underline-offset-2 flex-shrink-0">View All</button>
-              </div>
-              <div className={`grid gap-4 sm:gap-5 ${isMobile ? 'grid-cols-2' : 'grid-cols-4'}`}>
-                {products.slice(0, productCount).map((p, i) => <ProductCard key={p.id || i} p={p} i={i} />)}
-              </div>
-            </div>
-          )}
-
-          {/* Gallery */}
-          {showGallery && (
-            <div className={isMobile ? 'px-5 py-8' : 'px-8 py-12'}>
-              <div className="mb-5" style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700, fontSize: isMobile ? 18 : 24 }}>{galleryTitle}</div>
-              <div className={`grid gap-2 sm:gap-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-4'}`}>
-                {galleryImages.slice(0, isMobile ? 6 : 8).map((src, i) => (
-                  <div key={i} className="rounded-[var(--sf-radius)] overflow-hidden aspect-square" style={{ background: PASTELS[i % PASTELS.length] }}>
-                    <img src={src?.url ?? src} alt={`${brandName} gallery ${i + 1}`} className="w-full h-full object-cover" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* About */}
-          {showAbout && (
-            <div id={sectionId('about')} className={`${isMobile ? 'px-5 py-8' : 'px-8 py-14'} grid gap-8 items-center ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`} style={{ background: CREAM }}>
-              <div>
-                <div className="text-xs font-bold uppercase tracking-widest mb-2 text-gray-400">About</div>
-                <div className="mb-3" style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700, fontSize: isMobile ? 22 : 30, color: INK }}>
-                  {brandName}
-                </div>
-                <p className="text-sm text-gray-600 leading-relaxed">{aboutText}</p>
-              </div>
-              <div className="rounded-[var(--sf-radius)] overflow-hidden aspect-video flex items-center justify-center bg-white">
-                {logoUrl
-                  ? <img src={logoUrl} alt={brandName} className="w-full h-full object-cover" />
-                  : <div style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700 }} className="text-4xl opacity-20">{brandName.slice(0, 2).toUpperCase()}</div>}
-              </div>
-            </div>
-          )}
-
-          {/* Testimonials */}
-          {showTestimonials && (
-            <div className={isMobile ? 'px-5 py-10' : 'px-8 py-14'}>
-              <div className="mb-7" style={{ fontFamily: DISPLAY, fontSize: isMobile ? 20 : 28 }}>
-                <span className="font-bold" style={{ fontStyle: 'italic' }}>Happy Clients</span> <span style={{ fontStyle: 'italic' }} className="text-gray-500">Say</span>
-              </div>
-              <div className="relative flex items-center gap-3">
-                <button
-                  onClick={() => setTestiIdx(i => (i - 1 + testiPages) % testiPages)}
-                  className="hidden sm:flex w-9 h-9 rounded-full items-center justify-center flex-shrink-0 border border-gray-200 text-gray-500 hover:bg-gray-50 transition"
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                <div className={`grid gap-4 flex-1 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                  {visibleTesti.map((t, i) => (
-                    <div key={t.id || i} className="rounded-[var(--sf-radius)] p-6 text-center" style={{ background: '#F4F4F2' }}>
-                      <div className="flex justify-center mb-2"><GoogleMark size={20} /></div>
-                      <Stars value={t.rating || 5} size={13} color={INK} />
-                      <div className="text-sm font-semibold mt-3 mb-2" style={{ fontFamily: DISPLAY, fontStyle: 'italic' }}>
-                        "{t.name || 'Happy customer'}"
-                      </div>
-                      <p className="text-xs text-gray-500 leading-relaxed">{t.text}</p>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  onClick={() => setTestiIdx(i => (i + 1) % testiPages)}
-                  className="hidden sm:flex w-9 h-9 rounded-full items-center justify-center flex-shrink-0 border border-gray-200 text-gray-500 hover:bg-gray-50 transition"
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-              {testiPages > 1 && (
-                <div className="flex justify-center gap-1.5 mt-5">
-                  {Array.from({ length: testiPages }).map((_, i) => (
-                    <button key={i} onClick={() => setTestiIdx(i)} className="rounded-full transition"
-                      style={{ width: i === testiIdx ? 16 : 6, height: 6, background: i === testiIdx ? INK : '#e5e5e5' }} />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Contact / WhatsApp CTA */}
-          {showContact && (
-            <div id={sectionId('contact')} className={isMobile ? 'px-5 py-8' : 'px-8 py-12'}>
-              <div className="rounded-[var(--sf-radius)] text-center p-6 sm:p-10" style={{ background: INK }}>
-                <div className="text-white mb-2" style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700, fontSize: isMobile ? 20 : 28 }}>
-                  Ready to order?
-                </div>
-                <div className="text-xs text-white/60 mb-6">Chat with {brandName} directly on WhatsApp — real replies, no bots.</div>
-                <a
-                  href={waLink(genericOrderMsg)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-sm font-semibold px-6 py-3 rounded-full transition hover:opacity-90"
-                  style={{ background: '#fff', color: INK }}
-                >
-                  <MessageCircle size={15} /> Chat on WhatsApp
-                </a>
-                {(address || instagram) && (
-                  <div className="flex items-center justify-center gap-4 mt-6 text-xs text-white/60 flex-wrap">
-                    {address && <span className="flex items-center gap-1.5"><MapPin size={12} /> {address}</span>}
-                    {instagram && <span className="flex items-center gap-1.5"><AtSign size={12} /> {instagram.replace('@', '')}</span>}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          {sectionOrder.map(id => {
+            const { Component, show, styleKey } = SECTION_RENDERERS[id]
+            if (!show) return null
+            return <Component key={id} variant={sectionStyles[styleKey] || 'boutique'} ctx={ctx} />
+          })}
         </>
       )}
 
-      {/* ── Footer ── */}
-      <div className={`border-t border-gray-100 ${isMobile ? 'px-5 py-6' : 'px-8 py-8'}`} style={{ background: view === 'home' ? 'white' : 'white' }}>
+      {/* ── Footer — shared chrome, not variant-able ── */}
+      <div className={`border-t border-gray-100 ${isMobile ? 'px-5 py-6' : 'px-8 py-8'}`} style={{ background: 'white' }}>
         <div className={`flex ${isMobile ? 'flex-col gap-5' : 'items-start justify-between gap-6'}`}>
           {/* Brand */}
           <div>
@@ -832,7 +613,7 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
           </div>
 
           {/* Nav links */}
-          <div className="flex gap-6 text-xs text-gray-400">
+          <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-gray-400">
             {navLinks.map(l => (
               <button key={l.label} onClick={l.action} className="hover:text-gray-700 transition">{l.label}</button>
             ))}

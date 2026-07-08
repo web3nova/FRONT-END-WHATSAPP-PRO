@@ -15,6 +15,7 @@ export default function WebsitePreview() {
   const [business, setBusiness] = useState(null)
   const [products, setProducts] = useState([])
   const [settings, setSettings] = useState(null)
+  const [pages, setPages] = useState([])
   const [device, setDevice] = useState('desktop')
 
   useEffect(() => {
@@ -25,10 +26,11 @@ export default function WebsitePreview() {
         if (!token) throw new Error('You need to sign in to preview your website.')
 
         const headers = { Authorization: `Bearer ${token}` }
-        const [bizRes, prodRes, wsRes] = await Promise.all([
+        const [bizRes, prodRes, wsRes, pagesRes] = await Promise.all([
           fetch(`${API_BASE}/business`, { headers }),
           fetch(`${API_BASE}/products?limit=100&sort=sortOrder`, { headers }),
           fetch(`${API_BASE}/website/settings`, { headers }),
+          fetch(`${API_BASE}/website/pages?limit=100`, { headers }),
         ])
 
         if (bizRes.ok && !ignore) {
@@ -44,6 +46,11 @@ export default function WebsitePreview() {
           const body = await wsRes.json()
           setSettings(body?.data || body)
         }
+        if (pagesRes.ok && !ignore) {
+          const body = await pagesRes.json()
+          const list = body?.data || []
+          setPages(Array.isArray(list) ? list : [])
+        }
       } catch (err) {
         if (!ignore) setError(err.message || 'Could not load preview.')
       } finally {
@@ -57,7 +64,7 @@ export default function WebsitePreview() {
   const brandName = business?.displayName || 'Your Brand'
   const whatsapp = business?.whatsappNumber || ''
   const domain = business?.domain || `${brandName.toLowerCase().replace(/\s+/g, '')}.web3nova.com`
-  const activeTheme = { ...(THEMES[settings?.theme?.templateId] || THEMES.minimal), ...(settings?.theme?.customTheme || {}) }
+  const activeTheme = { ...(THEMES[settings?.theme?.templateId] || THEMES.minimal), ...(settings?.theme?.customTheme || {}), sectionStyles: settings?.theme?.sectionStyles || {} }
 
   return (
     <div className="fixed inset-0 z-40 bg-gray-100 flex flex-col">
@@ -147,7 +154,7 @@ export default function WebsitePreview() {
             className="bg-white shadow-sm overflow-hidden transition-all duration-300 w-full"
             style={device === 'mobile' ? { maxWidth: 400, borderRadius: 24, border: '8px solid #1f2937' } : { maxWidth: 1100, borderRadius: 16 }}
           >
-            <StorefrontPreview business={business} products={products} whatsapp={whatsapp} domain={domain} device={device} settings={settings} theme={activeTheme} />
+            <StorefrontPreview business={business} products={products} whatsapp={whatsapp} domain={domain} device={device} settings={settings} theme={activeTheme} pages={pages} />
           </div>
         )}
       </div>
