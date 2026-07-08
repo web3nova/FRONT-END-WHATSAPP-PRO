@@ -50,43 +50,60 @@ function EmptyChart({ title, subtitle, height = 190 }) {
   )
 }
 
+const RANGES = [
+  { label: '7 days', days: 7 },
+  { label: '30 days', days: 30 },
+  { label: '3 months', days: 90 },
+  { label: '1 year', days: 365 },
+]
+
+const SOURCE_COLORS = { whatsapp: '#25D366', website: PRIMARY, referral: '#f59e0b', direct: '#94a3b8' }
+const SOURCE_LABELS = { whatsapp: 'WhatsApp', website: 'Website', referral: 'Referral', direct: 'Direct' }
+
 export default function Analytics() {
   const [loading, setLoading] = useState(true)
+  const [days, setDays] = useState(7)
   const [kpis, setKpis] = useState({ revenue: null, orders: null, customers: null, messages: null })
   const [dailyRevenue, setDailyRevenue] = useState([])
   const [productData, setProductData] = useState([])
+  const [websiteVisits, setWebsiteVisits] = useState(null)
+  const [trafficSources, setTrafficSources] = useState(null)
+  const [customerGrowth, setCustomerGrowth] = useState([])
+  const [messagesBySender, setMessagesBySender] = useState(null)
 
   useEffect(() => {
+    setLoading(true)
     const token = localStorage.getItem('accessToken')
     const headers = { accept: 'application/json', Authorization: `Bearer ${token}` }
     const now = new Date()
-    const weekAgo = new Date(now)
-    weekAgo.setDate(now.getDate() - 6)
+    const rangeAgo = new Date(now)
+    rangeAgo.setDate(now.getDate() - (days - 1))
 
     Promise.all([
       listOrders({ limit: 200 }),
       listCustomers({ limit: 1 }),
       listConversations({ limit: 1 }),
       fetch(`${API_BASE}/products?limit=100`, { headers }).then(r => r.json()).catch(() => ({ data: [] })),
-    ]).then(([ordRes, custRes, convRes, prodRes]) => {
+      fetch(`${API_BASE}/analytics/overview?days=${days}`, { headers }).then(r => r.json()).catch(() => ({ data: null })),
+    ]).then(([ordRes, custRes, convRes, prodRes, analyticsRes]) => {
       const allOrders = ordRes.data ?? []
-      const weekOrders = allOrders.filter(o => new Date(o.createdAt) >= weekAgo)
-      const weekRevenue = weekOrders.reduce((s, o) => s + (o.totalMinor || 0), 0)
+      const rangeOrders = allOrders.filter(o => new Date(o.createdAt) >= rangeAgo)
+      const rangeRevenue = rangeOrders.reduce((s, o) => s + (o.totalMinor || 0), 0)
 
       setKpis({
-        revenue: weekRevenue,
-        orders: weekOrders.length,
+        revenue: rangeRevenue,
+        orders: rangeOrders.length,
         customers: custRes.meta?.total ?? 0,
         messages: convRes.meta?.total ?? 0,
       })
 
-      // Build daily revenue for last 7 days from real orders
-      const days = Array.from({ length: 7 }, (_, i) => {
+      // Build daily revenue for the selected range from real orders
+      const dayList = Array.from({ length: days }, (_, i) => {
         const d = new Date(now)
-        d.setDate(now.getDate() - (6 - i))
+        d.setDate(now.getDate() - (days - 1 - i))
         return d
       })
-      const daily = days.map(d => {
+      const daily = dayList.map(d => {
         const label = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
         const dayOrders = allOrders.filter(o => {
           const od = new Date(o.createdAt)
@@ -113,10 +130,25 @@ export default function Analytics() {
         .slice(0, 5)
         .map(([name, orders]) => ({ name: name.length > 14 ? name.slice(0, 13) + '…' : name, orders }))
       setProductData(sorted)
+
+      const a = analyticsRes?.data
+      setWebsiteVisits(a?.websiteVisits ?? null)
+      setTrafficSources(a?.trafficSources ?? null)
+      setCustomerGrowth(a?.customerGrowth ?? [])
+      setMessagesBySender(a?.messagesBySender ?? null)
     }).catch(() => {}).finally(() => setLoading(false))
-  }, [])
+  }, [days])
 
   const hasActivity = kpis.orders !== null && (kpis.orders > 0 || kpis.messages > 0)
+  const trafficSourceRows = trafficSources
+    ? Object.entries(trafficSources).map(([key, value]) => ({ key, value, label: SOURCE_LABELS[key], color: SOURCE_COLORS[key] }))
+    : []
+  const trafficPieData = trafficSourceRows.filter(r => r.value > 0)
+  let runningTotal = 0
+  const customerGrowthCumulative = customerGrowth.map(d => {
+    runningTotal += d.count
+    return { day: d.day, count: runningTotal }
+  })
 
   return (
     <div className="space-y-5">
@@ -127,14 +159,14 @@ export default function Analytics() {
           <p className="text-sm text-gray-400 mt-0.5">Performance insights for your business</p>
         </div>
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 flex-nowrap w-full sm:w-auto scrollbar-none">
-          {['7 days', '30 days', '3 months', '1 year'].map((r, i) => (
+          {RANGES.map(r => (
             <button
-              key={r}
-              disabled
+              key={r.label}
+              onClick={() => setDays(r.days)}
               className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-xl transition"
-              style={i === 0 ? { background: PRIMARY, color: '#fff' } : { background: 'white', color: '#6b7280', border: '1px solid #e5e7eb' }}
+              style={days === r.days ? { background: PRIMARY, color: '#fff' } : { background: 'white', color: '#6b7280', border: '1px solid #e5e7eb' }}
             >
-              {r}
+              {r.label}
             </button>
           ))}
         </div>
@@ -143,11 +175,11 @@ export default function Analytics() {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {[
-          { label: 'Revenue (7d)', value: loading ? '…' : kpis.revenue !== null ? formatRevenue(kpis.revenue * 100) : '—', icon: TrendingUp },
-          { label: 'Orders (7d)',  value: loading ? '…' : kpis.orders ?? '—',     icon: ShoppingBag },
+          { label: `Revenue (${days}d)`, value: loading ? '…' : kpis.revenue !== null ? formatRevenue(kpis.revenue * 100) : '—', icon: TrendingUp },
+          { label: `Orders (${days}d)`,  value: loading ? '…' : kpis.orders ?? '—',     icon: ShoppingBag },
           { label: 'Customers',   value: loading ? '…' : kpis.customers ?? '—',   icon: Users },
           { label: 'Conversations', value: loading ? '…' : kpis.messages ?? '—',  icon: MessageCircle },
-          { label: 'Website Visits', value: '—',                                   icon: Globe },
+          { label: 'Website Visits', value: loading ? '…' : websiteVisits ? websiteVisits.total : '—', icon: Globe },
         ].map((kpi, idx) => (
           <div
             key={kpi.label}
@@ -199,15 +231,28 @@ export default function Analytics() {
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 min-w-0 overflow-hidden">
           <h2 className="font-semibold text-gray-900 mb-1">Traffic Sources</h2>
           <p className="text-xs text-gray-400 mb-4">Where customers find you</p>
-          <EmptyChart title="Traffic source tracking" subtitle="Coming soon" height={145} />
+          {loading ? (
+            <EmptyChart title="Loading…" height={145} />
+          ) : trafficPieData.length === 0 ? (
+            <EmptyChart title="No storefront visits yet" subtitle="Sources appear once your site gets traffic" height={145} />
+          ) : (
+            <ResponsiveContainer width="100%" height={145}>
+              <PieChart>
+                <Pie data={trafficPieData} dataKey="value" nameKey="label" cx="50%" cy="50%" innerRadius={35} outerRadius={55} paddingAngle={2}>
+                  {trafficPieData.map(r => <Cell key={r.key} fill={r.color} />)}
+                </Pie>
+                <Tooltip formatter={(v, n) => [v, n]} />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
           <div className="space-y-1.5 mt-4">
-            {['WhatsApp', 'Website', 'Referral', 'Direct'].map(s => (
-              <div key={s} className="flex items-center justify-between text-sm">
+            {trafficSourceRows.map(r => (
+              <div key={r.key} className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-sm bg-gray-200"></div>
-                  <span className="text-gray-400">{s}</span>
+                  <div className="w-2 h-2 rounded-sm" style={{ background: r.color }}></div>
+                  <span className="text-gray-500">{r.label}</span>
                 </div>
-                <span className="text-xs text-gray-300">—</span>
+                <span className="text-xs text-gray-400">{loading ? '…' : r.value}</span>
               </div>
             ))}
           </div>
@@ -240,15 +285,43 @@ export default function Analytics() {
         {/* Customer growth */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 min-w-0 overflow-hidden">
           <h2 className="font-semibold text-gray-900 mb-1">Customer Growth</h2>
-          <p className="text-xs text-gray-400 mb-4">Total customers over time</p>
-          <EmptyChart title="Monthly trend tracking" subtitle="Coming soon — needs time-series data" />
+          <p className="text-xs text-gray-400 mb-4">New customers over the selected range</p>
+          {loading ? (
+            <EmptyChart title="Loading…" height={190} />
+          ) : customerGrowthCumulative.every(d => d.count === 0) ? (
+            <EmptyChart title="No new customers yet" subtitle="Growth will appear as customers sign up" height={190} />
+          ) : (
+            <ResponsiveContainer width="100%" height={190}>
+              <LineChart data={customerGrowthCumulative} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="day" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip content={<CustomTooltip />} />
+                <Line type="monotone" dataKey="count" name="Customers" stroke={PRIMARY} strokeWidth={2.5} dot={false} activeDot={{ r: 4, fill: PRIMARY, strokeWidth: 0 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
         {/* WhatsApp breakdown */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 min-w-0 overflow-hidden">
           <h2 className="font-semibold text-gray-900 mb-1">WhatsApp Messages</h2>
           <p className="text-xs text-gray-400 mb-4">AI vs Staff handled</p>
-          <EmptyChart title="Message breakdown" subtitle="Coming soon — needs conversation analytics" />
+          {loading ? (
+            <EmptyChart title="Loading…" height={190} />
+          ) : !messagesBySender || (messagesBySender.ai === 0 && messagesBySender.staff === 0) ? (
+            <EmptyChart title="No messages yet" subtitle="Breakdown appears once conversations happen" height={190} />
+          ) : (
+            <ResponsiveContainer width="100%" height={190}>
+              <BarChart data={[{ name: 'AI', count: messagesBySender.ai }, { name: 'Staff', count: messagesBySender.staff }]} barSize={36} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip formatter={v => [v, 'Messages']} />
+                <Bar dataKey="count" fill={PRIMARY} radius={[5, 5, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
     </div>
