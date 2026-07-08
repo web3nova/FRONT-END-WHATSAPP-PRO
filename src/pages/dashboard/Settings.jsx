@@ -187,7 +187,7 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
             <p className="text-xs text-gray-400 mt-0.5">Connect your WhatsApp Business number to enable messaging</p>
           </div>
           <a
-            href="/onboarding"
+            href="/dashboard/whatsapp"
             className="mt-1 px-4 py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition"
             style={{ background: PRIMARY }}
           >
