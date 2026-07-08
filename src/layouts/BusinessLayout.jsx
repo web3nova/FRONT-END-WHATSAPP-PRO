@@ -173,9 +173,9 @@ export default function BusinessLayout() {
 
       try {
         const statusData = await onboardingApi.checkStatus()
-        const onboardingDone = statusData?.completed === true
+        const businessStepDone = statusData?.steps?.business === true || statusData?.completed === true
         if (!cancelled) {
-          navigate(onboardingDone ? '/business-profile' : '/onboarding', { replace: true })
+          navigate(businessStepDone ? '/business-profile' : '/onboarding', { replace: true })
         }
       } catch {
         if (!cancelled) setChecking(false)

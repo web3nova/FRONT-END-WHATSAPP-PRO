@@ -56,19 +56,19 @@ export default function OnboardingGate({ children }) {
 
         if (cancelled) return
 
-        const onboardingDone = onboarding?.completed === true
+        // businessStepDone = user completed the onboarding wizard (name/phone/etc.)
+        // This matches what OnboardingPage uses to decide to go to /business-profile
+        const businessStepDone = onboarding?.steps?.business === true || onboarding?.completed === true
         const profileDone = isProfileComplete(business)
 
         let target
-        if (onboardingDone && profileDone) {
-          // Both done - never let them land back on either setup page.
+        if (businessStepDone && profileDone) {
+          // Fully done — redirect away from setup pages
           target = '/dashboard'
-        } else if (onboardingDone && !profileDone) {
+        } else if (businessStepDone && !profileDone) {
           target = '/business-profile'
-        } else if (!onboardingDone && profileDone) {
-          target = '/onboarding'
         } else {
-          // Neither done - start of the flow.
+          // Business step not done yet — start of the flow
           target = '/onboarding'
         }
 
