@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { useBusinessProfile } from '../../hooks/useBusinessProfile'
 import { useAuth } from '../../context/AuthContext'
-import { fetchWhatsappBusinessProfile, updateWhatsappBusinessProfile, disconnectWhatsapp } from '../../api/whatsappApi'
+import { fetchWhatsappAccount, fetchWhatsappBusinessProfile, updateWhatsappBusinessProfile, disconnectWhatsapp } from '../../api/whatsappApi'
 import { getNotificationPrefs, patchNotificationPrefs } from '../../api/notificationsApi'
 
 const PRIMARY = '#4166F5'
@@ -68,6 +68,7 @@ const INITIAL_FORM = {
 }
 
 function WhatsAppSettingsTab({ profile, toggles, tog }) {
+  const [account, setAccount] = useState(undefined) // undefined = still loading
   const [waProfile, setWaProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -81,7 +82,10 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
     setDisconnecting(true)
     try {
       await disconnectWhatsapp()
-      window.location.reload()
+      setAccount(null)
+      setWaProfile(null)
+      setShowDisconnectModal(false)
+      setDisconnecting(false)
     } catch (err) {
       setError(err.message || 'Failed to disconnect')
       setDisconnecting(false)
@@ -90,20 +94,28 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
   }
 
   useEffect(() => {
-    fetchWhatsappBusinessProfile()
-      .then(p => {
-        if (p) {
-          setWaProfile(p)
-          setForm({
-            about: p.about || '',
-            address: p.address || '',
-            description: p.description || '',
-            email: p.email || '',
-            website: p.websites?.[0] || '',
+    // Check DB first — source of truth for whether WhatsApp is connected
+    fetchWhatsappAccount()
+      .then(acc => {
+        setAccount(acc)
+        if (!acc) { setLoading(false); return }
+        // Only fetch Meta business profile if an account actually exists
+        return fetchWhatsappBusinessProfile()
+          .then(p => {
+            if (p) {
+              setWaProfile(p)
+              setForm({
+                about: p.about || '',
+                address: p.address || '',
+                description: p.description || '',
+                email: p.email || '',
+                website: p.websites?.[0] || '',
+              })
+            }
           })
-        }
+          .catch(() => {})
       })
-      .catch(() => {})
+      .catch(() => setAccount(null))
       .finally(() => setLoading(false))
   }, [])
 
@@ -133,33 +145,59 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
   return (
     <div className="space-y-5">
       <h2 className="font-semibold text-gray-900">WhatsApp Connection</h2>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border border-gray-100 gap-3" style={{ background: CREAM }}>
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#dce5fd' }}>
-            <MessageCircle size={18} style={{ color: PRIMARY }} />
-          </div>
-          <div className="min-w-0">
-            <div className="text-sm font-semibold text-gray-900 truncate">{profile?.whatsappNumber || 'WhatsApp Business'}</div>
-            <div className="text-xs font-medium" style={{ color: PRIMARY }}>● Connected via WhatsApp Business API</div>
-          </div>
+
+      {account === undefined ? (
+        <div className="flex items-center justify-center gap-2 py-8 text-sm text-gray-400">
+          <Loader2 size={16} className="animate-spin" /> Checking connection…
         </div>
-        <button
-          onClick={() => setShowDisconnectModal(true)}
-          disabled={disconnecting}
-          className="text-sm font-semibold text-red-400 border border-red-200 bg-white px-3 py-2.5 sm:py-1.5 rounded-lg hover:bg-red-50 transition w-full sm:w-auto flex-shrink-0 disabled:opacity-50"
-        >
-          {disconnecting ? 'Disconnecting…' : 'Disconnect'}
-        </button>
-      </div>
+      ) : account ? (
+        <>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border border-gray-100 gap-3" style={{ background: CREAM }}>
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#dce5fd' }}>
+                <MessageCircle size={18} style={{ color: PRIMARY }} />
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-gray-900 truncate">{account.phoneNumber || 'WhatsApp Business'}</div>
+                <div className="text-xs font-medium" style={{ color: PRIMARY }}>● Connected via WhatsApp Business API</div>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowDisconnectModal(true)}
+              disabled={disconnecting}
+              className="text-sm font-semibold text-red-400 border border-red-200 bg-white px-3 py-2.5 sm:py-1.5 rounded-lg hover:bg-red-50 transition w-full sm:w-auto flex-shrink-0 disabled:opacity-50"
+            >
+              {disconnecting ? 'Disconnecting…' : 'Disconnect'}
+            </button>
+          </div>
 
-      <div>
-        <SettingRow label="AI Auto-Reply" desc="Let AI respond to customer messages automatically. Configure in AI Settings.">
-          <span className="text-xs text-gray-400 font-medium">→ AI Settings tab</span>
-        </SettingRow>
-      </div>
+          <div>
+            <SettingRow label="AI Auto-Reply" desc="Let AI respond to customer messages automatically. Configure in AI Settings.">
+              <span className="text-xs text-gray-400 font-medium">→ AI Settings tab</span>
+            </SettingRow>
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-col items-center justify-center gap-3 py-10 rounded-2xl border border-dashed border-gray-200 text-center">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: '#f1f5f9' }}>
+            <MessageCircle size={20} className="text-gray-400" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-700">No WhatsApp account connected</p>
+            <p className="text-xs text-gray-400 mt-0.5">Connect your WhatsApp Business number to enable messaging</p>
+          </div>
+          <a
+            href="/onboarding"
+            className="mt-1 px-4 py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition"
+            style={{ background: PRIMARY }}
+          >
+            Connect WhatsApp
+          </a>
+        </div>
+      )}
 
-      {/* WhatsApp Business Profile Editor */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+      {/* WhatsApp Business Profile Editor — only shown when connected */}
+      {account && <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100">
           <h3 className="font-semibold text-gray-900">WhatsApp Business Profile</h3>
           <p className="text-xs text-gray-400 mt-0.5">This is what customers see when they view your WhatsApp number</p>
@@ -244,7 +282,7 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
             </button>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Disconnect WhatsApp confirmation modal */}
       {showDisconnectModal && (
