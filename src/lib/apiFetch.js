@@ -18,19 +18,23 @@ function clearAuthAndRedirect() {
 export async function apiFetch(path, options = {}) {
   const token = localStorage.getItem('accessToken')
 
+  // Skip the request entirely if there's no token (background polls shouldn't create noise)
+  if (!token) return new Response(JSON.stringify({}), { status: 401 })
+
+  const { noRedirect, ...fetchOptions } = options
+
   const headers = {
     accept: 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(options.headers || {}),
+    Authorization: `Bearer ${token}`,
+    ...(fetchOptions.headers || {}),
   }
 
   const url = path.startsWith('http') ? path : `${API_BASE}${path}`
 
-  const res = await fetch(url, { ...options, headers })
+  const res = await fetch(url, { ...fetchOptions, headers })
 
-  if (res.status === 401) {
+  if (res.status === 401 && !noRedirect) {
     clearAuthAndRedirect()
-    // Return a never-resolving promise — the redirect is happening
     return new Promise(() => {})
   }
 

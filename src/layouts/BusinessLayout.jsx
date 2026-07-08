@@ -64,7 +64,7 @@ function NotificationPanel({ onClose }) {
 
   const load = useCallback(async () => {
     try {
-      const res = await apiFetch('/notifications')
+      const res = await apiFetch('/notifications', { noRedirect: true })
       const body = await res.json().catch(() => null)
       setItems(body?.data?.items ?? [])
     } catch { /* silent */ } finally { setLoading(false) }
@@ -72,7 +72,7 @@ function NotificationPanel({ onClose }) {
 
   useEffect(() => {
     load()
-    apiFetch('/notifications/read-all', { method: 'PATCH' }).catch(() => {})
+    apiFetch('/notifications/read-all', { method: 'PATCH', noRedirect: true }).catch(() => {})
   }, [load])
 
   return (
@@ -143,7 +143,7 @@ export default function BusinessLayout() {
   // Poll unread count every 30s
   useEffect(() => {
     const fetchUnread = () =>
-      apiFetch('/notifications').then(r => r.json()).then(b => setUnread(b?.data?.unread ?? 0)).catch(() => {})
+      apiFetch('/notifications', { noRedirect: true }).then(r => r.json()).then(b => setUnread(b?.data?.unread ?? 0)).catch(() => {})
     fetchUnread()
     const t = setInterval(fetchUnread, 30000)
     return () => clearInterval(t)
