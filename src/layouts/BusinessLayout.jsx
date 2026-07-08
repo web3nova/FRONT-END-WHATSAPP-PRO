@@ -164,21 +164,9 @@ export default function BusinessLayout() {
         if (!cancelled) {
           setBusinessName(profile?.displayName || profile?.businessName || '')
           setLogoUrl(profile?.logoUrl || '')
-          setChecking(false)
-        }
-        return
-      } catch {
-        // No business profile yet
-      }
-
-      try {
-        const statusData = await onboardingApi.checkStatus()
-        const onboardingDone = statusData?.allPanelsDone === true
-        if (!cancelled) {
-          navigate(onboardingDone ? '/business-profile' : '/onboarding', { replace: true })
         }
       } catch {
-        if (!cancelled) setChecking(false)
+        // No business profile yet — still let them into the dashboard
       } finally {
         if (!cancelled) setChecking(false)
       }
@@ -188,7 +176,14 @@ export default function BusinessLayout() {
     return () => { cancelled = true }
   }, [navigate])
 
-  if (checking) return null
+  if (checking) return (
+    <div className="flex h-screen items-center justify-center bg-gray-50">
+      <div className="flex flex-col items-center gap-3 text-gray-400">
+        <div className="w-8 h-8 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin" />
+        <span className="text-sm">Loading dashboard…</span>
+      </div>
+    </div>
+  )
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: CREAM }}>
