@@ -28,15 +28,7 @@ const navItems = [
 ]
 
 
-function userInitials(name, email) {
-  if (name) {
-    const parts = name.trim().split(/\s+/)
-    return parts.length >= 2
-      ? (parts[0][0] + parts[1][0]).toUpperCase()
-      : parts[0].slice(0, 2).toUpperCase()
-  }
-  return (email || '?').slice(0, 2).toUpperCase()
-}
+
 
 const NOTIF_ICONS = {
   new_message:       { icon: MessageSquare, color: '#4166F5' },
@@ -131,7 +123,6 @@ export default function BusinessLayout() {
   const [businessName, setBusinessName] = useState('')
   const [logoUrl, setLogoUrl] = useState('')
 
-  const initials = userInitials(user?.name, user?.email)
   const displayName = user?.name || user?.email || 'Account'
   const displayEmail = user?.email || ''
   const [unread, setUnread] = useState(0)
@@ -264,12 +255,6 @@ export default function BusinessLayout() {
         {/* User + logout at bottom */}
         <div className="flex-shrink-0 border-t border-gray-100 p-4">
           <div className="flex items-center gap-3">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-              style={{ background: PRIMARY }}
-            >
-              {initials}
-            </div>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-gray-900 truncate">{displayName}</div>
               <div className="text-xs text-gray-400 truncate">{displayEmail}</div>
