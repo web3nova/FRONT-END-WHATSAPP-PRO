@@ -56,7 +56,7 @@ export default function OnboardingGate({ children }) {
 
         if (cancelled) return
 
-        const onboardingDone = onboarding?.allPanelsDone === true
+        const onboardingDone = onboarding?.completed === true
         const profileDone = isProfileComplete(business)
 
         let target
@@ -87,7 +87,7 @@ export default function OnboardingGate({ children }) {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname])
+  }, [])
 
   if (checking) {
     return (
