@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { API_BASE } from '../../lib/apiConfig';
 import { Link } from 'react-router-dom';
 import Noise from './Noise';
 import MagneticButton from './MagneticButton';
@@ -67,9 +68,11 @@ export default function BotpressHero() {
   // Chat state
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { text: "Hi! 👋 Need help?", sender: "bot", time: "just now" }
+    { text: "Hi! 👋 Ask me anything about BizIQ — features, pricing, how it works.", sender: "bot", time: "just now" }
   ]);
   const [inputValue, setInputValue] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const historyRef = useRef([]); // conversation history sent to AI
   const messagesContainerRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -82,23 +85,37 @@ export default function BotpressHero() {
     if (isChatOpen) scrollToBottom();
   }, [messages, isChatOpen]);
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = useCallback(async (e) => {
     e.preventDefault();
-    if (!inputValue.trim()) return;
+    const text = inputValue.trim();
+    if (!text || chatLoading) return;
 
-    // Add user message
-    setMessages(prev => [...prev, { text: inputValue, sender: "user", time: "just now" }]);
+    setMessages(prev => [...prev, { text, sender: "user", time: "just now" }]);
     setInputValue("");
+    setChatLoading(true);
 
-    // Bot replies immediately
-    setTimeout(() => {
-      setMessages(prev => [...prev, {
-        text: "Thanks for your message! I'm an AI bot. How can I help you explore Biz AI today?",
-        sender: "bot",
-        time: "just now"
-      }]);
-    }, 500);
-  };
+    try {
+      const res = await fetch(`${API_BASE}/chat/demo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, history: historyRef.current }),
+      });
+      const data = await res.json();
+      const reply = data.reply || data.error || "Something went wrong — please try again.";
+
+      historyRef.current = [
+        ...historyRef.current,
+        { role: 'user', content: text },
+        { role: 'assistant', content: reply },
+      ];
+
+      setMessages(prev => [...prev, { text: reply, sender: "bot", time: "just now" }]);
+    } catch {
+      setMessages(prev => [...prev, { text: "Couldn't reach the server — please check your connection.", sender: "bot", time: "just now" }]);
+    } finally {
+      setChatLoading(false);
+    }
+  }, [inputValue, chatLoading]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -206,16 +223,24 @@ export default function BotpressHero() {
                 </div>
               </div>
             ))}
+            {chatLoading && (
+              <div className="bp-chat-message-row bp-chat-row-bot">
+                <div className="bp-chat-bubble bp-chat-bubble-bot bp-chat-typing">
+                  <span /><span /><span />
+                </div>
+              </div>
+            )}
           </div>
           <form className="bp-chat-input-form" onSubmit={handleSendMessage}>
             <input
               type="text"
-              placeholder="Ask a question..."
+              placeholder="Ask about BizIQ..."
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               className="bp-chat-input"
+              disabled={chatLoading}
             />
-            <button type="submit" className="bp-chat-send-btn" disabled={!inputValue.trim()}>
+            <button type="submit" className="bp-chat-send-btn" disabled={!inputValue.trim() || chatLoading}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13"></line>
                 <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
