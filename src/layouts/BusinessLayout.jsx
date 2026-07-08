@@ -164,9 +164,21 @@ export default function BusinessLayout() {
         if (!cancelled) {
           setBusinessName(profile?.displayName || profile?.businessName || '')
           setLogoUrl(profile?.logoUrl || '')
+          setChecking(false)
+        }
+        return
+      } catch {
+        // No business profile yet — check onboarding to decide where to send them
+      }
+
+      try {
+        const statusData = await onboardingApi.checkStatus()
+        const onboardingDone = statusData?.completed === true
+        if (!cancelled) {
+          navigate(onboardingDone ? '/business-profile' : '/onboarding', { replace: true })
         }
       } catch {
-        // No business profile yet — still let them into the dashboard
+        if (!cancelled) setChecking(false)
       } finally {
         if (!cancelled) setChecking(false)
       }
