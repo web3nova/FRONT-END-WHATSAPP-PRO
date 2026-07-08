@@ -28,4 +28,4 @@ export const removeMember = (userId) =>
   request('DELETE', `/team/members/${userId}`)
 
 export const acceptInvite = (token, name, password) =>
-  request('POST', '/team/accept-invite', { token, name, password })
+  request('POST', '/auth/accept-invite', { token, name, password })
