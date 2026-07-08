@@ -7,7 +7,7 @@ import { isOwner, isAdmin } from '../utils/permissions'
 import {
   LayoutDashboard, ShoppingBag, Package, Users, MessageCircle,
   Globe, BarChart3, BookOpen, Settings, Bell, Search, Zap, ExternalLink, Menu, X, CreditCard,
-  MessageSquare, ShoppingCart, CheckCircle, Wifi, CreditCard as CardIcon, AlertCircle
+  MessageSquare, ShoppingCart, CheckCircle, Wifi, CreditCard as CardIcon, AlertCircle, LogOut
 } from 'lucide-react'
 
 const PRIMARY = '#4166F5'
@@ -126,7 +126,7 @@ function TrialBanner({ subscription }) {
 export default function BusinessLayout() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, subscription } = useAuth()
+  const { user, subscription, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [checking, setChecking] = useState(true)
   const [businessName, setBusinessName] = useState('')
@@ -271,6 +271,13 @@ export default function BusinessLayout() {
               <div className="text-sm font-medium text-gray-900 truncate">{displayName}</div>
               <div className="text-xs text-gray-400 truncate">{displayEmail}</div>
             </div>
+            <button
+              onClick={logout}
+              title="Sign out"
+              className="flex-shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition"
+            >
+              <LogOut size={15} />
+            </button>
           </div>
         </div>
       </aside>
