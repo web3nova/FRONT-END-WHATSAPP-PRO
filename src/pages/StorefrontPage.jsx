@@ -5,8 +5,9 @@ import { API_BASE } from '../lib/apiConfig'
 import { THEMES } from '../lib/themes'
 import StorefrontPreview from './dashboard/StorefrontPreview'
 
-export default function StorefrontPage() {
-  const { tenantId } = useParams()
+export default function StorefrontPage({ domain: domainProp } = {}) {
+  const params = useParams()
+  const tenantId = params.tenantId
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [data, setData] = useState(null)
@@ -15,7 +16,10 @@ export default function StorefrontPage() {
     let ignore = false
     async function load() {
       try {
-        const res = await fetch(`${API_BASE}/website/storefront?tenantId=${tenantId}`)
+        const query = domainProp
+          ? `domain=${encodeURIComponent(domainProp)}`
+          : `tenantId=${tenantId}`
+        const res = await fetch(`${API_BASE}/website/storefront?${query}`)
         if (!res.ok) {
           if (res.status === 404) throw new Error('Storefront not found. The business may not be published yet.')
           throw new Error('Could not load storefront.')
@@ -30,7 +34,7 @@ export default function StorefrontPage() {
     }
     load()
     return () => { ignore = true }
-  }, [tenantId])
+  }, [tenantId, domainProp])
 
   // Inject SEO meta tags into <head> once data is loaded.
   // Must run before the loading/error early returns below — hooks can't be conditional.

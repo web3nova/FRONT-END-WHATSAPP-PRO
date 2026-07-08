@@ -46,10 +46,63 @@ export default function Website() {
   const [sectionForm, setSectionForm] = useState({})
   const [designForm, setDesignForm] = useState({})
   const [customThemeForm, setCustomThemeForm] = useState({})
+  const [showDomainPanel, setShowDomainPanel] = useState(false)
+  const [domainInput, setDomainInput] = useState('')
+  const [domainSaving, setDomainSaving] = useState(false)
+  const [domainRemoving, setDomainRemoving] = useState(false)
+  const [domainError, setDomainError] = useState('')
+  const [domainSuccess, setDomainSuccess] = useState(null) // { domain, cname }
 
   // Whether the product data actually has distinct categories — used to let
   // people know why "Shop by Category" might not show anything yet.
   const hasRealCategories = new Set(products.map(p => p.category).filter(Boolean)).size >= 2
+
+  const handleSaveDomain = async () => {
+    setDomainError('')
+    setDomainSuccess(null)
+    setDomainSaving(true)
+    try {
+      const token = getStoredAccessToken()
+      const res = await fetch(`${API_BASE}/tenant/domain`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ domain: domainInput.trim() }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body?.message || 'Failed to save domain')
+      const data = body?.data ?? body
+      setBusiness(b => ({ ...b, domain: data.domain }))
+      setDomainSuccess(data)
+    } catch (err) {
+      setDomainError(err.message)
+    } finally {
+      setDomainSaving(false)
+    }
+  }
+
+  const handleRemoveDomain = async () => {
+    setDomainError('')
+    setDomainRemoving(true)
+    try {
+      const token = getStoredAccessToken()
+      const res = await fetch(`${API_BASE}/tenant/domain`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body?.message || 'Failed to remove domain')
+      }
+      setBusiness(b => ({ ...b, domain: null }))
+      setDomainInput('')
+      setDomainSuccess(null)
+      setShowDomainPanel(false)
+    } catch (err) {
+      setDomainError(err.message)
+    } finally {
+      setDomainRemoving(false)
+    }
+  }
 
   useEffect(() => {
     let ignore = false
@@ -510,39 +563,115 @@ export default function Website() {
       </div>
 
       {/* Domain card */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: CREAM }}>
-            <Globe size={20} style={{ color: PRIMARY }} />
-          </div>
-          <div className="min-w-0">
-            <div className="text-sm font-semibold text-gray-900 break-all">{storefrontUrl}</div>
-            <div className="text-xs text-gray-400 mt-0.5">
-              {business?.domain ? (
-                <>Custom domain · <button onClick={() => navigate('/dashboard/settings')} className="underline hover:text-blue-600">Manage</button></>
-              ) : (
-                <>Free preview URL · <button onClick={() => navigate('/dashboard/settings')} className="underline hover:text-blue-600 font-medium" style={{ color: PRIMARY }}>Upgrade for a custom domain</button></>
-              )}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: CREAM }}>
+              <Globe size={20} style={{ color: PRIMARY }} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-gray-900 break-all">{storefrontUrl}</div>
+              <div className="text-xs text-gray-400 mt-0.5">
+                {business?.domain ? (
+                  <>Custom domain connected · <button onClick={() => { setShowDomainPanel(v => !v); setDomainInput(business.domain) }} className="underline hover:text-red-500">Manage</button></>
+                ) : (
+                  <>Free preview URL · <button onClick={() => setShowDomainPanel(v => !v)} className="underline font-medium" style={{ color: PRIMARY }}>Connect a custom domain</button></>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto border-t sm:border-t-0 pt-3 sm:pt-0 border-gray-50">
-          <div className="flex items-center gap-1.5 text-xs font-semibold flex-shrink-0" style={{ color: PRIMARY }}>
-            <CheckCircle size={14} /> {settings?.published ? 'Live' : 'Draft'}
+          <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto border-t sm:border-t-0 pt-3 sm:pt-0 border-gray-50">
+            <div className="flex items-center gap-1.5 text-xs font-semibold flex-shrink-0" style={{ color: PRIMARY }}>
+              <CheckCircle size={14} /> {settings?.published ? 'Live' : 'Draft'}
+            </div>
+            <button
+              onClick={() => {
+                const url = business?.domain
+                  ? `https://${business.domain}`
+                  : `/storefront/${business?.tenantId || ''}`
+                window.open(url, '_blank')
+              }}
+              className="flex items-center gap-1.5 text-xs font-semibold text-white px-3 py-2 sm:py-1.5 rounded-lg hover:opacity-90 active:opacity-80 transition flex-shrink-0"
+              style={{ background: PRIMARY }}
+            >
+              <ExternalLink size={12} /> Visit Site
+            </button>
           </div>
-          <button
-            onClick={() => {
-              const url = business?.domain
-                ? `https://${business.domain}`
-                : `/storefront/${business?.tenantId || ''}`
-              navigate(url)
-            }}
-            className="flex items-center gap-1.5 text-xs font-semibold text-white px-3 py-2 sm:py-1.5 rounded-lg hover:opacity-90 active:opacity-80 transition flex-shrink-0"
-            style={{ background: PRIMARY }}
-          >
-            <ExternalLink size={12} /> Visit Site
-          </button>
         </div>
+
+        {/* Custom domain panel */}
+        {showDomainPanel && (
+          <div className="border-t border-gray-100 px-4 sm:px-5 py-4 space-y-4 bg-gray-50">
+            {business?.domain ? (
+              /* Already has a domain — show manage options */
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <CheckCircle size={14} className="text-green-500 flex-shrink-0" />
+                  <span className="text-sm font-semibold text-gray-800">{business.domain} is connected</span>
+                </div>
+                <p className="text-xs text-gray-500">To change your domain, remove the current one first then add the new one.</p>
+                {domainError && <p className="text-xs text-red-600">{domainError}</p>}
+                <button
+                  onClick={handleRemoveDomain}
+                  disabled={domainRemoving}
+                  className="text-sm font-semibold text-red-500 border border-red-200 bg-white px-4 py-2 rounded-lg hover:bg-red-50 transition disabled:opacity-50"
+                >
+                  {domainRemoving ? 'Removing…' : 'Remove custom domain'}
+                </button>
+              </div>
+            ) : domainSuccess ? (
+              /* Just connected — show DNS instructions */
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <CheckCircle size={14} className="text-green-500 flex-shrink-0" />
+                  <span className="text-sm font-semibold text-gray-800">{domainSuccess.domain} registered</span>
+                </div>
+                <p className="text-xs text-gray-500">Add this DNS record at your domain registrar, then wait up to 24h for it to propagate:</p>
+                <div className="bg-white border border-gray-200 rounded-xl p-3 font-mono text-xs space-y-1">
+                  <div className="flex gap-4">
+                    <span className="text-gray-400 w-12">Type</span>
+                    <span className="font-semibold">CNAME</span>
+                  </div>
+                  <div className="flex gap-4">
+                    <span className="text-gray-400 w-12">Name</span>
+                    <span className="font-semibold break-all">{domainSuccess.cname?.name}</span>
+                  </div>
+                  <div className="flex gap-4">
+                    <span className="text-gray-400 w-12">Value</span>
+                    <span className="font-semibold">{domainSuccess.cname?.value}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400">SSL is handled automatically once DNS propagates.</p>
+              </div>
+            ) : (
+              /* Input form */
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Your custom domain</label>
+                  <input
+                    value={domainInput}
+                    onChange={e => { setDomainInput(e.target.value); setDomainError('') }}
+                    placeholder="store.yourbusiness.com"
+                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Enter the domain or subdomain you own. e.g. <em>shop.mybrand.com</em></p>
+                </div>
+                {domainError && <p className="text-xs text-red-600">{domainError}</p>}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveDomain}
+                    disabled={domainSaving || !domainInput.trim()}
+                    className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition disabled:opacity-50"
+                    style={{ background: PRIMARY }}
+                  >
+                    {domainSaving ? <><Loader size={13} className="animate-spin" /> Connecting…</> : 'Connect domain'}
+                  </button>
+                  <button onClick={() => setShowDomainPanel(false)} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

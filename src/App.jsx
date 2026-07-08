@@ -46,7 +46,22 @@ import OnboardingPage from './pages/auth/OnboardingPage';
 import BusinessProfilePage from './pages/auth/BusinessProfilePage';
 import AcceptInvitePage from './pages/auth/AcceptInvitePage';
 
+// If the page is loaded on a custom domain (not biziq.online or localhost),
+// serve the storefront for that domain directly — no router needed.
+const BIZIQ_HOSTS = ['biziq.online', 'www.biziq.online']
+const hostname = typeof window !== 'undefined' ? window.location.hostname : ''
+const isCustomDomain =
+  hostname &&
+  !BIZIQ_HOSTS.includes(hostname) &&
+  hostname !== 'localhost' &&
+  !hostname.endsWith('.vercel.app') &&
+  !hostname.endsWith('.onrender.com')
+
 export default function App() {
+  if (isCustomDomain) {
+    return <StorefrontPage domain={hostname} />
+  }
+
   return (
     <div className="app-bg">
 
