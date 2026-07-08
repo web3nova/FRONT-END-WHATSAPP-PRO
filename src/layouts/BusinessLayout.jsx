@@ -212,7 +212,7 @@ export default function BusinessLayout() {
             <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center shadow-sm flex-shrink-0" style={{ background: PRIMARY }}>
               {logoUrl
                 ? <img src={logoUrl} alt="logo" className="w-full h-full object-cover" />
-                : <Zap size={16} className="text-white" />}
+                : <LayoutDashboard size={16} className="text-white" />}
             </div>
             <div className="min-w-0">
               <div className="font-bold text-gray-900 text-sm leading-tight truncate">
