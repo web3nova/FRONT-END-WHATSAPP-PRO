@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { isOwner } from '../../utils/permissions'
+import { getTeamMembers, inviteMember, cancelInvite, removeMember } from '../../api/teamApi'
 import {
   User, MessageCircle, Bot, Bell, Users, CreditCard, Check, Plus, Trash2,
   ToggleLeft, ToggleRight, Eye, EyeOff, Loader2, Upload, AlertCircle, X, Save
@@ -12,13 +14,13 @@ import { getNotificationPrefs, patchNotificationPrefs } from '../../api/notifica
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
 
-const tabs = [
-  { id: 'profile', label: 'Business Profile', icon: User },
-  { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
-  { id: 'ai', label: 'AI Settings', icon: Bot },
-  { id: 'team', label: 'Team', icon: Users },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'billing', label: 'Billing & Plan', icon: CreditCard },
+const ALL_TABS = [
+  { id: 'profile',       label: 'Business Profile', icon: User },
+  { id: 'whatsapp',      label: 'WhatsApp',         icon: MessageCircle },
+  { id: 'ai',            label: 'AI Settings',      icon: Bot },
+  { id: 'notifications', label: 'Notifications',    icon: Bell },
+  { id: 'team',          label: 'Team',             icon: Users,      ownerOnly: true },
+  { id: 'billing',       label: 'Billing & Plan',   icon: CreditCard, ownerOnly: true },
 ]
 
 
@@ -70,12 +72,12 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
+  const [showDisconnectModal, setShowDisconnectModal] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [form, setForm] = useState({ about: '', address: '', description: '', email: '', website: '' })
 
   const handleDisconnect = async () => {
-    if (!window.confirm('Disconnect WhatsApp? Your AI will stop responding to customer messages.')) return
     setDisconnecting(true)
     try {
       await disconnectWhatsapp()
@@ -83,6 +85,7 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
     } catch (err) {
       setError(err.message || 'Failed to disconnect')
       setDisconnecting(false)
+      setShowDisconnectModal(false)
     }
   }
 
@@ -141,7 +144,7 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
           </div>
         </div>
         <button
-          onClick={handleDisconnect}
+          onClick={() => setShowDisconnectModal(true)}
           disabled={disconnecting}
           className="text-sm font-semibold text-red-400 border border-red-200 bg-white px-3 py-2.5 sm:py-1.5 rounded-lg hover:bg-red-50 transition w-full sm:w-auto flex-shrink-0 disabled:opacity-50"
         >
@@ -150,8 +153,8 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
       </div>
 
       <div>
-        <SettingRow label="AI Auto-Reply" desc="Let AI respond to customer messages automatically">
-          <Toggle on={toggles.aiReply} onToggle={() => tog('aiReply')} label="Toggle AI auto-reply" />
+        <SettingRow label="AI Auto-Reply" desc="Let AI respond to customer messages automatically. Configure in AI Settings.">
+          <span className="text-xs text-gray-400 font-medium">→ AI Settings tab</span>
         </SettingRow>
       </div>
 
@@ -242,6 +245,241 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
           </div>
         )}
       </div>
+
+      {/* Disconnect WhatsApp confirmation modal */}
+      {showDisconnectModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-0 sm:px-4"
+          onClick={() => !disconnecting && setShowDisconnectModal(false)}
+        >
+          <div
+            className="bg-white rounded-t-3xl sm:rounded-2xl shadow-xl w-full sm:max-w-sm p-5 sm:p-6"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#fee2e2' }}>
+                <MessageCircle size={18} className="text-red-500" />
+              </div>
+              <button
+                onClick={() => !disconnecting && setShowDisconnectModal(false)}
+                className="p-1 text-gray-400 hover:text-gray-600"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="text-sm font-semibold text-gray-900">Disconnect WhatsApp?</div>
+            <p className="text-sm text-gray-500 mt-1">
+              Your AI will stop responding to customer messages until you reconnect.
+            </p>
+            <div className="flex gap-2 mt-5">
+              <button
+                onClick={() => setShowDisconnectModal(false)}
+                disabled={disconnecting}
+                className="flex-1 px-4 py-3 sm:py-2.5 text-sm font-semibold border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDisconnect}
+                disabled={disconnecting}
+                className="flex-1 px-4 py-3 sm:py-2.5 text-sm font-semibold bg-red-500 text-white rounded-xl hover:bg-red-600 disabled:opacity-50"
+              >
+                {disconnecting ? 'Disconnecting…' : 'Disconnect'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function memberInitials(name, email) {
+  const n = name || email || '?'
+  return n.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+}
+
+const ROLE_LABELS = { owner: 'Owner', admin: 'Admin', member: 'Member' }
+const ROLE_COLORS = { owner: '#4f46e5', admin: '#0891b2', member: '#6b7280' }
+
+function TeamTab({ currentUser }) {
+  const [members, setMembers] = useState([])
+  const [pending, setPending] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showInvite, setShowInvite] = useState(false)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteRole, setInviteRole] = useState('member')
+  const [inviting, setInviting] = useState(false)
+  const [inviteError, setInviteError] = useState('')
+  const [inviteSent, setInviteSent] = useState(false)
+  const [removeTarget, setRemoveTarget] = useState(null)
+  const [removing, setRemoving] = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const data = await getTeamMembers()
+      setMembers(data.members || [])
+      setPending(data.pendingInvites || [])
+    } catch {
+      // silent
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  async function handleInvite(e) {
+    e.preventDefault()
+    setInviting(true)
+    setInviteError('')
+    try {
+      await inviteMember(inviteEmail, inviteRole)
+      setInviteSent(true)
+      setInviteEmail('')
+      setInviteRole('member')
+      setTimeout(() => { setInviteSent(false); setShowInvite(false) }, 2000)
+      load()
+    } catch (err) {
+      setInviteError(err.message || 'Failed to send invite')
+    } finally {
+      setInviting(false)
+    }
+  }
+
+  async function handleCancel(inviteId) {
+    try { await cancelInvite(inviteId); load() } catch { /* silent */ }
+  }
+
+  async function handleRemove() {
+    if (!removeTarget) return
+    setRemoving(true)
+    try { await removeMember(removeTarget.id); setRemoveTarget(null); load() } catch { /* silent */ }
+    setRemoving(false)
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <h2 className="font-semibold text-gray-900">Team Members</h2>
+        <button
+          onClick={() => setShowInvite(true)}
+          className="flex items-center justify-center gap-2 text-sm font-semibold text-white px-4 py-2.5 sm:py-2 rounded-xl w-full sm:w-auto"
+          style={{ background: PRIMARY }}
+        >
+          <Plus size={14} /> Invite Member
+        </button>
+      </div>
+
+      {/* Members list */}
+      <div className="space-y-2">
+        {loading ? (
+          <div className="py-6 text-center text-sm text-gray-400">Loading…</div>
+        ) : members.map(m => (
+          <div key={m.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-2xl border border-gray-100">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ background: ROLE_COLORS[m.teamRole] || PRIMARY }}>
+                {memberInitials(m.name, m.email)}
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-gray-900 truncate">{m.name || m.email}</div>
+                <div className="text-xs text-gray-400 truncate">{m.email}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0 pl-12 sm:pl-0">
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-lg" style={{ background: '#f1f5f9', color: ROLE_COLORS[m.teamRole] || PRIMARY }}>
+                {ROLE_LABELS[m.teamRole] || m.teamRole}
+              </span>
+              {m.id !== currentUser?.id && m.teamRole !== 'owner' && (
+                <button
+                  onClick={() => setRemoveTarget(m)}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Pending invites */}
+      {pending.length > 0 && (
+        <div>
+          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Pending Invites</div>
+          <div className="space-y-2">
+            {pending.map(inv => (
+              <div key={inv.id} className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border border-dashed border-gray-200 bg-gray-50">
+                <div className="min-w-0">
+                  <div className="text-sm text-gray-700 truncate">{inv.email}</div>
+                  <div className="text-xs text-gray-400">{ROLE_LABELS[inv.role] || inv.role} · expires {new Date(inv.expiresAt).toLocaleDateString()}</div>
+                </div>
+                <button
+                  onClick={() => handleCancel(inv.id)}
+                  className="text-xs text-gray-400 hover:text-red-500 flex-shrink-0"
+                >
+                  Cancel
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Invite modal */}
+      {showInvite && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.4)' }}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="font-semibold text-gray-900 mb-1">Invite Team Member</h3>
+            <p className="text-xs text-gray-400 mb-4">They'll receive an email to set up their account.</p>
+            <form onSubmit={handleInvite} className="space-y-3">
+              <input
+                type="email"
+                required
+                placeholder="Email address"
+                value={inviteEmail}
+                onChange={e => setInviteEmail(e.target.value)}
+                className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 bg-gray-50"
+              />
+              <select
+                value={inviteRole}
+                onChange={e => setInviteRole(e.target.value)}
+                className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none"
+              >
+                <option value="member">Member — orders & conversations only</option>
+                <option value="admin">Admin — full access except billing & team</option>
+              </select>
+              {inviteError && <p className="text-xs text-red-500">{inviteError}</p>}
+              {inviteSent && <p className="text-xs text-green-600">Invite sent!</p>}
+              <div className="flex gap-2 pt-1">
+                <button type="button" onClick={() => setShowInvite(false)} className="flex-1 px-4 py-2.5 text-sm font-semibold border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50">
+                  Cancel
+                </button>
+                <button type="submit" disabled={inviting} className="flex-1 px-4 py-2.5 text-sm font-semibold text-white rounded-xl disabled:opacity-50" style={{ background: PRIMARY }}>
+                  {inviting ? 'Sending…' : 'Send Invite'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Remove confirmation modal */}
+      {removeTarget && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.4)' }}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="font-semibold text-gray-900 mb-1">Remove {removeTarget.name || removeTarget.email}?</h3>
+            <p className="text-sm text-gray-500 mb-4">They'll lose access immediately. You can invite them again later.</p>
+            <div className="flex gap-2">
+              <button onClick={() => setRemoveTarget(null)} disabled={removing} className="flex-1 px-4 py-2.5 text-sm font-semibold border border-gray-200 rounded-xl text-gray-600">Cancel</button>
+              <button onClick={handleRemove} disabled={removing} className="flex-1 px-4 py-2.5 text-sm font-semibold bg-red-500 text-white rounded-xl hover:bg-red-600 disabled:opacity-50">
+                {removing ? 'Removing…' : 'Remove'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -254,11 +492,21 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState('profile')
   const [showKey, setShowKey] = useState(false)
   const [toggles, setToggles] = useState({
-    aiAutoReply: true, collectMeasurements: true, generateQuotes: true,
     orderNotif: true, whatsappNotif: true, emailNotif: false, weeklyReport: true,
     aiReply: true,
   })
+  const [aiSettings, setAiSettings] = useState({
+    autoReply: true,
+    collectMeasurements: true,
+    generateQuotes: true,
+    persona: '',
+    tone: 'Friendly',
+  })
+  const [savedAiSettings, setSavedAiSettings] = useState(null)
+  const [aiSaving, setAiSaving] = useState(false)
+  const [aiSaved, setAiSaved] = useState(false)
   const [form, setForm] = useState(INITIAL_FORM)
+  const [savedForm, setSavedForm] = useState(INITIAL_FORM)
   const [fetchLoading, setFetchLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState(null)
@@ -302,14 +550,26 @@ export default function Settings() {
         if (data) {
           setProfile(data)
           setProfileExists(true)
-          setForm({
+          const loadedForm = {
             displayName: data.displayName || '',
             tagline: data.tagline || '',
             description: data.description || '',
             email: data.email || '',
             phone: data.phone || '',
             location: data.location || '',
-          })
+          }
+          setForm(loadedForm)
+          setSavedForm(loadedForm)
+          const ai = data.settings?.ai || {}
+          const loadedAi = {
+            autoReply: ai.autoReply !== false,
+            collectMeasurements: ai.collectMeasurements !== false,
+            generateQuotes: ai.generateQuotes !== false,
+            persona: ai.persona || '',
+            tone: ai.tone || 'Friendly',
+          }
+          setAiSettings(loadedAi)
+          setSavedAiSettings(loadedAi)
         }
       } catch (err) {
         if (ignore) return
@@ -329,6 +589,24 @@ export default function Settings() {
     setForm(p => ({ ...p, [e.target.name]: e.target.value }))
   }
 
+  const aiSettingsDirty = savedAiSettings !== null &&
+    JSON.stringify(aiSettings) !== JSON.stringify(savedAiSettings)
+
+  async function handleSaveAiSettings() {
+    setAiSaving(true)
+    setAiSaved(false)
+    try {
+      await updateProfile({ settings: { ...(profile?.settings || {}), ai: aiSettings } })
+      setSavedAiSettings({ ...aiSettings })
+      setAiSaved(true)
+      setTimeout(() => setAiSaved(false), 3000)
+    } catch (err) {
+      setToast({ type: 'error', message: err.message || 'Failed to save AI settings' })
+    } finally {
+      setAiSaving(false)
+    }
+  }
+
   async function handleSave() {
     setSaving(true)
     setToast(null)
@@ -342,6 +620,7 @@ export default function Settings() {
         : await saveProfile(payload)
       setProfile(result)
       setProfileExists(true)
+      setSavedForm({ ...form })
       setToast({ type: 'success', message: 'Business profile saved successfully.' })
     } catch (err) {
       setToast({ type: 'error', message: err.message || 'Failed to save profile' })
@@ -387,7 +666,7 @@ export default function Settings() {
             visible and tappable at once (no hidden-scrollbar gesture to discover).
             On md+ it becomes a vertical sidebar list as before. */}
         <div className="w-full md:w-52 flex-shrink-0 grid grid-cols-3 md:flex md:flex-col gap-2 md:gap-1">
-          {tabs.map(t => (
+          {ALL_TABS.filter(t => !t.ownerOnly || isOwner(user)).map(t => (
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id)}
@@ -502,15 +781,17 @@ export default function Settings() {
                     </div>
                   </div>
 
-                  <button
-                    onClick={handleSave}
-                    disabled={saving || !form.displayName.trim()}
-                    className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 sm:py-2.5 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition disabled:opacity-50"
-                    style={{ background: PRIMARY }}
-                  >
-                    {saving && <Loader2 size={14} className="animate-spin" />}
-                    {saving ? 'Saving…' : 'Save Changes'}
-                  </button>
+                  {(saving || JSON.stringify(form) !== JSON.stringify(savedForm)) && (
+                    <button
+                      onClick={handleSave}
+                      disabled={saving || !form.displayName.trim()}
+                      className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 sm:py-2.5 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition disabled:opacity-50"
+                      style={{ background: PRIMARY }}
+                    >
+                      {saving && <Loader2 size={14} className="animate-spin" />}
+                      {saving ? 'Saving…' : 'Save Changes'}
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -522,42 +803,58 @@ export default function Settings() {
           {/* AI Settings */}
           {activeTab === 'ai' && (
             <div className="space-y-5">
-              <h2 className="font-semibold text-gray-900">AI Settings</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="font-semibold text-gray-900">AI Settings</h2>
+                <div className="flex items-center gap-2">
+                  {aiSaved && <span className="text-xs text-green-600 font-medium">Saved</span>}
+                  {aiSettingsDirty && (
+                    <button
+                      onClick={handleSaveAiSettings}
+                      disabled={aiSaving}
+                      className="px-4 py-2 text-sm font-semibold text-white rounded-xl disabled:opacity-50"
+                      style={{ background: PRIMARY }}
+                    >
+                      {aiSaving ? 'Saving…' : 'Save'}
+                    </button>
+                  )}
+                </div>
+              </div>
               <div>
                 <SettingRow label="AI Auto-Reply" desc="AI handles customer conversations automatically">
-                  <Toggle on={toggles.aiAutoReply} onToggle={() => tog('aiAutoReply')} label="Toggle AI auto-reply" />
+                  <Toggle on={aiSettings.autoReply} onToggle={() => setAiSettings(p => ({ ...p, autoReply: !p.autoReply }))} label="Toggle AI auto-reply" />
                 </SettingRow>
                 <SettingRow label="Collect Measurements" desc="AI asks for body measurements when needed">
-                  <Toggle on={toggles.collectMeasurements} onToggle={() => tog('collectMeasurements')} label="Toggle collect measurements" />
+                  <Toggle on={aiSettings.collectMeasurements} onToggle={() => setAiSettings(p => ({ ...p, collectMeasurements: !p.collectMeasurements }))} label="Toggle collect measurements" />
                 </SettingRow>
                 <SettingRow label="Generate Quotations" desc="AI automatically generates price quotes">
-                  <Toggle on={toggles.generateQuotes} onToggle={() => tog('generateQuotes')} label="Toggle generate quotations" />
+                  <Toggle on={aiSettings.generateQuotes} onToggle={() => setAiSettings(p => ({ ...p, generateQuotes: !p.generateQuotes }))} label="Toggle generate quotations" />
                 </SettingRow>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5">AI Persona Name</label>
-                <input placeholder="e.g. Sales Assistant" className="w-full px-4 py-3 sm:py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none bg-gray-50" />
+                <input
+                  value={aiSettings.persona}
+                  onChange={e => setAiSettings(p => ({ ...p, persona: e.target.value }))}
+                  placeholder="e.g. Sales Assistant"
+                  className="w-full px-4 py-3 sm:py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 bg-gray-50"
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5">Tone of Voice</label>
                 <div className="grid grid-cols-2 sm:flex gap-2">
-                  {['Friendly', 'Professional', 'Casual', 'Formal'].map((t, i) => (
-                    <button key={t} className="sm:flex-1 py-2.5 sm:py-2 text-xs font-medium rounded-xl border transition"
-                      style={i === 0 ? { background: PRIMARY, color: '#fff', borderColor: PRIMARY } : { borderColor: '#e5e7eb', color: '#6b7280' }}>
+                  {['Friendly', 'Professional', 'Casual', 'Formal'].map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setAiSettings(p => ({ ...p, tone: t }))}
+                      className="sm:flex-1 py-2.5 sm:py-2 text-xs font-medium rounded-xl border transition"
+                      style={aiSettings.tone === t
+                        ? { background: PRIMARY, color: '#fff', borderColor: PRIMARY }
+                        : { borderColor: '#e5e7eb', color: '#6b7280' }}
+                    >
                       {t}
                     </button>
                   ))}
                 </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Language</label>
-                <select className="w-full px-4 py-3 sm:py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none">
-                  <option>English</option>
-                  <option>Pidgin English</option>
-                  <option>Yoruba</option>
-                  <option>Igbo</option>
-                  <option>Hausa</option>
-                </select>
               </div>
               <div className="rounded-xl border border-dashed border-gray-200 px-4 py-3 text-xs text-gray-400 text-center">
                 Custom AI API key configuration coming soon
@@ -567,43 +864,7 @@ export default function Settings() {
 
           {/* Team */}
           {activeTab === 'team' && (
-            <div className="space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h2 className="font-semibold text-gray-900">Team Members</h2>
-                <button
-                  disabled
-                  title="Team invitations coming soon"
-                  className="flex items-center justify-center gap-2 text-sm font-semibold text-white px-4 py-2.5 sm:py-2 rounded-xl opacity-50 cursor-not-allowed w-full sm:w-auto"
-                  style={{ background: PRIMARY }}
-                >
-                  <Plus size={14} /> Invite Member
-                </button>
-              </div>
-              <div className="space-y-3">
-                {/* Only the account owner — team management coming soon */}
-                {user && (() => {
-                  const name = user.name || user.email || 'Account Owner'
-                  const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
-                  return (
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-2xl border border-gray-100">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ background: PRIMARY }}>
-                          {initials}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-sm font-medium text-gray-900 truncate">{name}</div>
-                          <div className="text-xs text-gray-400 truncate">{user.email}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 flex-shrink-0 pl-12 sm:pl-0">
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-gray-100 text-gray-500">Owner</span>
-                      </div>
-                    </div>
-                  )
-                })()}
-              </div>
-              <p className="text-xs text-gray-400 text-center pt-2">Team invitations and role management coming soon</p>
-            </div>
+            <TeamTab currentUser={user} />
           )}
 
           {/* Notifications */}
@@ -659,13 +920,21 @@ export default function Settings() {
                     ))}
                   </div>
                 </div>
-                <div className="rounded-2xl p-4 border border-gray-100 bg-gray-50">
-                  <div className="font-semibold text-gray-900 mb-0.5">Upgrade to Pro</div>
-                  <div className="text-xs text-gray-400 mb-3">Unlimited AI messages · Multiple WhatsApp numbers · Priority support</div>
-                  <button onClick={() => navigate('/subscribe')} className="text-sm font-semibold text-white px-4 py-2.5 sm:py-2 rounded-xl hover:opacity-90 w-full sm:w-auto" style={{ background: PRIMARY }}>
-                    View Plans
-                  </button>
-                </div>
+                {(!isActive || isTrial) && (
+                  <div className="rounded-2xl p-4 border border-gray-100 bg-gray-50">
+                    <div className="font-semibold text-gray-900 mb-0.5">
+                      {isTrial ? 'Upgrade before your trial ends' : 'Choose a plan to get started'}
+                    </div>
+                    <div className="text-xs text-gray-400 mb-3">Unlimited AI messages · Multiple WhatsApp numbers · Priority support</div>
+                    <button
+                      onClick={() => navigate('/subscribe?upgrade=1')}
+                      className="text-sm font-semibold text-white px-4 py-2.5 sm:py-2 rounded-xl hover:opacity-90 w-full sm:w-auto"
+                      style={{ background: PRIMARY }}
+                    >
+                      {isTrial ? 'Upgrade Now' : 'View Plans'}
+                    </button>
+                  </div>
+                )}
                 <div>
                   <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Payment History</div>
                   <div className="py-6 text-center text-sm text-gray-400">No payment history yet</div>

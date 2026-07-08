@@ -51,6 +51,7 @@ export default function Knowledge() {
   const [aiLoading, setAiLoading] = useState(false)
   const [retrying, setRetrying] = useState({})
   const [deleting, setDeleting] = useState({})
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const [aiError, setAiError] = useState('')
 
   const fileInputRef = useRef(null)
@@ -311,13 +312,7 @@ export default function Knowledge() {
                         </span>
                         <button
                           disabled={deleting[doc.id]}
-                          onClick={async () => {
-                            if (!window.confirm(`Delete "${doc.filename}"?`)) return
-                            setDeleting(p => ({ ...p, [doc.id]: true }))
-                            try { await deleteDocument(doc.id) } catch {}
-                            await loadDocs()
-                            setDeleting(p => ({ ...p, [doc.id]: false }))
-                          }}
+                          onClick={() => setDeleteTarget(doc)}
                           className="p-1 text-gray-300 hover:text-red-500 transition disabled:opacity-40"
                           title="Delete document"
                         >
@@ -477,6 +472,58 @@ export default function Knowledge() {
           </div>
         </div>
       </div>
+
+      {/* Delete document confirmation modal */}
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-0 sm:px-4"
+          onClick={() => !deleting[deleteTarget.id] && setDeleteTarget(null)}
+        >
+          <div
+            className="bg-white rounded-t-3xl sm:rounded-2xl shadow-xl w-full sm:max-w-sm p-5 sm:p-6"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#fee2e2' }}>
+                <Trash2 size={18} className="text-red-500" />
+              </div>
+              <button
+                onClick={() => !deleting[deleteTarget.id] && setDeleteTarget(null)}
+                className="p-1 text-gray-400 hover:text-gray-600"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="text-sm font-semibold text-gray-900">Delete document?</div>
+            <p className="text-sm text-gray-500 mt-1">
+              "{deleteTarget.filename}" and all its indexed chunks will be permanently removed.
+            </p>
+            <div className="flex gap-2 mt-5">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting[deleteTarget.id]}
+                className="flex-1 px-4 py-3 sm:py-2.5 text-sm font-semibold border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={deleting[deleteTarget.id]}
+                onClick={async () => {
+                  const id = deleteTarget.id
+                  setDeleting(p => ({ ...p, [id]: true }))
+                  try { await deleteDocument(id) } catch {}
+                  await loadDocs()
+                  setDeleting(p => ({ ...p, [id]: false }))
+                  setDeleteTarget(null)
+                }}
+                className="flex-1 px-4 py-3 sm:py-2.5 text-sm font-semibold bg-red-500 text-white rounded-xl hover:bg-red-600 disabled:opacity-50"
+              >
+                {deleting[deleteTarget.id] ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

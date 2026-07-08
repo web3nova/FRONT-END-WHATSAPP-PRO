@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { Check, Zap, Loader2 } from 'lucide-react'
 import { fetchPlans, initializePayment } from '../../api/billingApi'
@@ -10,31 +10,37 @@ import './Auth.css'
 // `features` field on each plan, this preset map can be removed.
 const FEATURE_PRESETS = {
   weekly: [
-    'Up to 100 orders/week',
+    'AI auto-replies to customer messages 24/7',
     '1 WhatsApp number',
-    'Basic analytics',
-    'Email support',
+    'Product catalog & order management',
+    'Knowledge base (up to 5 documents)',
+    'Basic sales analytics',
   ],
   monthly: [
-    'Up to 1,000 orders/month',
-    '3 WhatsApp numbers',
-    'Advanced analytics',
-    'Priority support',
-    'Team members (up to 5)',
+    'AI auto-replies to customer messages 24/7',
+    '1 WhatsApp number',
+    'Custom AI persona, tone & language',
+    'Knowledge base (up to 20 documents)',
+    'Custom website & storefront builder',
+    'Payment gateway integration',
+    'Priority email support',
   ],
   quarterly: [
-    'Up to 3,500 orders/quarter',
-    '3 WhatsApp numbers',
-    'Advanced analytics',
+    'Everything in Monthly — save 20%',
+    'AI auto-replies to customer messages 24/7',
+    'Team members (up to 3)',
+    'Advanced sales & conversation analytics',
+    'Bulk order & quote management',
+    'Payment gateway integration',
     'Priority support',
-    'Team members (up to 5)',
   ],
   yearly: [
-    'Unlimited orders',
-    'Unlimited WhatsApp numbers',
-    'Custom integrations',
-    'Dedicated account manager',
-    'SLA guarantee',
+    'Everything in Quarterly — save 33%',
+    'AI auto-replies to customer messages 24/7',
+    'Unlimited knowledge base documents',
+    'Team members (up to 10)',
+    'Dedicated onboarding & setup',
+    'Priority support with fast response SLA',
   ],
 }
 
@@ -65,6 +71,8 @@ const FREE_TRIAL_DAYS = 14
 export default function SubscribePage() {
   const { startFreeTrial } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const upgradeMode = searchParams.get('upgrade') === '1'
 
   const [plans, setPlans] = useState([])
   const [loadingPlans, setLoadingPlans] = useState(true)
@@ -164,33 +172,36 @@ export default function SubscribePage() {
 
             <header className="subscribe-header">
               <div className="subscribe-badge">
-                Simple Pricing
+                {upgradeMode ? 'Upgrade Your Plan' : 'Simple Pricing'}
               </div>
 
               <h1 className="auth-heading">
-                Choose your plan
+                {upgradeMode ? 'Upgrade to a paid plan' : 'Choose your plan'}
               </h1>
 
               <p className="auth-subheading">
-                Try free for {FREE_TRIAL_DAYS} days, or subscribe now.
-                Upgrade or cancel anytime.
+                {upgradeMode
+                  ? 'Unlock unlimited AI messages, multiple WhatsApp numbers, and priority support.'
+                  : `Try free for ${FREE_TRIAL_DAYS} days, or subscribe now. Upgrade or cancel anytime.`}
               </p>
             </header>
 
-            <div className="trial-banner">
-              <div className="trial-banner__copy">
-                <strong>Not ready to commit?</strong>
-                <span>Start a {FREE_TRIAL_DAYS}-day free trial — no card required.</span>
+            {!upgradeMode && (
+              <div className="trial-banner">
+                <div className="trial-banner__copy">
+                  <strong>Not ready to commit?</strong>
+                  <span>Start a {FREE_TRIAL_DAYS}-day free trial — no card required.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleFreeTrial}
+                  disabled={startingTrial}
+                  className="auth-btn-secondary"
+                >
+                  {startingTrial ? 'Starting trial…' : 'Start free trial'}
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={handleFreeTrial}
-                disabled={startingTrial}
-                className="auth-btn-secondary"
-              >
-                {startingTrial ? 'Starting trial…' : 'Start free trial'}
-              </button>
-            </div>
+            )}
 
             {selectError && (
               <div className="auth-error" role="alert" style={{ maxWidth: 480, margin: '0 auto 24px' }}>
@@ -257,7 +268,11 @@ export default function SubscribePage() {
                         </div>
 
                         <p className="plan-description">
-                          Billed every {plan.intervalDays} days.
+                          {plan.intervalDays === 7 ? 'Billed weekly. Cancel anytime.' :
+                           plan.intervalDays === 30 ? 'Billed monthly. Cancel anytime.' :
+                           plan.intervalDays === 90 ? 'Billed every 3 months. Save vs monthly.' :
+                           plan.intervalDays === 365 ? 'Billed annually. Best value.' :
+                           `Billed every ${plan.intervalDays} days.`}
                         </p>
 
                       </div>

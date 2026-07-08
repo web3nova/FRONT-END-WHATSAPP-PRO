@@ -3,6 +3,7 @@ import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-do
 import onboardingApi from '../services/onboardingService'
 import { useAuth } from '../context/AuthContext'
 import { apiFetch } from '../lib/apiFetch'
+import { isOwner, isAdmin } from '../utils/permissions'
 import {
   LayoutDashboard, ShoppingBag, Package, Users, MessageCircle,
   Globe, BarChart3, BookOpen, Settings, Bell, Search, Zap, ExternalLink, Menu, X, CreditCard,
@@ -12,17 +13,18 @@ import {
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
 
+// minRole: minimum role required to see this nav item (default: member = everyone)
 const navItems = [
-  { label: 'Overview', icon: LayoutDashboard, path: '/dashboard', end: true },
-  { label: 'Orders', icon: ShoppingBag, path: '/dashboard/orders' },
-  { label: 'Products', icon: Package, path: '/dashboard/products' },
-  { label: 'Customers', icon: Users, path: '/dashboard/customers' },
-  { label: 'WhatsApp', icon: MessageCircle, path: '/dashboard/whatsapp' },
-  { label: 'Website', icon: Globe, path: '/dashboard/website' },
-  { label: 'Analytics', icon: BarChart3, path: '/dashboard/analytics' },
-  { label: 'Knowledge Base', icon: BookOpen, path: '/dashboard/knowledge' },
-  { label: 'Payments', icon: CreditCard, path: '/dashboard/payments' },
-  { label: 'Settings', icon: Settings, path: '/dashboard/settings' },
+  { label: 'Overview',      icon: LayoutDashboard, path: '/dashboard',            end: true },
+  { label: 'Orders',        icon: ShoppingBag,     path: '/dashboard/orders' },
+  { label: 'Products',      icon: Package,         path: '/dashboard/products' },
+  { label: 'Customers',     icon: Users,           path: '/dashboard/customers' },
+  { label: 'WhatsApp',      icon: MessageCircle,   path: '/dashboard/whatsapp' },
+  { label: 'Website',       icon: Globe,           path: '/dashboard/website',    minRole: 'admin' },
+  { label: 'Analytics',     icon: BarChart3,       path: '/dashboard/analytics' },
+  { label: 'Knowledge Base',icon: BookOpen,        path: '/dashboard/knowledge',  minRole: 'admin' },
+  { label: 'Payments',      icon: CreditCard,      path: '/dashboard/payments',   minRole: 'admin' },
+  { label: 'Settings',      icon: Settings,        path: '/dashboard/settings',   minRole: 'admin' },
 ]
 
 const ORDER_PAGES = ['/dashboard', '/dashboard/orders', '/dashboard/products']
@@ -233,7 +235,7 @@ export default function BusinessLayout() {
 
         {/* Nav — min-h-0 ensures it shrinks so bottom sections stay visible */}
         <nav className="flex-1 min-h-0 px-3 py-4 space-y-0.5 overflow-y-auto">
-          {navItems.map(item => (
+          {navItems.filter(item => !item.minRole || isAdmin(user)).map(item => (
             <NavLink
               key={item.path}
               to={item.path}

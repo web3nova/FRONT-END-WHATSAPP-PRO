@@ -48,6 +48,7 @@ export default function PaymentSettings() {
     manual: { isActive: false, bankAccount: null },
     paystack: { isActive: false, publicKey: '', secretKey: '' },
     monnify: { isActive: false, apiKey: '', secretKey: '', contractCode: '' },
+    blockradar: { isActive: false, apiKey: '', webhookUrl: '' },
     otherProviders: [],
     preferredProvider: 'manual',
   })
@@ -339,6 +340,23 @@ export default function PaymentSettings() {
         )}
       </Section>
 
+      {/* Blockradar */}
+      <Section title="Blockradar" desc="Accept crypto payments (USDT, ETH, BTC, etc.) via Blockradar.">
+        <Toggle label="Enable Blockradar" checked={config.blockradar?.isActive || false} onChange={e => update('blockradar.isActive', e.target.checked)} />
+        {config.blockradar?.isActive && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            <div>
+              <label className={labelClass}>API Key</label>
+              <input value={config.blockradar?.apiKey || ''} onChange={e => update('blockradar.apiKey', e.target.value)} placeholder="br_live_xxxxxxxxxxxx" className={`${inputClass} font-mono text-xs`} />
+            </div>
+            <div>
+              <label className={labelClass}>Webhook URL <span className="text-gray-400 font-normal">(optional)</span></label>
+              <input value={config.blockradar?.webhookUrl || ''} onChange={e => update('blockradar.webhookUrl', e.target.value)} placeholder="https://yourdomain.com/webhook/blockradar" className={`${inputClass} font-mono text-xs`} />
+            </div>
+          </div>
+        )}
+      </Section>
+
       {/* Other Providers */}
       <Section title="Other Payment Providers" desc="Add custom payment gateways (e.g. Flutterwave, Remita, Interswitch).">
         {config.otherProviders?.map((p, i) => (
@@ -370,6 +388,7 @@ export default function PaymentSettings() {
           <option value="manual">Bank Transfer (Manual)</option>
           <option value="paystack">Paystack</option>
           <option value="monnify">Monnify</option>
+          <option value="blockradar">Blockradar (Crypto)</option>
           <option value="other">Other Provider</option>
         </select>
       </Section>

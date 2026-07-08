@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useLogin } from '../../hooks/useLogin'
 import onboardingApi from '../../services/onboardingService'
@@ -31,10 +31,13 @@ export default function LoginPage() {
   const { login: loginRequest, loading, error: apiError } = useLogin()
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
 
   const fromSignup = location.state?.fromSignup ?? false
   const prefillEmail = location.state?.email ?? ''
-  const notice = location.state?.notice ?? ''
+  const notice = searchParams.get('invited') === '1'
+    ? 'Account created! Sign in with your email and the password you just set.'
+    : (location.state?.notice ?? '')
 
   const [form, setForm] = useState({
     email: prefillEmail,

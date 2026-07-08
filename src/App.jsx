@@ -44,6 +44,7 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import SubscribePage from './pages/auth/SubscribePage';
 import OnboardingPage from './pages/auth/OnboardingPage';
 import BusinessProfilePage from './pages/auth/BusinessProfilePage';
+import AcceptInvitePage from './pages/auth/AcceptInvitePage';
 
 export default function App() {
   return (
@@ -83,6 +84,11 @@ export default function App() {
               <Route
                 path="/forgot-password"
                 element={<ForgotPasswordPage />}
+              />
+
+              <Route
+                path="/accept-invite"
+                element={<AcceptInvitePage />}
               />
 
               <Route
