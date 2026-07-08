@@ -32,8 +32,16 @@ export default function ForgotPasswordPage() {
   const [fieldError, setFieldError] = useState('')
   const [tIdx, setTIdx] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
+  const [cooldown, setCooldown] = useState(0) // seconds until resend allowed
 
   const emailInputRef = useRef(null)
+
+  // Cooldown countdown
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const t = setInterval(() => setCooldown(s => Math.max(0, s - 1)), 1000)
+    return () => clearInterval(t)
+  }, [cooldown > 0])
 
   // Auto-rotate testimonials (pauses on hover/focus)
   useEffect(() => {
@@ -86,6 +94,7 @@ export default function ForgotPasswordPage() {
 
     try {
       await forgotPassword(trimmedEmail)
+      setCooldown(60)
     } catch (err) {
       setError(err.message || 'Something went wrong. Please try again.')
     }
@@ -194,12 +203,14 @@ export default function ForgotPasswordPage() {
                   )}
                 </div>
 
-                <button type="submit" disabled={loading} className="auth-btn-primary">
+                <button type="submit" disabled={loading || cooldown > 0} className="auth-btn-primary">
                   {loading ? (
                     <>
                       <span className="auth-spinner" aria-hidden="true" />
                       Sending...
                     </>
+                  ) : cooldown > 0 ? (
+                    `Resend in ${cooldown}s`
                   ) : (
                     'Send reset email'
                   )}

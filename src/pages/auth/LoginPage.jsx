@@ -56,9 +56,21 @@ export default function LoginPage() {
   const [otpEmail, setOtpEmail] = useState('')
   const [otpCode, setOtpCode] = useState('')
   const [resent, setResent] = useState(false)
+  const [otpSecondsLeft, setOtpSecondsLeft] = useState(600) // 10-min code TTL
+  const [resendCooldown, setResendCooldown] = useState(0)   // seconds until resend allowed
 
   const emailInputRef = useRef(null)
   const passwordInputRef = useRef(null)
+
+  // OTP expiry + resend cooldown countdown
+  useEffect(() => {
+    if (!otpStep) return
+    const t = setInterval(() => {
+      setOtpSecondsLeft(s => Math.max(0, s - 1))
+      setResendCooldown(s => Math.max(0, s - 1))
+    }, 1000)
+    return () => clearInterval(t)
+  }, [otpStep])
 
   const from = fromSignup ? '/subscribe' : location.state?.from?.pathname || '/dashboard'
 
@@ -146,6 +158,8 @@ export default function LoginPage() {
         setOtpUserId(result.userId)
         setOtpEmail(result.email)
         setOtpStep(true)
+        setOtpSecondsLeft(600)
+        setResendCooldown(60)
         setIsSubmitting(false)
         return
       }
@@ -307,17 +321,29 @@ export default function LoginPage() {
                   </button>
                 </form>
 
-                <div style={{ textAlign: 'center', marginTop: '16px' }}>
+                <div style={{ textAlign: 'center', marginTop: '12px' }}>
+                  <p style={{ fontSize: '0.75rem', color: otpSecondsLeft < 60 ? '#dc2626' : '#94a3b8', marginBottom: '10px' }}>
+                    {otpSecondsLeft > 0
+                      ? `Code expires in ${Math.floor(otpSecondsLeft / 60)}:${String(otpSecondsLeft % 60).padStart(2, '0')}`
+                      : 'Code expired — request a new one'}
+                  </p>
                   <button
                     type="button"
                     className="auth-link-muted"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem' }}
+                    style={{ background: 'none', border: 'none', cursor: resendCooldown > 0 ? 'default' : 'pointer', fontSize: '0.875rem', opacity: resendCooldown > 0 ? 0.5 : 1 }}
+                    disabled={resendCooldown > 0 || loading}
                     onClick={async () => {
                       setResent(false)
-                      try { await resendOtp({ userId: otpUserId }); setResent(true); setTimeout(() => setResent(false), 4000) } catch { /* silent */ }
+                      try {
+                        await resendOtp({ userId: otpUserId })
+                        setResent(true)
+                        setOtpSecondsLeft(600)
+                        setResendCooldown(60)
+                        setTimeout(() => setResent(false), 4000)
+                      } catch { /* silent */ }
                     }}
                   >
-                    Didn't receive it? Resend code
+                    {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Didn't receive it? Resend code"}
                   </button>
                   <span style={{ margin: '0 8px', color: '#cbd5e1' }}>·</span>
                   <button
