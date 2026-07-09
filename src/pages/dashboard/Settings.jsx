@@ -4,8 +4,10 @@ import { isOwner } from '../../utils/permissions'
 import { getTeamMembers, inviteMember, cancelInvite, removeMember } from '../../api/teamApi'
 import {
   User, MessageCircle, Bot, Bell, Users, CreditCard, Check, Plus, Trash2,
-  ToggleLeft, ToggleRight, Eye, EyeOff, Loader2, Upload, AlertCircle, X, Save
+  ToggleLeft, ToggleRight, Eye, EyeOff, Loader2, Upload, AlertCircle, X, Save,
+  Globe, CheckCircle, RefreshCw, Copy
 } from 'lucide-react'
+import { apiFetch } from '../../lib/apiFetch'
 import { useBusinessProfile } from '../../hooks/useBusinessProfile'
 import { useAuth } from '../../context/AuthContext'
 import { fetchWhatsappAccount, fetchWhatsappBusinessProfile, updateWhatsappBusinessProfile, disconnectWhatsapp, uploadWhatsappProfilePicture, requestWhatsappDisplayNameChange } from '../../api/whatsappApi'
@@ -18,6 +20,7 @@ const ALL_TABS = [
   { id: 'profile',       label: 'Business Profile', icon: User },
   { id: 'whatsapp',      label: 'WhatsApp',         icon: MessageCircle },
   { id: 'ai',            label: 'AI Settings',      icon: Bot },
+  { id: 'domain',        label: 'Custom Domain',    icon: Globe,      ownerOnly: true },
   { id: 'notifications', label: 'Notifications',    icon: Bell },
   { id: 'team',          label: 'Team',             icon: Users,      ownerOnly: true },
   { id: 'billing',       label: 'Billing & Plan',   icon: CreditCard, ownerOnly: true },
@@ -42,6 +45,190 @@ function SettingRow({ label, desc, children }) {
         {desc && <div className="text-xs text-gray-400 mt-0.5">{desc}</div>}
       </div>
       <div className="flex-shrink-0">{children}</div>
+    </div>
+  )
+}
+
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false)
+  const copy = () => {
+    navigator.clipboard?.writeText(text).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    }).catch(() => {})
+  }
+  return (
+    <button onClick={copy} title="Copy" className="p-1 -m-1 text-gray-400 hover:text-gray-600 transition flex-shrink-0">
+      {copied ? <Check size={12} className="text-green-500" /> : <Copy size={12} />}
+    </button>
+  )
+}
+
+function DnsRecordCard({ rec, highlight }) {
+  return (
+    <div className={`rounded-xl p-3 font-mono text-xs space-y-1 border ${highlight ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200'}`}>
+      <div className="flex gap-4 items-center"><span className="text-gray-400 w-12 flex-shrink-0">Type</span><span className="font-semibold uppercase">{rec.type}</span></div>
+      <div className="flex gap-4 items-center"><span className="text-gray-400 w-12 flex-shrink-0">Name</span><span className="font-semibold break-all flex-1">{rec.name}</span><CopyButton text={rec.name} /></div>
+      <div className="flex gap-4 items-center"><span className="text-gray-400 w-12 flex-shrink-0">Value</span><span className="font-semibold break-all flex-1">{rec.value}</span><CopyButton text={rec.value} /></div>
+      {rec.note && <div className="text-gray-400 font-sans">{rec.note}</div>}
+    </div>
+  )
+}
+
+function DomainSettingsTab() {
+  const [status, setStatus] = useState(null) // { domain, dns[], verified, misconfigured, live, verification[] }
+  const [loading, setLoading] = useState(true)
+  const [checking, setChecking] = useState(false)
+  const [input, setInput] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [removing, setRemoving] = useState(false)
+  const [error, setError] = useState('')
+
+  const loadStatus = useCallback(async (isRefresh = false) => {
+    isRefresh ? setChecking(true) : setLoading(true)
+    try {
+      const res = await apiFetch('/tenant/domain/status')
+      const body = await res.json().catch(() => ({}))
+      if (res.ok) setStatus(body?.data ?? body)
+    } catch { /* silent */ } finally {
+      setLoading(false)
+      setChecking(false)
+    }
+  }, [])
+
+  useEffect(() => { loadStatus() }, [loadStatus])
+
+  const handleConnect = async () => {
+    setError('')
+    setSaving(true)
+    try {
+      const res = await apiFetch('/tenant/domain', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: input.trim() }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body?.message || 'Failed to connect domain')
+      setInput('')
+      await loadStatus()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleRemove = async () => {
+    setError('')
+    setRemoving(true)
+    try {
+      const res = await apiFetch('/tenant/domain', { method: 'DELETE' })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body?.message || 'Failed to remove domain')
+      }
+      setStatus({ domain: null })
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setRemoving(false)
+    }
+  }
+
+  if (loading) {
+    return <div className="flex items-center gap-2 py-8 text-sm text-gray-400"><Loader2 size={16} className="animate-spin" /> Loading domain settings…</div>
+  }
+
+  return (
+    <div className="space-y-5 max-w-xl">
+      <div>
+        <h2 className="text-base font-semibold text-gray-900">Custom Domain</h2>
+        <p className="text-xs text-gray-400 mt-1">Serve your storefront on your own domain instead of the free BizIQ URL.</p>
+      </div>
+
+      {status?.domain ? (
+        <div className="space-y-4">
+          {/* Status header */}
+          <div className="flex items-center justify-between gap-2 flex-wrap p-4 bg-white border border-gray-200 rounded-2xl">
+            <div className="flex items-center gap-2.5">
+              {status.live ? (
+                <CheckCircle size={18} className="text-green-500 flex-shrink-0" />
+              ) : (
+                <Loader2 size={18} className={`text-amber-500 flex-shrink-0 ${checking ? 'animate-spin' : ''}`} />
+              )}
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-gray-900">{status.domain}</span>
+                  <CopyButton text={status.domain} />
+                </div>
+                <div className={`text-xs font-medium ${status.live ? 'text-green-600' : 'text-amber-600'}`}>
+                  {status.live ? 'Live — serving your storefront' : status.verification?.length ? 'Ownership verification required' : 'Waiting for DNS'}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => loadStatus(true)}
+              disabled={checking}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition disabled:opacity-50"
+            >
+              <RefreshCw size={12} className={checking ? 'animate-spin' : ''} />
+              {checking ? 'Checking…' : 'Check status'}
+            </button>
+          </div>
+
+          {/* DNS instructions — shown until live */}
+          {!status.live && (
+            <div className="space-y-3">
+              <p className="text-xs text-gray-500">
+                Add {status.dns?.length === 1 ? 'this DNS record' : 'these DNS records'} at your domain registrar (where you bought the domain). Changes can take up to 24 hours to propagate.
+              </p>
+              {(status.dns || []).map((rec, i) => <DnsRecordCard key={i} rec={rec} />)}
+              {(status.verification || []).length > 0 && (
+                <>
+                  <p className="text-xs text-amber-600 font-semibold">This domain needs ownership verification — also add:</p>
+                  {status.verification.map((rec, i) => <DnsRecordCard key={i} rec={rec} highlight />)}
+                </>
+              )}
+              <p className="text-xs text-gray-400">SSL (https) is issued automatically once DNS is verified — nothing else to do.</p>
+            </div>
+          )}
+
+          {error && <p className="text-xs text-red-600">{error}</p>}
+
+          <div className="pt-2 border-t border-gray-100">
+            <button
+              onClick={handleRemove}
+              disabled={removing}
+              className="text-sm font-semibold text-red-500 border border-red-200 bg-white px-4 py-2 rounded-lg hover:bg-red-50 transition disabled:opacity-50"
+            >
+              {removing ? 'Removing…' : 'Remove custom domain'}
+            </button>
+            <p className="text-xs text-gray-400 mt-2">To change domains, remove this one first, then connect the new one.</p>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Your domain</label>
+            <input
+              value={input}
+              onChange={e => { setInput(e.target.value); setError('') }}
+              placeholder="shop.yourbusiness.com or yourbusiness.com"
+              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100"
+            />
+            <p className="text-xs text-gray-400 mt-1">Enter a domain you own — a subdomain like <em>shop.mybrand.com</em> or the root domain itself.</p>
+          </div>
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <button
+            onClick={handleConnect}
+            disabled={saving || !input.trim()}
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition disabled:opacity-50"
+            style={{ background: PRIMARY }}
+          >
+            {saving ? <><Loader2 size={13} className="animate-spin" /> Connecting…</> : 'Connect domain'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -960,6 +1147,8 @@ export default function Settings() {
 
           {/* WhatsApp */}
           {activeTab === 'whatsapp' && <WhatsAppSettingsTab profile={profile} toggles={toggles} tog={tog} />}
+
+          {activeTab === 'domain' && <DomainSettingsTab />}
 
           {/* AI Settings */}
           {activeTab === 'ai' && (
