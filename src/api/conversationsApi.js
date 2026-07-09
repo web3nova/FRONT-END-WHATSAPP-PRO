@@ -85,25 +85,43 @@ export async function sendStaffMessage(id, text) {
  * @param {{ onMessage: (event, data) => void }} handlers
  */
 export function subscribeToEvents({ onMessage }) {
-  const token = localStorage.getItem('accessToken')
-  if (!token) return () => {}
-  const url = `${API_BASE}/conversations/events?token=${encodeURIComponent(token)}`
-  const es = new EventSource(url)
+  let es = null
+  let destroyed = false
 
-  es.addEventListener('new_message', (e) => {
-    try { onMessage('new_message', JSON.parse(e.data)) } catch {}
-  })
-  es.addEventListener('ai_message', (e) => {
-    try { onMessage('ai_message', JSON.parse(e.data)) } catch {}
-  })
-  es.addEventListener('conversation_updated', (e) => {
-    try { onMessage('conversation_updated', JSON.parse(e.data)) } catch {}
-  })
-  es.addEventListener('staff_message', (e) => {
-    try { onMessage('staff_message', JSON.parse(e.data)) } catch {}
-  })
+  function connect() {
+    const token = localStorage.getItem('accessToken')
+    if (!token || destroyed) return
 
-  return () => es.close()
+    const url = `${API_BASE}/conversations/events?token=${encodeURIComponent(token)}`
+    es = new EventSource(url)
+
+    es.addEventListener('new_message', (e) => {
+      try { onMessage('new_message', JSON.parse(e.data)) } catch {}
+    })
+    es.addEventListener('ai_message', (e) => {
+      try { onMessage('ai_message', JSON.parse(e.data)) } catch {}
+    })
+    es.addEventListener('conversation_updated', (e) => {
+      try { onMessage('conversation_updated', JSON.parse(e.data)) } catch {}
+    })
+    es.addEventListener('staff_message', (e) => {
+      try { onMessage('staff_message', JSON.parse(e.data)) } catch {}
+    })
+
+    es.onerror = () => {
+      if (destroyed) return
+      if (es.readyState === EventSource.CLOSED) {
+        es = null
+        // Reconnect in 3s with whatever token is in storage.
+        // If the token expired, apiFetch will have already refreshed it (or
+        // redirected to /login), so we just pick up the latest value.
+        setTimeout(() => { if (!destroyed) connect() }, 3000)
+      }
+    }
+  }
+
+  connect()
+  return () => { destroyed = true; es?.close(); es = null }
 }
 
 /**
