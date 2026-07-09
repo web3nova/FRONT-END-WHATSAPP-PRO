@@ -36,6 +36,8 @@ import PaymentSettings from './pages/dashboard/PaymentSettings';
 
 import LandingPage from './pages/LandingPage';
 import StorefrontPage from './pages/StorefrontPage';
+import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
 
 import SignUpPage from './pages/auth/SignUpPage';
 import LoginPage from './pages/auth/LoginPage';
@@ -79,10 +81,9 @@ export default function App() {
             <Routes>
 
               {/* Landing */}
-              <Route
-                path="/"
-                element={<LandingPage />}
-              />
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/terms" element={<TermsPage />} />
 
               {/* Authentication */}
 
