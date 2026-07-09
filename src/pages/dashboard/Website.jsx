@@ -249,6 +249,7 @@ export default function Website() {
   const [loadingRevisions, setLoadingRevisions] = useState(false)
   const [revisionsError, setRevisionsError] = useState('')
   const [restoringId, setRestoringId] = useState('')
+  const [navDraft, setNavDraft] = useState(null)
 
   const handleSaveDomain = async () => {
     setDomainError('')
@@ -426,6 +427,94 @@ export default function Website() {
       setSections(previousSections)
       setActiveSectionFlags(previousFlags)
       setSaveError('Could not save that order. Please try again.')
+    } finally {
+      setSavingSettings(false)
+    }
+  }
+
+  // Turn the auto-derived nav into editable rows, seeded from custom pages.
+  const startNavCustomization = () => {
+    setNavDraft([
+      { label: 'Home', target: { type: 'home' } },
+      { label: 'Shop', target: { type: 'shop' } },
+      { label: 'About', target: { type: 'section', ref: 'about' } },
+      { label: 'Contact', target: { type: 'section', ref: 'contact' } },
+      ...customPages.map(p => ({ label: p.title, target: { type: 'page', ref: p.slug } })),
+    ])
+  }
+
+  const updateNavLink = (i, patch) => {
+    setNavDraft(cur => cur.map((link, idx) => idx === i ? { ...link, ...patch } : link))
+  }
+
+  const updateNavLinkTarget = (i, patch) => {
+    setNavDraft(cur => cur.map((link, idx) => idx === i ? { ...link, target: { ...link.target, ...patch } } : link))
+  }
+
+  const removeNavLink = (i) => {
+    setNavDraft(cur => cur.filter((_, idx) => idx !== i))
+  }
+
+  const addNavLink = () => {
+    setNavDraft(cur => [...cur, { label: '', target: { type: 'home' } }])
+  }
+
+  const reorderNavLink = (index, direction) => {
+    setNavDraft(cur => {
+      const targetIndex = index + direction
+      if (targetIndex < 0 || targetIndex >= cur.length) return cur
+      const next = [...cur]
+      ;[next[index], next[targetIndex]] = [next[targetIndex], next[index]]
+      return next
+    })
+  }
+
+  // Persist the edited nav. Drops blank labels and page links whose target
+  // page no longer exists, same optimistic/guarded pattern as toggle().
+  const saveNavigation = async () => {
+    if (savingSettings) return
+    const cleaned = navDraft
+      .filter(link => link.label.trim() !== '')
+      .filter(link => link.target.type !== 'page' || customPages.some(p => p.slug === link.target.ref))
+    const token = getStoredAccessToken()
+    if (!token) return
+    setSavingSettings(true)
+    setSaveError('')
+    try {
+      const res = await fetch(`${API_BASE}/website/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ navigation: cleaned }),
+      })
+      if (!res.ok) throw new Error('Save failed')
+      setSettings(s => ({ ...s, navigation: cleaned }))
+    } catch (err) {
+      console.error('Failed to save navigation:', err)
+      setSaveError('Could not save that change. Please try again.')
+    } finally {
+      setSavingSettings(false)
+    }
+  }
+
+  // Reset back to the auto-derived nav (Home/Shop/About/Contact + custom pages).
+  const resetNavigation = async () => {
+    if (savingSettings) return
+    const token = getStoredAccessToken()
+    if (!token) return
+    setSavingSettings(true)
+    setSaveError('')
+    try {
+      const res = await fetch(`${API_BASE}/website/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ navigation: [] }),
+      })
+      if (!res.ok) throw new Error('Save failed')
+      setSettings(s => ({ ...s, navigation: [] }))
+      setNavDraft(null)
+    } catch (err) {
+      console.error('Failed to reset navigation:', err)
+      setSaveError('Could not save that change. Please try again.')
     } finally {
       setSavingSettings(false)
     }
@@ -1046,6 +1135,7 @@ export default function Website() {
     ...settings,
     theme: { ...(settings?.theme || {}), builder: liveBuilder },
     sections: sections.map((s, idx) => ({ id: s.id, name: s.name, active: activeSectionFlags[idx] })),
+    navigation: navDraft ?? settings?.navigation,
   }
   const previewWhatsapp = editingSectionId === 6 ? (sectionForm.whatsapp ?? whatsapp) : whatsapp
 
@@ -1210,10 +1300,15 @@ export default function Website() {
         <div className="col-span-1 lg:col-span-1 space-y-4">
           {/* Tabs */}
           <div className="flex bg-white rounded-xl border border-gray-100 p-1 gap-1">
-            {['pages', 'sections', 'design'].map(t => (
+            {['pages', 'sections', 'navigation', 'design'].map(t => (
               <button
                 key={t}
-                onClick={() => setTab(t)}
+                onClick={() => {
+                  setTab(t)
+                  if (t === 'navigation' && navDraft === null && settings?.navigation?.length > 0) {
+                    setNavDraft(settings.navigation)
+                  }
+                }}
                 className="flex-1 py-2 sm:py-1.5 text-xs font-semibold rounded-lg capitalize transition"
                 style={tab === t ? { background: PRIMARY, color: '#fff' } : { color: '#9ca3af' }}
               >
@@ -1760,6 +1855,138 @@ export default function Website() {
                   )
                 })}
               </div>
+            </div>
+          )}
+
+          {tab === 'navigation' && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                <span className="text-sm font-semibold text-gray-900">Menu</span>
+                {savingSettings && (
+                  <div className="flex items-center gap-1.5 text-xs" style={{ color: PRIMARY }}>
+                    <Loader size={12} className="animate-spin" /> Saving...
+                  </div>
+                )}
+              </div>
+
+              {saveError && (
+                <div className="px-4 py-2.5 border-b border-gray-100 text-xs font-medium text-red-600 bg-red-50">
+                  {saveError}
+                </div>
+              )}
+
+              {navDraft === null || navDraft.length === 0 ? (
+                <div className="px-4 py-6 space-y-3 text-center">
+                  <p className="text-xs text-gray-400">
+                    Your menu is automatic: Home, Shop, About, Contact plus your custom pages.
+                  </p>
+                  <button
+                    onClick={startNavCustomization}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-lg hover:opacity-90 transition"
+                    style={{ background: PRIMARY }}
+                  >
+                    Customize menu
+                  </button>
+                </div>
+              ) : (
+                <div className="p-4 space-y-3">
+                  <div className="space-y-2">
+                    {navDraft.map((link, i) => (
+                      <div key={i} className="flex items-center gap-2 border border-gray-100 rounded-lg p-2">
+                        <div className="flex flex-col gap-2 flex-1 min-w-0">
+                          <input
+                            type="text"
+                            value={link.label}
+                            onChange={e => updateNavLink(i, { label: e.target.value })}
+                            placeholder="Label"
+                            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                          />
+                          <select
+                            value={link.target.type === 'section' || link.target.type === 'page' ? `${link.target.type}:${link.target.ref}` : link.target.type}
+                            onChange={e => {
+                              const [type, ref] = e.target.value.split(':')
+                              updateNavLink(i, { target: ref ? { type, ref } : { type } })
+                            }}
+                            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                          >
+                            <option value="home">Home</option>
+                            <option value="shop">Shop / Products</option>
+                            <option value="section:about">About section</option>
+                            <option value="section:contact">Contact section</option>
+                            <option value="section:products">Products section</option>
+                            <option value="section:gallery">Gallery section</option>
+                            <option value="section:testimonials">Testimonials section</option>
+                            {customPages.map(p => (
+                              <option key={p.slug} value={`page:${p.slug}`}>Page: {p.title}</option>
+                            ))}
+                            <option value="external">External URL</option>
+                          </select>
+                          {link.target.type === 'external' && (
+                            <input
+                              type="text"
+                              value={link.target.ref || ''}
+                              onChange={e => updateNavLinkTarget(i, { ref: e.target.value })}
+                              placeholder="https://example.com"
+                              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                            />
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-1 flex-shrink-0">
+                          <button
+                            onClick={() => reorderNavLink(i, -1)}
+                            disabled={i === 0}
+                            aria-label="Move up"
+                            className="text-gray-300 hover:text-gray-600 transition p-1 disabled:opacity-30"
+                          >
+                            <ChevronUp size={14} />
+                          </button>
+                          <button
+                            onClick={() => reorderNavLink(i, 1)}
+                            disabled={i === navDraft.length - 1}
+                            aria-label="Move down"
+                            className="text-gray-300 hover:text-gray-600 transition p-1 disabled:opacity-30"
+                          >
+                            <ChevronDown size={14} />
+                          </button>
+                          <button
+                            onClick={() => removeNavLink(i)}
+                            aria-label="Remove link"
+                            className="text-gray-300 hover:text-red-500 transition p-1"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={addNavLink}
+                    className="flex items-center gap-1.5 text-xs font-semibold hover:opacity-80 transition"
+                    style={{ color: PRIMARY }}
+                  >
+                    <Plus size={13} /> Add link
+                  </button>
+
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={saveNavigation}
+                      disabled={savingSettings}
+                      className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-lg hover:opacity-90 transition disabled:opacity-60"
+                      style={{ background: PRIMARY }}
+                    >
+                      {savingSettings ? <Loader size={13} className="animate-spin" /> : <Save size={13} />} Save menu
+                    </button>
+                    <button
+                      onClick={resetNavigation}
+                      disabled={savingSettings}
+                      className="px-4 py-2 text-xs font-semibold text-gray-500 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition disabled:opacity-60"
+                    >
+                      Reset to automatic
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
