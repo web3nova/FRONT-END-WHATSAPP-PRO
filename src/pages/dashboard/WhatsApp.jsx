@@ -423,6 +423,11 @@ export default function WhatsAppPage() {
       setShowQuoteModal(false)
       setQuoteForm({ description: '', amountNaira: '' })
       showToast('Quotation sent to customer via WhatsApp.')
+      // Refresh thread directly — don't depend on the SSE event having arrived
+      if (selectedId) {
+        getConversationMessages(selectedId, { limit: 100 })
+          .then(({ data }) => setMessages(data)).catch(() => {})
+      }
     } catch (err) {
       setQuoteError(err.message)
     } finally {
@@ -452,6 +457,11 @@ export default function WhatsAppPage() {
       setShowOrderModal(false)
       setOrderForm({ product: '', size: '', amountNaira: '', status: 'pending' })
       showToast('Order created and sent to customer via WhatsApp.')
+      // Refresh thread directly — don't depend on the SSE event having arrived
+      if (selectedId) {
+        getConversationMessages(selectedId, { limit: 100 })
+          .then(({ data }) => setMessages(data)).catch(() => {})
+      }
     } catch (err) {
       setOrderError(err.message)
     } finally {
