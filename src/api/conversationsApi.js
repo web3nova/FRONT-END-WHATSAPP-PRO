@@ -40,6 +40,30 @@ export async function getConversationMessages(id, { page = 1, limit = 50 } = {})
 }
 
 /**
+ * Subscribe to real-time conversation events via SSE.
+ * Returns a cleanup function — call it to close the stream.
+ * @param {{ onMessage: (event, data) => void }} handlers
+ */
+export function subscribeToEvents({ onMessage }) {
+  const token = localStorage.getItem('accessToken')
+  if (!token) return () => {}
+  const url = `${API_BASE}/conversations/events?token=${encodeURIComponent(token)}`
+  const es = new EventSource(url)
+
+  es.addEventListener('new_message', (e) => {
+    try { onMessage('new_message', JSON.parse(e.data)) } catch {}
+  })
+  es.addEventListener('ai_message', (e) => {
+    try { onMessage('ai_message', JSON.parse(e.data)) } catch {}
+  })
+  es.addEventListener('conversation_updated', (e) => {
+    try { onMessage('conversation_updated', JSON.parse(e.data)) } catch {}
+  })
+
+  return () => es.close()
+}
+
+/**
  * PATCH /conversations/:id/resolve
  * Returns { resolved: true, conversation }
  */

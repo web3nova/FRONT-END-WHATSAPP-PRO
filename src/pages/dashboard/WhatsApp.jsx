@@ -5,7 +5,7 @@ import {
   Link2, Loader2, CheckCircle2,
 } from 'lucide-react'
 import { fetchWhatsappAccount, connectWhatsapp } from '../../api/whatsappApi'
-import { listConversations, getConversationMessages, resolveConversation } from '../../api/conversationsApi'
+import { listConversations, getConversationMessages, resolveConversation, subscribeToEvents } from '../../api/conversationsApi'
 import { sendNotification } from '../../api/notificationsApi'
 import { createOrder } from '../../api/ordersApi'
 import { createQuote } from '../../api/quotesApi'
@@ -270,6 +270,41 @@ export default function WhatsAppPage() {
       .finally(() => { if (!ignore) setMsgsLoading(false) })
     return () => { ignore = true }
   }, [selectedId])
+
+  // Keep a stable ref to selectedId so the SSE handler can read it without re-subscribing
+  const selectedIdRef = useRef(selectedId)
+  useEffect(() => { selectedIdRef.current = selectedId }, [selectedId])
+
+  // SSE — real-time message delivery (runs once account is verified)
+  useEffect(() => {
+    if (!account?.verified) return
+    const unsubscribe = subscribeToEvents({
+      onMessage: (event, data) => {
+        if (event === 'new_message' || event === 'ai_message') {
+          const { conversationId, message } = data
+          // Append to open chat if it matches
+          if (conversationId === selectedIdRef.current) {
+            setMessages(prev => {
+              if (prev.some(m => m.id === message.id)) return prev
+              return [...prev, message]
+            })
+          }
+          // Bump conversation to top of list and mark open
+          setConversations(prev => {
+            const existing = prev.find(c => c.id === conversationId)
+            if (!existing) {
+              // New conversation — reload list
+              listConversations({ limit: 50 }).then(({ data: d }) => setConversations(d)).catch(() => {})
+              return prev
+            }
+            const updated = { ...existing, status: 'open', updatedAt: new Date().toISOString() }
+            return [updated, ...prev.filter(c => c.id !== conversationId)]
+          })
+        }
+      }
+    })
+    return unsubscribe
+  }, [account])
 
   // Scroll to bottom when messages update
   useEffect(() => {
