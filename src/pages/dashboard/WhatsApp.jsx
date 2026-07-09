@@ -3,10 +3,10 @@ import { useSearchParams } from 'react-router-dom'
 import {
   Search, Send, Bot, UserCheck, Phone, MoreHorizontal,
   Zap, CheckCheck, AlertCircle, FileText, ShoppingBag, ChevronLeft, X,
-  Link2, Loader2, CheckCircle2,
+  Link2, Loader2, CheckCircle2, Paperclip,
 } from 'lucide-react'
 import { fetchWhatsappAccount, connectWhatsapp } from '../../api/whatsappApi'
-import { listConversations, getConversationMessages, takeOverConversation, releaseConversation, sendStaffMessage, subscribeToEvents } from '../../api/conversationsApi'
+import { listConversations, getConversationMessages, takeOverConversation, releaseConversation, sendStaffMessage, sendStaffMedia, subscribeToEvents } from '../../api/conversationsApi'
 import { createOrder } from '../../api/ordersApi'
 import { createQuote } from '../../api/quotesApi'
 
@@ -385,6 +385,25 @@ export default function WhatsAppPage() {
     }
   }
 
+  const fileInputRef = useRef(null)
+
+  const handleAttach = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !selectedId || sending) return
+    setSending(true)
+    try {
+      const result = await sendStaffMedia(selectedId, file, inputText.trim())
+      const msg = result?.message ?? result
+      setInputText('')
+      setMessages(prev => prev.some(m => m.id === msg?.id) ? prev : [...prev, msg])
+    } catch (err) {
+      showToast(err.message, 'error')
+    } finally {
+      setSending(false)
+    }
+  }
+
   const handleCreateQuote = async e => {
     e.preventDefault()
     if (!quoteForm.amountNaira || isNaN(Number(quoteForm.amountNaira))) {
@@ -422,6 +441,7 @@ export default function WhatsAppPage() {
     try {
       await createOrder({
         customerId: selected?.customer?.id,
+        conversationId: selectedId,
         status: orderForm.status,
         totalMinor: Math.round(Number(orderForm.amountNaira) * 100),
         items: orderForm.product
@@ -431,7 +451,7 @@ export default function WhatsAppPage() {
       })
       setShowOrderModal(false)
       setOrderForm({ product: '', size: '', amountNaira: '', status: 'pending' })
-      showToast('Order logged successfully.')
+      showToast('Order created and sent to customer via WhatsApp.')
     } catch (err) {
       setOrderError(err.message)
     } finally {
@@ -648,6 +668,21 @@ export default function WhatsAppPage() {
                                 ? { background: CREAM, color: '#1e293b', borderBottomLeftRadius: 4 }
                                 : { background: isAi ? PRIMARY : '#374151', color: '#fff', borderBottomRightRadius: 4 }}
                             >
+                              {(msg.media || []).map((m, i) => (
+                                m.mimeType?.startsWith('image/') ? (
+                                  <a key={m.id || i} href={m.url} target="_blank" rel="noopener noreferrer">
+                                    <img src={m.url} alt="" className="rounded-lg max-w-full mb-2 max-h-64 object-contain" />
+                                  </a>
+                                ) : m.mimeType?.startsWith('video/') ? (
+                                  <video key={m.id || i} src={m.url} controls className="rounded-lg max-w-full mb-2 max-h-64" />
+                                ) : m.mimeType?.startsWith('audio/') ? (
+                                  <audio key={m.id || i} src={m.url} controls className="mb-2 w-full" />
+                                ) : (
+                                  <a key={m.id || i} href={m.url} target="_blank" rel="noopener noreferrer" className="underline text-xs block mb-2">
+                                    📎 Attachment
+                                  </a>
+                                )
+                              ))}
                               {msg.content}
                             </div>
                             <div className={`flex items-center gap-1 mt-1 ${isCustomer ? 'justify-start' : 'justify-end'}`}>
@@ -679,6 +714,21 @@ export default function WhatsAppPage() {
                     </div>
                   )}
                   <div className="flex items-end gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*,video/mp4,audio/*,.pdf"
+                      className="hidden"
+                      onChange={handleAttach}
+                    />
+                    <button
+                      disabled={selected.status !== 'human' || sending}
+                      onClick={() => fileInputRef.current?.click()}
+                      title="Attach image or video"
+                      className="p-2.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition disabled:opacity-40 flex-shrink-0"
+                    >
+                      <Paperclip size={16} />
+                    </button>
                     <textarea
                       rows={1}
                       value={inputText}

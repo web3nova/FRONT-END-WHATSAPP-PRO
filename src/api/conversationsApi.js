@@ -80,6 +80,23 @@ export async function sendStaffMessage(id, text) {
 }
 
 /**
+ * POST /conversations/:id/media — staff sends an image/video/document
+ */
+export async function sendStaffMedia(id, file, caption = '') {
+  const form = new FormData()
+  form.append('file', file)
+  if (caption) form.append('caption', caption)
+  const res = await fetch(`${API_BASE}/conversations/${encodeURIComponent(id)}/media`, {
+    method: 'POST',
+    headers: { accept: 'application/json', ...authHeaders() },
+    body: form,
+  })
+  const body = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(body?.message || `Failed to send media (${res.status})`)
+  return body?.data ?? body
+}
+
+/**
  * Subscribe to real-time conversation events via SSE.
  * Returns a cleanup function — call it to close the stream.
  * @param {{ onMessage: (event, data) => void }} handlers
