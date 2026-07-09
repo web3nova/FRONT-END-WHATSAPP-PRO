@@ -365,44 +365,56 @@ export default function WhatsAppPage() {
 
   const handleSend = async () => {
     const text = inputText.trim()
-    if (!text || !selectedId || sending) return
+    if ((!text && !pendingFile) || !selectedId || sending) return
     setSending(true)
     try {
-      const msg = await sendStaffMessage(selectedId, text)
-      setInputText('')
-      // SSE will deliver the staff_message event but add optimistically too
-      setMessages(prev => prev.some(m => m.id === msg?.message?.id) ? prev : [...prev, {
-        id: msg?.message?.id || `tmp-${Date.now()}`,
-        conversationId: selectedId,
-        role: 'staff',
-        content: text,
-        createdAt: new Date().toISOString(),
-      }])
-    } catch (err) {
-      alert(err.message)
-    } finally {
-      setSending(false)
-    }
-  }
-
-  const fileInputRef = useRef(null)
-
-  const handleAttach = async (e) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file || !selectedId || sending) return
-    setSending(true)
-    try {
-      const result = await sendStaffMedia(selectedId, file, inputText.trim())
-      const msg = result?.message ?? result
-      setInputText('')
-      setMessages(prev => prev.some(m => m.id === msg?.id) ? prev : [...prev, msg])
+      if (pendingFile) {
+        // Media message — text becomes the caption
+        const result = await sendStaffMedia(selectedId, pendingFile, text)
+        const msg = result?.message ?? result
+        clearPending()
+        setInputText('')
+        setMessages(prev => prev.some(m => m.id === msg?.id) ? prev : [...prev, msg])
+      } else {
+        const msg = await sendStaffMessage(selectedId, text)
+        setInputText('')
+        // SSE will deliver the staff_message event but add optimistically too
+        setMessages(prev => prev.some(m => m.id === msg?.message?.id) ? prev : [...prev, {
+          id: msg?.message?.id || `tmp-${Date.now()}`,
+          conversationId: selectedId,
+          role: 'staff',
+          content: text,
+          createdAt: new Date().toISOString(),
+        }])
+      }
     } catch (err) {
       showToast(err.message, 'error')
     } finally {
       setSending(false)
     }
   }
+
+  const fileInputRef = useRef(null)
+  const [pendingFile, setPendingFile] = useState(null)
+  const [pendingPreview, setPendingPreview] = useState(null)
+
+  const handleAttach = (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (pendingPreview) URL.revokeObjectURL(pendingPreview)
+    setPendingFile(file)
+    setPendingPreview(file.type.startsWith('image/') ? URL.createObjectURL(file) : null)
+  }
+
+  const clearPending = () => {
+    if (pendingPreview) URL.revokeObjectURL(pendingPreview)
+    setPendingFile(null)
+    setPendingPreview(null)
+  }
+
+  // Never carry a staged attachment across conversations
+  useEffect(() => { clearPending() }, [selectedId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCreateQuote = async e => {
     e.preventDefault()
@@ -723,6 +735,24 @@ export default function WhatsAppPage() {
                       </button>
                     </div>
                   )}
+                  {pendingFile && (
+                    <div className="flex items-center gap-3 mb-2 p-2 bg-gray-50 border border-gray-200 rounded-xl">
+                      {pendingPreview ? (
+                        <img src={pendingPreview} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-gray-200 flex items-center justify-center flex-shrink-0">
+                          <Paperclip size={16} className="text-gray-500" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-semibold text-gray-700 truncate">{pendingFile.name}</div>
+                        <div className="text-[10px] text-gray-400">Type a caption below, then press Send</div>
+                      </div>
+                      <button onClick={clearPending} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg flex-shrink-0">
+                        <X size={14} />
+                      </button>
+                    </div>
+                  )}
                   <div className="flex items-end gap-2">
                     <input
                       ref={fileInputRef}
@@ -752,7 +782,7 @@ export default function WhatsAppPage() {
                       style={{ maxHeight: 100 }}
                     />
                     <button
-                      disabled={selected.status !== 'human' || !inputText.trim() || sending}
+                      disabled={selected.status !== 'human' || (!inputText.trim() && !pendingFile) || sending}
                       onClick={handleSend}
                       className="p-2.5 rounded-xl text-white transition disabled:opacity-40 flex-shrink-0"
                       style={{ background: PRIMARY }}
