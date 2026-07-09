@@ -211,6 +211,13 @@ export default function WhatsAppPage() {
   const [inputText, setInputText] = useState('')
   const [sending, setSending] = useState(false)
 
+  // Toast
+  const [toast, setToast] = useState(null)
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 4000)
+  }
+
   // Generate Quotation modal
   const [showQuoteModal, setShowQuoteModal] = useState(false)
   const [quoteForm, setQuoteForm] = useState({ description: '', amountNaira: '' })
@@ -379,7 +386,7 @@ export default function WhatsAppPage() {
       })
       setShowQuoteModal(false)
       setQuoteForm({ description: '', amountNaira: '' })
-      alert('Quotation sent to customer via WhatsApp.')
+      showToast('Quotation sent to customer via WhatsApp.')
     } catch (err) {
       setQuoteError(err.message)
     } finally {
@@ -407,6 +414,7 @@ export default function WhatsAppPage() {
       })
       setShowOrderModal(false)
       setOrderForm({ product: '', size: '', amountNaira: '', status: 'pending' })
+      showToast('Order logged successfully.')
     } catch (err) {
       setOrderError(err.message)
     } finally {
@@ -432,6 +440,15 @@ export default function WhatsAppPage() {
 
   return (
     <>
+      {/* Toast notification */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-[9999] flex items-center gap-2 px-4 py-3 rounded-xl border text-sm shadow-lg ${toast.type === 'success' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-600'}`}>
+          <CheckCircle2 size={16} className="flex-shrink-0" />
+          <span>{toast.message}</span>
+          <button onClick={() => setToast(null)} className="ml-2 opacity-60 hover:opacity-100"><X size={14} /></button>
+        </div>
+      )}
+
       <div className="flex flex-col min-h-[600px] lg:h-[calc(100vh-64px-48px)] rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-sm">
 
         <ConnectedBadge account={account} />
