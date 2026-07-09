@@ -202,22 +202,59 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
 
   const builtInLinks = [
     { label: 'Home', action: () => scrollToSection('hero') },
-    { label: 'Shop', action: () => goShop('all') },
+    { label: 'Shop', action: () => goShop('all'), isShop: true },
     { label: 'About', action: () => scrollToSection('about') },
     { label: 'Contact', action: () => scrollToSection('contact') },
   ].map(link => {
     const override = pageByLabel.get(link.label.toLowerCase())
-    return override ? { label: link.label, action: () => openCustomPage(override) } : link
+    return override ? { label: link.label, action: () => openCustomPage(override), page: override } : link
   })
 
   const RESERVED_NAV_LABELS = new Set(['home', 'shop', 'about', 'contact'])
 
-  const navLinks = [
+  const derivedNavLinks = [
     ...builtInLinks,
     ...pages
       .filter(p => !RESERVED_NAV_LABELS.has((p.title || '').trim().toLowerCase()))
-      .map(p => ({ label: p.title, action: () => openCustomPage(p) })),
+      .map(p => ({ label: p.title, action: () => openCustomPage(p), page: p })),
   ]
+
+  // ── Data-driven navigation ─────────────────────────────────────────────
+  // settings.navigation is an optional, ordered array authored by the nav
+  // editor UI (a later task). Each item: { label, target: { type, ref? } }.
+  // When present and non-empty (after dropping malformed/dangling entries)
+  // it fully replaces the derived nav above; otherwise we fall back to the
+  // legacy built-in + CMS-page derivation unchanged.
+  const NAV_SECTION_REFS = new Set(['about', 'contact', 'products', 'gallery', 'testimonials'])
+
+  const buildDataNavLink = (item) => {
+    if (!item || typeof item.label !== 'string' || !item.label.trim()) return null
+    const target = item.target || {}
+    switch (target.type) {
+      case 'home':
+        return { label: item.label, action: () => scrollToSection('hero') }
+      case 'shop':
+        return { label: item.label, action: () => goShop('all'), isShop: true }
+      case 'section':
+        return NAV_SECTION_REFS.has(target.ref)
+          ? { label: item.label, action: () => scrollToSection(target.ref) }
+          : null
+      case 'page': {
+        const match = pages.find(p => p.slug === target.ref)
+        return match ? { label: item.label, action: () => openCustomPage(match), page: match } : null
+      }
+      case 'external':
+        return target.ref ? { label: item.label, action: () => window.open(target.ref, '_blank', 'noopener') } : null
+      default:
+        return null
+    }
+  }
+
+  const dataNavLinks = Array.isArray(settings?.navigation)
+    ? settings.navigation.map(buildDataNavLink).filter(Boolean)
+    : []
+
+  const navLinks = dataNavLinks.length > 0 ? dataNavLinks : derivedNavLinks
 
   // Everything a section component might need, built once. Keeps section
   // files to a two-prop signature (`variant`, `ctx`) instead of threading
@@ -407,7 +444,7 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
                   key={`${l.label}-${i}`}
                   onClick={l.action}
                   className="transition pb-0.5"
-                  style={(view === 'shop' && l.label === 'Shop') || (view === 'page' && l.label === activePage?.title)
+                  style={(view === 'shop' && (l.isShop || l.label === 'Shop')) || (view === 'page' && !!l.page && l.page === activePage)
                     ? { color: INK, borderBottom: `2px solid ${INK}` }
                     : { color: '#6b7280' }}
                 >
