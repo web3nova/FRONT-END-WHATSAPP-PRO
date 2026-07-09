@@ -190,6 +190,17 @@ function DomainSettingsTab() {
                 </>
               )}
               <p className="text-xs text-gray-400">SSL (https) is issued automatically once DNS is verified — nothing else to do.</p>
+
+              {/* Common pitfalls */}
+              <div className="bg-white border border-gray-200 rounded-2xl p-4 space-y-2">
+                <div className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Important tips</div>
+                <div className="text-xs text-gray-500 space-y-1.5">
+                  <p>• <span className="font-semibold text-gray-700">Replace, don't add.</span> If this name already has a record (e.g. it points to an old website), edit that record — don't create a second one alongside it, or visitors will be randomly split between the old site and your storefront.</p>
+                  <p>• <span className="font-semibold text-gray-700">Using Cloudflare?</span> Set the record to "DNS only" (grey cloud), not "Proxied" (orange cloud) — proxying blocks our SSL setup.</p>
+                  <p>• <span className="font-semibold text-gray-700">Domain used elsewhere?</span> Connecting it here moves it away from wherever it currently serves. Only connect a domain you want pointing at this storefront.</p>
+                  <p>• <span className="font-semibold text-gray-700">Be patient.</span> DNS can take from a few minutes up to 24 hours to spread worldwide. If "Check status" still says waiting after that, re-check the records for typos.</p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -207,7 +218,26 @@ function DomainSettingsTab() {
           </div>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-5">
+          {/* How it works */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 space-y-3">
+            <div className="text-xs font-semibold text-gray-700 uppercase tracking-wide">How it works</div>
+            {[
+              ['1', 'Buy a domain', 'From any registrar — Namecheap, GoDaddy, Cloudflare, Whogohost, Qservers, etc. You own it; we never charge for connecting it.'],
+              ['2', 'Connect it here', 'Enter the domain below. We\'ll show you exactly which DNS records to create.'],
+              ['3', 'Add the records at your registrar', 'Log in where you bought the domain, open its DNS settings, and add the records we show you (each has a copy button).'],
+              ['4', 'Check status', 'DNS changes take minutes to a few hours to spread. Come back and press "Check status" until it says Live. SSL (https) is set up automatically — nothing to buy.'],
+            ].map(([n, title, desc]) => (
+              <div key={n} className="flex gap-3">
+                <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 mt-0.5" style={{ background: PRIMARY }}>{n}</div>
+                <div>
+                  <div className="text-xs font-semibold text-gray-800">{title}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">{desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">Your domain</label>
             <input
@@ -216,7 +246,9 @@ function DomainSettingsTab() {
               placeholder="shop.yourbusiness.com or yourbusiness.com"
               className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100"
             />
-            <p className="text-xs text-gray-400 mt-1">Enter a domain you own — a subdomain like <em>shop.mybrand.com</em> or the root domain itself.</p>
+            <p className="text-xs text-gray-400 mt-1">
+              A subdomain like <em>shop.mybrand.com</em> or the root domain <em>mybrand.com</em> — either works, the instructions adjust automatically.
+            </p>
           </div>
           {error && <p className="text-xs text-red-600">{error}</p>}
           <button
@@ -227,6 +259,10 @@ function DomainSettingsTab() {
           >
             {saving ? <><Loader2 size={13} className="animate-spin" /> Connecting…</> : 'Connect domain'}
           </button>
+
+          <p className="text-xs text-gray-400">
+            Don't have a domain? No problem — your storefront stays available on your free BizIQ link either way.
+          </p>
         </div>
       )}
     </div>
