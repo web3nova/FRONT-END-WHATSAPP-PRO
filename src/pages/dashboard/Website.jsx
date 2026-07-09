@@ -74,6 +74,33 @@ function emptyBlock(type) {
   return { _key: newBlockKey(), type, text: '', url: '', storageKey: '' }
 }
 
+// Collapsible category used to break the Design tab into digestible chunks
+// instead of one long scrolling form.
+function DesignAccordionSection({ title, subtitle, isOpen, onToggle, children }) {
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between gap-3 px-4 py-3.5 text-left hover:bg-gray-50 transition"
+      >
+        <div className="min-w-0">
+          <div className="text-xs font-semibold text-gray-900 uppercase tracking-wider">{title}</div>
+          {subtitle && <div className="text-[11px] text-gray-400 mt-0.5 leading-snug">{subtitle}</div>}
+        </div>
+        <div className="flex-shrink-0 text-gray-300">
+          {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </div>
+      </button>
+      {isOpen && (
+        <div className="px-4 pb-4 pt-1 space-y-3">
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Create/edit form for a custom CMS page — shared between the "new page" and
 // "edit page" panels in the Pages tab. Content is a simple ordered list of
 // blocks (heading/paragraph/image) rather than one plain-text field.
@@ -202,6 +229,8 @@ export default function Website() {
   const [saveError, setSaveError] = useState('')
   const [sectionForm, setSectionForm] = useState({})
   const [designForm, setDesignForm] = useState({})
+  const [openDesignCategory, setOpenDesignCategory] = useState('templates')
+  const toggleDesignCategory = (id) => setOpenDesignCategory(cur => (cur === id ? null : id))
   const [customThemeForm, setCustomThemeForm] = useState({})
   const [showDomainPanel, setShowDomainPanel] = useState(false)
   const [domainInput, setDomainInput] = useState('')
@@ -1735,10 +1764,13 @@ export default function Website() {
           )}
 
           {tab === 'design' && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-5">
-              <div>
-                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Starter Templates</div>
-                <p className="text-xs text-gray-400 mb-3">One-click setup for your kind of business — color theme, section styles, and layout together. Always overwrites current choices, never applied automatically.</p>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50 overflow-hidden">
+              <DesignAccordionSection
+                title="Starter Templates"
+                subtitle="One-click setup for your kind of business — color theme, section styles, and layout together. Always overwrites current choices, never applied automatically."
+                isOpen={openDesignCategory === 'templates'}
+                onToggle={() => toggleDesignCategory('templates')}
+              >
                 <div className="grid grid-cols-2 gap-3">
                   {STARTER_TEMPLATES.map(tpl => {
                     const isRecommended = recommendedStarterTemplateId(business?.category) === tpl.id
@@ -1761,23 +1793,24 @@ export default function Website() {
                     )
                   })}
                 </div>
-              </div>
+              </DesignAccordionSection>
 
-              <div className="pt-5 border-t border-gray-100">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Template</div>
-                  {savingSettings && (
-                    <div className="flex items-center gap-1.5 text-xs" style={{ color: PRIMARY }}>
-                      <Loader size={12} className="animate-spin" /> Saving...
-                    </div>
-                  )}
-                </div>
+              <DesignAccordionSection
+                title="Color Template"
+                subtitle="Pick the visual style closest to your brand. You can switch anytime — your content stays the same."
+                isOpen={openDesignCategory === 'template'}
+                onToggle={() => toggleDesignCategory('template')}
+              >
+                {savingSettings && (
+                  <div className="flex items-center gap-1.5 text-xs" style={{ color: PRIMARY }}>
+                    <Loader size={12} className="animate-spin" /> Saving...
+                  </div>
+                )}
                 {saveError && (
-                  <div className="mb-3 px-3 py-2 rounded-lg text-xs font-medium text-red-600 bg-red-50">
+                  <div className="px-3 py-2 rounded-lg text-xs font-medium text-red-600 bg-red-50">
                     {saveError}
                   </div>
                 )}
-                <p className="text-xs text-gray-400 mb-3">Pick the visual style closest to your brand. You can switch anytime — your content stays the same.</p>
                 <div className="grid grid-cols-2 gap-3">
                   {Object.values(THEMES).map(theme => {
                     const isActive = activeTemplateId === theme.id
@@ -1805,11 +1838,14 @@ export default function Website() {
                     )
                   })}
                 </div>
-              </div>
+              </DesignAccordionSection>
 
-              <div className="pt-5 border-t border-gray-100 space-y-3">
-                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Look &amp; Feel</div>
-                <p className="text-xs text-gray-400">Pick a whole look, or mix styles per section — e.g. a Magazine hero with a Catalog product grid. Independent of your color template above.</p>
+              <DesignAccordionSection
+                title="Look & Feel"
+                subtitle="Pick a whole look, or mix styles per section — e.g. a Magazine hero with a Catalog product grid. Independent of your color template above."
+                isOpen={openDesignCategory === 'lookfeel'}
+                onToggle={() => toggleDesignCategory('lookfeel')}
+              >
                 <div className="grid grid-cols-3 gap-2">
                   {OUTLOOKS.map(o => (
                     <button
@@ -1851,11 +1887,14 @@ export default function Website() {
                     )
                   })}
                 </div>
-              </div>
+              </DesignAccordionSection>
 
-              <div className="pt-5 border-t border-gray-100 space-y-3">
-                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Customize</div>
-                <p className="text-xs text-gray-400">Fine-tune the colors, font, and shape of the selected template. Switching templates resets these.</p>
+              <DesignAccordionSection
+                title="Customize"
+                subtitle="Fine-tune the colors, font, and shape of the selected template. Switching templates resets these."
+                isOpen={openDesignCategory === 'customize'}
+                onToggle={() => toggleDesignCategory('customize')}
+              >
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 mb-1.5">Ink (text)</label>
@@ -1933,10 +1972,14 @@ export default function Website() {
                     Reset to Preset
                   </button>
                 </div>
-              </div>
+              </DesignAccordionSection>
 
-              <div className="pt-5 border-t border-gray-100 space-y-3">
-                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">SEO</div>
+              <DesignAccordionSection
+                title="SEO & Social"
+                subtitle="How your storefront shows up in search results and social shares."
+                isOpen={openDesignCategory === 'seo'}
+                onToggle={() => toggleDesignCategory('seo')}
+              >
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1">Page title</label>
                   <input
@@ -2020,13 +2063,13 @@ export default function Website() {
                 >
                   <Save size={13} /> Save SEO & Social
                 </button>
-              </div>
+              </DesignAccordionSection>
             </div>
           )}
         </div>
 
         {/* Right - website preview mockup */}
-        <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden lg:sticky lg:top-4 lg:self-start">
           <div className="flex items-center gap-2 px-3 sm:px-4 py-3 border-b border-gray-100 bg-gray-50">
             <div className="hidden xs:flex gap-1.5 flex-shrink-0">
               <div className="w-3 h-3 rounded-full bg-red-400"></div>
@@ -2058,7 +2101,7 @@ export default function Website() {
           </div>
 
           {/* Mockup content */}
-          <div className="overflow-y-auto bg-gray-50 flex justify-center items-start py-4" style={{ maxHeight: 520 }}>
+          <div className="overflow-y-auto bg-gray-50 flex justify-center items-start py-4" style={{ maxHeight: 'calc(100vh - 160px)', minHeight: 780 }}>
             <div
               className="bg-white overflow-hidden transition-all duration-300 w-full"
               style={previewDevice === 'mobile' ? { maxWidth: 340, borderRadius: 16 } : { maxWidth: '100%' }}
