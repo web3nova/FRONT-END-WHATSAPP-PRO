@@ -49,6 +49,32 @@ export async function disconnectWhatsapp() {
   return body?.data ?? body
 }
 
+/** POST /whatsapp/profile-picture — upload and set WhatsApp profile picture */
+export async function uploadWhatsappProfilePicture(file) {
+  const formData = new FormData()
+  formData.append('image', file)
+  const res = await fetch(`${API_BASE}/whatsapp/profile-picture`, {
+    method: 'POST',
+    headers: { accept: 'application/json', ...authHeaders() },
+    body: formData,
+  })
+  const body = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(body?.message || 'Failed to upload profile picture')
+  return body?.data ?? body
+}
+
+/** POST /whatsapp/display-name — request display name change (Meta must approve) */
+export async function requestWhatsappDisplayNameChange(displayName) {
+  const res = await fetch(`${API_BASE}/whatsapp/display-name`, {
+    method: 'POST',
+    headers: { accept: 'application/json', 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ displayName }),
+  })
+  const body = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(body?.message || 'Failed to request display name change')
+  return body?.data ?? body
+}
+
 /** POST /whatsapp/connect — exchange OAuth code for long-lived token */
 export async function connectWhatsapp({ code, redirectUri, wabaId, phoneNumberId }) {
   const res = await fetch(`${API_BASE}/whatsapp/connect`, {

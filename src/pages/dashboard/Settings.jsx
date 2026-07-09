@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { useBusinessProfile } from '../../hooks/useBusinessProfile'
 import { useAuth } from '../../context/AuthContext'
-import { fetchWhatsappAccount, fetchWhatsappBusinessProfile, updateWhatsappBusinessProfile, disconnectWhatsapp } from '../../api/whatsappApi'
+import { fetchWhatsappAccount, fetchWhatsappBusinessProfile, updateWhatsappBusinessProfile, disconnectWhatsapp, uploadWhatsappProfilePicture, requestWhatsappDisplayNameChange } from '../../api/whatsappApi'
 import { getNotificationPrefs, patchNotificationPrefs } from '../../api/notificationsApi'
 
 const PRIMARY = '#4166F5'
@@ -77,6 +77,13 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [form, setForm] = useState({ about: '', address: '', description: '', email: '', website: '' })
+  const [displayName, setDisplayName] = useState('')
+  const [savingName, setSavingName] = useState(false)
+  const [nameSuccess, setNameSuccess] = useState(false)
+  const [picPreview, setPicPreview] = useState(null)
+  const [picFile, setPicFile] = useState(null)
+  const [uploadingPic, setUploadingPic] = useState(false)
+  const picInputRef = useRef(null)
 
   const handleDisconnect = async () => {
     setDisconnecting(true)
@@ -111,6 +118,7 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
                 email: p.email || '',
                 website: p.websites?.[0] || '',
               })
+              setDisplayName(p.verified_name || '')
             }
           })
           .catch(() => {})
@@ -137,6 +145,42 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
       setError(err.message || 'Failed to update profile')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleSaveDisplayName = async () => {
+    if (!displayName.trim()) return
+    setSavingName(true)
+    try {
+      await requestWhatsappDisplayNameChange(displayName.trim())
+      setNameSuccess(true)
+      setTimeout(() => setNameSuccess(false), 4000)
+    } catch (err) {
+      setError(err.message || 'Failed to request name change')
+    } finally {
+      setSavingName(false)
+    }
+  }
+
+  const handlePicChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPicFile(file)
+    setPicPreview(URL.createObjectURL(file))
+  }
+
+  const handleUploadPic = async () => {
+    if (!picFile) return
+    setUploadingPic(true)
+    setError('')
+    try {
+      await uploadWhatsappProfilePicture(picFile)
+      setSuccess(true)
+      setTimeout(() => setSuccess(false), 3000)
+    } catch (err) {
+      setError(err.message || 'Failed to upload profile picture')
+    } finally {
+      setUploadingPic(false)
     }
   }
 
@@ -209,6 +253,67 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
           </div>
         ) : (
           <div className="px-5 py-5 space-y-4">
+
+            {/* Profile picture */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-2">Profile Picture</label>
+              <div className="flex items-center gap-4">
+                <div
+                  className="w-16 h-16 rounded-full border-2 border-gray-200 overflow-hidden flex items-center justify-center bg-gray-50 flex-shrink-0 cursor-pointer"
+                  onClick={() => picInputRef.current?.click()}
+                >
+                  {picPreview || waProfile?.profile_picture_url ? (
+                    <img src={picPreview || waProfile?.profile_picture_url} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <Upload size={18} className="text-gray-300" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <input ref={picInputRef} type="file" accept="image/jpeg,image/png" className="hidden" onChange={handlePicChange} />
+                  <button
+                    onClick={() => picInputRef.current?.click()}
+                    className="text-sm font-medium text-blue-600 hover:underline"
+                  >
+                    {picPreview ? 'Change photo' : 'Upload photo'}
+                  </button>
+                  <p className="text-xs text-gray-400 mt-0.5">JPG or PNG, max 5MB. Square images work best.</p>
+                  {picFile && (
+                    <button
+                      onClick={handleUploadPic}
+                      disabled={uploadingPic}
+                      className="mt-2 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-lg hover:opacity-90 disabled:opacity-60"
+                      style={{ background: PRIMARY }}
+                    >
+                      {uploadingPic ? <><Loader2 size={12} className="animate-spin" /> Uploading…</> : <><Upload size={12} /> Set as WhatsApp Photo</>}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Display name */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Display Name</label>
+              <div className="flex gap-2">
+                <input
+                  value={displayName}
+                  onChange={e => setDisplayName(e.target.value)}
+                  placeholder={waProfile?.verified_name || 'Your business name'}
+                  className="flex-1 px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+                <button
+                  onClick={handleSaveDisplayName}
+                  disabled={savingName || !displayName.trim()}
+                  className="px-3 py-2.5 text-sm font-semibold text-white rounded-xl hover:opacity-90 disabled:opacity-50 flex-shrink-0"
+                  style={{ background: PRIMARY }}
+                >
+                  {savingName ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                </button>
+              </div>
+              {nameSuccess && <p className="text-xs text-green-600 mt-1">Name change submitted — Meta will review and approve it shortly.</p>}
+              <p className="text-xs text-gray-400 mt-1">This is the name customers see. Changes require Meta approval (usually within 24–48hrs).</p>
+            </div>
+
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1.5">About <span className="text-gray-400 font-normal">(139 chars max)</span></label>
               <input
