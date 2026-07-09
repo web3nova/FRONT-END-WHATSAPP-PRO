@@ -5,8 +5,7 @@ import {
   Link2, Loader2, CheckCircle2,
 } from 'lucide-react'
 import { fetchWhatsappAccount, connectWhatsapp } from '../../api/whatsappApi'
-import { listConversations, getConversationMessages, resolveConversation, subscribeToEvents } from '../../api/conversationsApi'
-import { sendNotification } from '../../api/notificationsApi'
+import { listConversations, getConversationMessages, takeOverConversation, releaseConversation, sendStaffMessage, subscribeToEvents } from '../../api/conversationsApi'
 import { createOrder } from '../../api/ordersApi'
 import { createQuote } from '../../api/quotesApi'
 
@@ -208,10 +207,9 @@ export default function WhatsAppPage() {
   // UI state
   const [filter, setFilter] = useState('all')
   const [mobilePanel, setMobilePanel] = useState('list')
-  const [staffMode, setStaffMode] = useState(false)
+  const [togglingMode, setTogglingMode] = useState(false)
   const [inputText, setInputText] = useState('')
   const [sending, setSending] = useState(false)
-  const [resolving, setResolving] = useState(false)
 
   // Generate Quotation modal
   const [showQuoteModal, setShowQuoteModal] = useState(false)
@@ -280,26 +278,24 @@ export default function WhatsAppPage() {
     if (!account?.verified) return
     const unsubscribe = subscribeToEvents({
       onMessage: (event, data) => {
-        if (event === 'new_message' || event === 'ai_message') {
+        if (event === 'new_message' || event === 'ai_message' || event === 'staff_message') {
           const { conversationId, message } = data
-          // Append to open chat if it matches
           if (conversationId === selectedIdRef.current) {
-            setMessages(prev => {
-              if (prev.some(m => m.id === message.id)) return prev
-              return [...prev, message]
-            })
+            setMessages(prev => prev.some(m => m.id === message.id) ? prev : [...prev, message])
           }
-          // Bump conversation to top of list and mark open
           setConversations(prev => {
             const existing = prev.find(c => c.id === conversationId)
             if (!existing) {
-              // New conversation — reload list
               listConversations({ limit: 50 }).then(({ data: d }) => setConversations(d)).catch(() => {})
               return prev
             }
-            const updated = { ...existing, status: 'open', updatedAt: new Date().toISOString() }
+            const updated = { ...existing, updatedAt: new Date().toISOString() }
             return [updated, ...prev.filter(c => c.id !== conversationId)]
           })
+        }
+        if (event === 'conversation_updated') {
+          const { conversationId, status } = data
+          setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, status } : c))
         }
       }
     })
@@ -314,7 +310,7 @@ export default function WhatsAppPage() {
   const selected = conversations.find(c => c.id === selectedId)
 
   const filteredConvs = conversations.filter(c => {
-    if (filter === 'open') return c.status === 'open'
+    if (filter === 'open') return c.status === 'open' || c.status === 'human'
     if (filter === 'closed') return c.status === 'closed'
     return true
   })
@@ -322,38 +318,41 @@ export default function WhatsAppPage() {
   const handleConvSelect = (id) => {
     setSelectedId(id)
     setMobilePanel('chat')
-    setStaffMode(false)
   }
 
-  const handleResolve = async () => {
-    if (!selectedId || resolving) return
-    setResolving(true)
+  const handleToggleMode = async () => {
+    if (!selectedId || togglingMode) return
+    const isHuman = selected?.status === 'human'
+    setTogglingMode(true)
     try {
-      await resolveConversation(selectedId)
-      setConversations(prev =>
-        prev.map(c => c.id === selectedId ? { ...c, status: 'closed' } : c)
-      )
+      if (isHuman) {
+        await releaseConversation(selectedId)
+        setConversations(prev => prev.map(c => c.id === selectedId ? { ...c, status: 'open' } : c))
+      } else {
+        await takeOverConversation(selectedId)
+        setConversations(prev => prev.map(c => c.id === selectedId ? { ...c, status: 'human' } : c))
+      }
     } catch (err) {
       alert(err.message)
     } finally {
-      setResolving(false)
+      setTogglingMode(false)
     }
   }
 
   const handleSend = async () => {
     const text = inputText.trim()
-    if (!text || !selected?.customer?.phone || sending) return
+    if (!text || !selectedId || sending) return
     setSending(true)
     try {
-      await sendNotification({ channel: 'whatsapp', to: selected.customer.phone, text })
+      const msg = await sendStaffMessage(selectedId, text)
       setInputText('')
-      setMessages(prev => [...prev, {
-        id: `tmp-${Date.now()}`,
+      // SSE will deliver the staff_message event but add optimistically too
+      setMessages(prev => prev.some(m => m.id === msg?.message?.id) ? prev : [...prev, {
+        id: msg?.message?.id || `tmp-${Date.now()}`,
         conversationId: selectedId,
         role: 'staff',
         content: text,
         createdAt: new Date().toISOString(),
-        meta: {},
       }])
     } catch (err) {
       alert(err.message)
@@ -447,7 +446,7 @@ export default function WhatsAppPage() {
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-bold text-gray-900 text-base">WhatsApp Inbox</h2>
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full text-white" style={{ background: PRIMARY }}>
-                  {conversations.filter(c => c.status === 'open').length} open
+                  {conversations.filter(c => c.status === 'open' || c.status === 'human').length} open
                 </span>
               </div>
               <div className="relative">
@@ -483,6 +482,7 @@ export default function WhatsAppPage() {
               ) : (
                 filteredConvs.map(conv => {
                   const displayName = conv.customer?.name || conv.customer?.phone || 'Unknown'
+                  const isHuman = conv.status === 'human'
                   const isOpen = conv.status === 'open'
                   return (
                     <button
@@ -506,12 +506,14 @@ export default function WhatsAppPage() {
                           <div className="text-xs text-gray-400 truncate mb-1.5">{conv.customer?.phone}</div>
                           <div
                             className="inline-flex items-center gap-1 text-xs font-medium rounded-full px-2 py-0.5"
-                            style={isOpen
-                              ? { background: '#dce5fd', color: PRIMARY }
-                              : { background: '#f3f4f6', color: '#6b7280' }}
+                            style={isHuman
+                              ? { background: '#fef9c3', color: '#92400e' }
+                              : isOpen
+                                ? { background: '#dce5fd', color: PRIMARY }
+                                : { background: '#f3f4f6', color: '#6b7280' }}
                           >
-                            {isOpen ? <Bot size={10} /> : <UserCheck size={10} />}
-                            {isOpen ? 'Open' : 'Closed'}
+                            {isHuman ? <UserCheck size={10} /> : isOpen ? <Bot size={10} /> : <X size={10} />}
+                            {isHuman ? 'Staff' : isOpen ? 'AI' : 'Closed'}
                           </div>
                         </div>
                       </div>
@@ -558,26 +560,16 @@ export default function WhatsAppPage() {
 
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setStaffMode(v => !v)}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition"
-                      style={!staffMode
+                      onClick={handleToggleMode}
+                      disabled={togglingMode}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition disabled:opacity-50"
+                      style={selected.status !== 'human'
                         ? { background: '#dce5fd', color: PRIMARY, borderColor: '#c7d2fb' }
-                        : { background: '#f9fafb', color: '#6b7280', borderColor: '#e5e7eb' }}
+                        : { background: '#fef9c3', color: '#92400e', borderColor: '#fde68a' }}
                     >
-                      {!staffMode ? <Bot size={13} /> : <UserCheck size={13} />}
-                      {!staffMode ? 'AI Handling' : 'Staff Handling'}
+                      {selected.status !== 'human' ? <Bot size={13} /> : <UserCheck size={13} />}
+                      {togglingMode ? '…' : selected.status !== 'human' ? 'AI Handling' : 'Staff Handling'}
                     </button>
-
-                    {selected.status === 'open' && (
-                      <button
-                        onClick={handleResolve}
-                        disabled={resolving}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition text-red-400 border-red-100 bg-red-50 hover:bg-red-100 disabled:opacity-50"
-                      >
-                        <X size={13} />
-                        {resolving ? 'Closing…' : 'Resolve'}
-                      </button>
-                    )}
 
                     <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition">
                       <MoreHorizontal size={17} />
@@ -637,13 +629,14 @@ export default function WhatsAppPage() {
 
                 {/* Input */}
                 <div className="border-t border-gray-100 px-4 py-3 bg-white flex-shrink-0">
-                  {!staffMode && (
+                  {selected.status !== 'human' && (
                     <div className="flex items-center gap-2 mb-2 px-1">
                       <Bot size={13} style={{ color: PRIMARY }} />
                       <span className="text-xs" style={{ color: PRIMARY }}>AI is handling this conversation · </span>
                       <button
-                        onClick={() => setStaffMode(true)}
-                        className="text-xs font-semibold underline"
+                        onClick={handleToggleMode}
+                        disabled={togglingMode}
+                        className="text-xs font-semibold underline disabled:opacity-50"
                         style={{ color: PRIMARY }}
                       >
                         Take over as Staff
@@ -658,13 +651,13 @@ export default function WhatsAppPage() {
                       onKeyDown={e => {
                         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
                       }}
-                      placeholder={!staffMode ? 'AI is responding automatically…' : 'Type a message…'}
-                      disabled={!staffMode || sending}
+                      placeholder={selected.status !== 'human' ? 'AI is responding automatically…' : 'Type a message…'}
+                      disabled={selected.status !== 'human' || sending}
                       className="flex-1 resize-none px-4 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{ maxHeight: 100 }}
                     />
                     <button
-                      disabled={!staffMode || !inputText.trim() || sending}
+                      disabled={selected.status !== 'human' || !inputText.trim() || sending}
                       onClick={handleSend}
                       className="p-2.5 rounded-xl text-white transition disabled:opacity-40 flex-shrink-0"
                       style={{ background: PRIMARY }}
@@ -742,16 +735,6 @@ export default function WhatsAppPage() {
                       <ShoppingBag size={15} />
                       Create Order
                     </button>
-                    {selected.status === 'open' && (
-                      <button
-                        onClick={handleResolve}
-                        disabled={resolving}
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-red-400 border border-red-100 bg-red-50 transition hover:bg-red-100 disabled:opacity-50"
-                      >
-                        <X size={15} />
-                        {resolving ? 'Closing…' : 'End Conversation'}
-                      </button>
-                    )}
                   </div>
                 </div>
 

@@ -40,6 +40,46 @@ export async function getConversationMessages(id, { page = 1, limit = 50 } = {})
 }
 
 /**
+ * PATCH /conversations/:id/take-over — staff takes over, AI paused
+ */
+export async function takeOverConversation(id) {
+  const res = await fetch(`${API_BASE}/conversations/${encodeURIComponent(id)}/take-over`, {
+    method: 'PATCH',
+    headers: { accept: 'application/json', ...authHeaders() },
+  })
+  const body = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(body?.message || `Failed to take over (${res.status})`)
+  return body?.data ?? body
+}
+
+/**
+ * PATCH /conversations/:id/release — release back to AI
+ */
+export async function releaseConversation(id) {
+  const res = await fetch(`${API_BASE}/conversations/${encodeURIComponent(id)}/release`, {
+    method: 'PATCH',
+    headers: { accept: 'application/json', ...authHeaders() },
+  })
+  const body = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(body?.message || `Failed to release (${res.status})`)
+  return body?.data ?? body
+}
+
+/**
+ * POST /conversations/:id/messages — staff sends a message (saved to DB)
+ */
+export async function sendStaffMessage(id, text) {
+  const res = await fetch(`${API_BASE}/conversations/${encodeURIComponent(id)}/messages`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', accept: 'application/json', ...authHeaders() },
+    body: JSON.stringify({ text }),
+  })
+  const body = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(body?.message || `Failed to send message (${res.status})`)
+  return body?.data ?? body
+}
+
+/**
  * Subscribe to real-time conversation events via SSE.
  * Returns a cleanup function — call it to close the stream.
  * @param {{ onMessage: (event, data) => void }} handlers
@@ -58,6 +98,9 @@ export function subscribeToEvents({ onMessage }) {
   })
   es.addEventListener('conversation_updated', (e) => {
     try { onMessage('conversation_updated', JSON.parse(e.data)) } catch {}
+  })
+  es.addEventListener('staff_message', (e) => {
+    try { onMessage('staff_message', JSON.parse(e.data)) } catch {}
   })
 
   return () => es.close()
