@@ -77,6 +77,7 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [form, setForm] = useState({ about: '', address: '', description: '', email: '', website: '' })
+  const [savedForm, setSavedForm] = useState(null)
   const [displayName, setDisplayName] = useState('')
   const [savingName, setSavingName] = useState(false)
   const [nameSuccess, setNameSuccess] = useState(false)
@@ -111,13 +112,15 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
           .then(p => {
             if (p) {
               setWaProfile(p)
-              setForm({
+              const loaded = {
                 about: p.about || '',
                 address: p.address || '',
                 description: p.description || '',
                 email: p.email || '',
                 website: p.websites?.[0] || '',
-              })
+              }
+              setForm(loaded)
+              setSavedForm(loaded)
               setDisplayName(p.verified_name || '')
             }
           })
@@ -139,6 +142,7 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
         email: form.email || undefined,
         websites: form.website ? [form.website] : undefined,
       })
+      setSavedForm({ ...form })
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (err) {
@@ -147,6 +151,10 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
       setSaving(false)
     }
   }
+
+  const isFormDirty = savedForm
+    ? Object.keys(form).some(k => form[k] !== savedForm[k])
+    : false
 
   const handleSaveDisplayName = async () => {
     if (!displayName.trim()) return
@@ -379,7 +387,7 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
 
             <button
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || !isFormDirty}
               className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition disabled:opacity-60"
               style={{ background: PRIMARY }}
             >
