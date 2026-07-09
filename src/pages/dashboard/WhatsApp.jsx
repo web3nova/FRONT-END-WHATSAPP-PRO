@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   Search, Send, Bot, UserCheck, Phone, MoreHorizontal,
   Zap, CheckCheck, AlertCircle, FileText, ShoppingBag, ChevronLeft, X,
@@ -247,6 +248,10 @@ export default function WhatsAppPage() {
 
   useEffect(() => { loadAccount() }, [loadAccount])
 
+  // ?conversation=<id> — deep link from a notification click
+  const [searchParams, setSearchParams] = useSearchParams()
+  const deepLinkId = searchParams.get('conversation')
+
   // Load conversations once account is confirmed connected
   useEffect(() => {
     if (!account?.verified) return
@@ -256,13 +261,25 @@ export default function WhatsAppPage() {
       .then(({ data }) => {
         if (!ignore) {
           setConversations(data)
-          if (data.length) setSelectedId(data[0].id)
+          if (data.length) setSelectedId(prev => prev ?? data[0].id)
         }
       })
       .catch(err => { if (!ignore) setConvsError(err.message) })
       .finally(() => { if (!ignore) setConvsLoading(false) })
     return () => { ignore = true }
   }, [account])
+
+  // Select the deep-linked conversation once it exists in the loaded list,
+  // then clear the param so refresh/back doesn't re-trigger it.
+  useEffect(() => {
+    if (!deepLinkId || !conversations.length) return
+    const target = conversations.find(c => c.id === deepLinkId)
+    if (target) {
+      setSelectedId(target.id)
+      setMobilePanel('chat')
+      setSearchParams({}, { replace: true })
+    }
+  }, [deepLinkId, conversations])
 
   // Load messages when selected conversation changes
   useEffect(() => {

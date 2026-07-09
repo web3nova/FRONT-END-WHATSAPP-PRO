@@ -49,9 +49,10 @@ function relTime(iso) {
   return `${Math.floor(h / 24)}d ago`
 }
 
-function NotificationPanel({ onClose }) {
+function NotificationPanel({ onClose, onUnreadChange }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
 
   const load = useCallback(async () => {
     try {
@@ -61,16 +62,44 @@ function NotificationPanel({ onClose }) {
     } catch { /* silent */ } finally { setLoading(false) }
   }, [])
 
-  useEffect(() => {
-    load()
+  useEffect(() => { load() }, [load])
+
+  const markAllRead = () => {
+    setItems(prev => prev.map(n => ({ ...n, read: true })))
+    onUnreadChange?.() // reset badge to 0
     apiFetch('/notifications/read-all', { method: 'PATCH', noRedirect: true }).catch(() => {})
-  }, [load])
+  }
+
+  const handleClick = (n) => {
+    if (!n.read) {
+      setItems(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))
+      onUnreadChange?.(-1)
+      apiFetch(`/notifications/${n.id}/read`, { method: 'PATCH', noRedirect: true }).catch(() => {})
+    }
+    const conversationId = n.metadata?.conversationId
+    if (conversationId) {
+      onClose()
+      navigate(`/dashboard/whatsapp?conversation=${encodeURIComponent(conversationId)}`)
+    } else if (n.metadata?.orderId) {
+      onClose()
+      navigate('/dashboard/orders')
+    }
+  }
+
+  const hasUnread = items.some(n => !n.read)
 
   return (
     <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
         <span className="text-sm font-semibold text-gray-900">Notifications</span>
-        <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 rounded-lg"><X size={14} /></button>
+        <div className="flex items-center gap-2">
+          {hasUnread && (
+            <button onClick={markAllRead} className="text-[11px] font-semibold hover:underline" style={{ color: '#4166F5' }}>
+              Mark all read
+            </button>
+          )}
+          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 rounded-lg"><X size={14} /></button>
+        </div>
       </div>
       <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
         {loading ? (
@@ -80,8 +109,13 @@ function NotificationPanel({ onClose }) {
         ) : items.map(n => {
           const cfg = NOTIF_ICONS[n.type] ?? NOTIF_ICONS.default
           const Icon = cfg.icon
+          const clickable = !!(n.metadata?.conversationId || n.metadata?.orderId)
           return (
-            <div key={n.id} className={`flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition ${!n.read ? 'bg-blue-50/40' : ''}`}>
+            <div
+              key={n.id}
+              onClick={() => handleClick(n)}
+              className={`flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition ${!n.read ? 'bg-blue-50/40' : ''} ${clickable ? 'cursor-pointer' : ''}`}
+            >
               <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: `${cfg.color}18` }}>
                 <Icon size={14} style={{ color: cfg.color }} />
               </div>
@@ -290,7 +324,7 @@ export default function BusinessLayout() {
           <div className="flex items-center gap-3 ml-auto">
             <div className="relative" ref={notifRef}>
               <button
-                onClick={() => { setNotifOpen(v => !v); if (!notifOpen) setUnread(0) }}
+                onClick={() => setNotifOpen(v => !v)}
                 className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-xl transition"
               >
                 <Bell size={18} />
@@ -300,7 +334,12 @@ export default function BusinessLayout() {
                   </span>
                 )}
               </button>
-              {notifOpen && <NotificationPanel onClose={() => setNotifOpen(false)} />}
+              {notifOpen && (
+                <NotificationPanel
+                  onClose={() => setNotifOpen(false)}
+                  onUnreadChange={(delta) => setUnread(u => Math.max(0, typeof delta === 'number' ? u + delta : 0))}
+                />
+              )}
             </div>
           </div>
         </header>
