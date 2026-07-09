@@ -373,7 +373,10 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
       </div>
 
       {/* ── Nav ── */}
-      <div className={`flex items-center justify-between border-b border-gray-100 relative ${isMobile ? 'px-4 py-3' : 'px-8 py-4'}`}>
+      {/* Sticky: without this, clicking About/Contact scrolls the nav itself
+          out of view (it sits above the target section in document flow),
+          leaving no way to click back to another section. */}
+      <div className={`sticky top-0 z-30 bg-white flex items-center justify-between border-b border-gray-100 ${isMobile ? 'px-4 py-3' : 'px-8 py-4'}`}>
         <div className="flex items-center gap-2.5 min-w-0">
           {logoUrl && <img src={logoUrl} alt="logo" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />}
           <div className="truncate" style={{ fontFamily: DISPLAY, fontWeight: 700, fontStyle: 'italic', color: INK, fontSize: isMobile ? 18 : 22 }}>
