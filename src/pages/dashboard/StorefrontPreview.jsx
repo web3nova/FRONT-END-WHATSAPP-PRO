@@ -191,24 +191,32 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
     setNavOpen(false)
   }
 
-  // Built-in labels reserved for the homepage sections (Sections tab) — a
-  // custom CMS page sharing one of these titles would otherwise render a
-  // second nav button with the same label, and since nav buttons are keyed
-  // by label, React reuses/misattributes the DOM node between them and
-  // navigation breaks after visiting the custom page. Skip the duplicate.
-  const RESERVED_NAV_LABELS = new Set(['home', 'shop', 'about', 'contact'])
+  // If a tenant names a custom CMS page "Home"/"Shop"/"About"/"Contact", that's
+  // a deliberate choice to replace the built-in homepage-section link with a
+  // full page — not a collision to hide. Without this, two nav buttons would
+  // share the same label; since nav buttons are keyed by label, React would
+  // misattribute the DOM node between them and navigation would break after
+  // visiting the custom page. Resolve it by letting the custom page win.
+  const pageByLabel = new Map(pages.map(p => [(p.title || '').trim().toLowerCase(), p]))
+  const openCustomPage = (p) => { setActivePage(p); setView('page'); setNavOpen(false) }
 
-  const navLinks = [
+  const builtInLinks = [
     { label: 'Home', action: () => scrollToSection('hero') },
     { label: 'Shop', action: () => goShop('all') },
     { label: 'About', action: () => scrollToSection('about') },
     { label: 'Contact', action: () => scrollToSection('contact') },
+  ].map(link => {
+    const override = pageByLabel.get(link.label.toLowerCase())
+    return override ? { label: link.label, action: () => openCustomPage(override) } : link
+  })
+
+  const RESERVED_NAV_LABELS = new Set(['home', 'shop', 'about', 'contact'])
+
+  const navLinks = [
+    ...builtInLinks,
     ...pages
       .filter(p => !RESERVED_NAV_LABELS.has((p.title || '').trim().toLowerCase()))
-      .map(p => ({
-        label: p.title,
-        action: () => { setActivePage(p); setView('page'); setNavOpen(false) },
-      })),
+      .map(p => ({ label: p.title, action: () => openCustomPage(p) })),
   ]
 
   // Everything a section component might need, built once. Keeps section
