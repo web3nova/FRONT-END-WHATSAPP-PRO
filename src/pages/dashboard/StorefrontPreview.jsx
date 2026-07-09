@@ -191,15 +191,24 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
     setNavOpen(false)
   }
 
+  // Built-in labels reserved for the homepage sections (Sections tab) — a
+  // custom CMS page sharing one of these titles would otherwise render a
+  // second nav button with the same label, and since nav buttons are keyed
+  // by label, React reuses/misattributes the DOM node between them and
+  // navigation breaks after visiting the custom page. Skip the duplicate.
+  const RESERVED_NAV_LABELS = new Set(['home', 'shop', 'about', 'contact'])
+
   const navLinks = [
     { label: 'Home', action: () => scrollToSection('hero') },
     { label: 'Shop', action: () => goShop('all') },
     { label: 'About', action: () => scrollToSection('about') },
     { label: 'Contact', action: () => scrollToSection('contact') },
-    ...pages.map(p => ({
-      label: p.title,
-      action: () => { setActivePage(p); setView('page'); setNavOpen(false) },
-    })),
+    ...pages
+      .filter(p => !RESERVED_NAV_LABELS.has((p.title || '').trim().toLowerCase()))
+      .map(p => ({
+        label: p.title,
+        action: () => { setActivePage(p); setView('page'); setNavOpen(false) },
+      })),
   ]
 
   // Everything a section component might need, built once. Keeps section
@@ -382,9 +391,9 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
         ) : (
           <>
             <div className="flex gap-7 text-xs font-semibold tracking-wide flex-shrink-0">
-              {navLinks.map(l => (
+              {navLinks.map((l, i) => (
                 <button
-                  key={l.label}
+                  key={`${l.label}-${i}`}
                   onClick={l.action}
                   className="transition pb-0.5"
                   style={(view === 'shop' && l.label === 'Shop') || (view === 'page' && l.label === activePage?.title)
@@ -421,8 +430,8 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
 
         {isMobile && navOpen && (
           <div className="absolute top-full left-0 right-0 bg-white border-b border-gray-100 shadow-sm z-10 flex flex-col py-2">
-            {navLinks.map(l => (
-              <button key={l.label} onClick={l.action} className="px-4 py-3 text-sm text-gray-700 text-left w-full hover:bg-gray-50">{l.label}</button>
+            {navLinks.map((l, i) => (
+              <button key={`${l.label}-${i}`} onClick={l.action} className="px-4 py-3 text-sm text-gray-700 text-left w-full hover:bg-gray-50">{l.label}</button>
             ))}
             <div className="px-4 py-2 border-t border-gray-50">
               <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-full px-3 py-2">
@@ -614,8 +623,8 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
 
           {/* Nav links */}
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-gray-400">
-            {navLinks.map(l => (
-              <button key={l.label} onClick={l.action} className="hover:text-gray-700 transition">{l.label}</button>
+            {navLinks.map((l, i) => (
+              <button key={`${l.label}-${i}`} onClick={l.action} className="hover:text-gray-700 transition">{l.label}</button>
             ))}
           </div>
 
