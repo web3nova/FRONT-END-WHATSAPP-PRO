@@ -372,13 +372,14 @@ export default function WhatsAppPage() {
     try {
       await createQuote({
         customerId: selected?.customer?.id,
-        status: 'draft',
+        conversationId: selectedId,
         amountMinor: Math.round(Number(quoteForm.amountNaira) * 100),
         currency: 'NGN',
         details: { item: quoteForm.description },
       })
       setShowQuoteModal(false)
       setQuoteForm({ description: '', amountNaira: '' })
+      alert('Quotation sent to customer via WhatsApp.')
     } catch (err) {
       setQuoteError(err.message)
     } finally {
