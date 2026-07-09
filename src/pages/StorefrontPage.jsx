@@ -6,7 +6,7 @@ import { THEMES } from '../lib/themes'
 import StorefrontPreview from './dashboard/StorefrontPreview'
 
 export default function StorefrontPage({ domain: domainProp } = {}) {
-  const { tenantId, pageSlug } = useParams()
+  const { tenantId } = useParams()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [data, setData] = useState(null)
@@ -123,7 +123,7 @@ export default function StorefrontPage({ domain: domainProp } = {}) {
           settings={settings}
           theme={activeTheme}
           pages={pages}
-          initialPageSlug={pageSlug}
+          routed
         />
       </div>
     </div>

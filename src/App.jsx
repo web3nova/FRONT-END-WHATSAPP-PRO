@@ -61,7 +61,20 @@ const isCustomDomain =
 
 export default function App() {
   if (isCustomDomain) {
-    return <StorefrontPage domain={hostname} />
+    // Custom-domain tenants have no /storefront/:tenantId prefix — the whole
+    // origin IS their storefront — but still need path-based routing for
+    // Home/Shop/custom-page URLs, so this gets its own minimal BrowserRouter
+    // rather than the app-wide one below (which also mounts auth/dashboard
+    // routes that make no sense on a tenant's custom domain).
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<StorefrontPage domain={hostname} />} />
+          <Route path="/shop" element={<StorefrontPage domain={hostname} />} />
+          <Route path="/:view" element={<StorefrontPage domain={hostname} />} />
+        </Routes>
+      </BrowserRouter>
+    )
   }
 
   return (
@@ -150,7 +163,7 @@ export default function App() {
               {/* Public Storefront Preview */}
 
               <Route
-                path="/storefront/:tenantId/:pageSlug?"
+                path="/storefront/:tenantId/:view?"
                 element={<StorefrontPage />}
               />
 

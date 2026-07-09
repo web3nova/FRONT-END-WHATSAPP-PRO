@@ -3,6 +3,7 @@ import {
   Search, User, ShoppingBag, ChevronLeft, ChevronRight, ArrowLeft,
 } from 'lucide-react'
 import { useState, useRef, useEffect, useMemo } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   DEFAULT_INK, DEFAULT_CREAM, DEFAULT_GOLD, DEFAULT_FONT, DEFAULT_RADIUS, BODY,
   isSectionActive, mixHexWithWhite, socialHref, isSoldOut, useThemeFont,
@@ -25,7 +26,99 @@ import ContactSection from './storefronts/sections/ContactSection'
 // section (settings.theme.sectionStyles). Nav and Footer are not variant-able
 // — one consistent frame holds together whatever mix of section styles sits
 // between them.
-export default function StorefrontPreview({ business, products, whatsapp, domain, device = 'desktop', settings, theme, pages = [], initialPageSlug }) {
+//
+// ── Dual-context navigation ─────────────────────────────────────────────
+// This component renders in two very different places:
+//   1. The live public storefront (StorefrontPage.jsx), where it sits under
+//      a real <BrowserRouter> and view changes (Home/Shop/custom page)
+//      should push shareable, deep-linkable URLs.
+//   2. The website builder's live mockup (Website.jsx / WebsitePreview.jsx),
+//      a fake-browser-chrome preview embedded in the dashboard. It is ALSO
+//      technically inside the app's <BrowserRouter> (the dashboard routes),
+//      so `useInRouterContext()` can't distinguish the two cases — it would
+//      return true in both, and real navigation there would hijack the
+//      merchant's dashboard URL.
+//
+// The caller disambiguates explicitly via the `routed` prop (default false).
+// Since React hooks can't be called conditionally, the two behaviors are
+// split into sibling components — RoutedStorefrontPreview (calls
+// useNavigate/useParams, always rendered inside a Router because `routed`
+// is only ever true from StorefrontPage.jsx) and UnroutedStorefrontPreview
+// (plain useState, zero router hooks, used everywhere else including the
+// builder preview) — both delegating to the shared `StorefrontPreviewBody`
+// for the ~650 lines of render JSX so nothing is duplicated.
+export default function StorefrontPreview(props) {
+  return props.routed
+    ? <RoutedStorefrontPreview {...props} />
+    : <UnroutedStorefrontPreview {...props} />
+}
+
+function RoutedStorefrontPreview(props) {
+  const { pages = [] } = props
+  const { tenantId, view: viewParam } = useParams()
+  const navigate = useNavigate()
+
+  const [view, setView] = useState('home')
+  const [activePage, setActivePage] = useState(null)
+  const [shopCategory, setShopCategory] = useState('all')
+
+  // URL is the source of truth: read :view on mount and whenever it changes
+  // (browser back/forward, or a navigate() call below) and derive view state.
+  useEffect(() => {
+    if (!viewParam) {
+      setView('home')
+      setActivePage(null)
+      return
+    }
+    if (viewParam === 'shop') {
+      setView('shop')
+      setActivePage(null)
+      return
+    }
+    // Custom page slug. `pages` may still be loading on first mount — this
+    // effect re-runs once it arrives (see dependency array) so direct links
+    // to a page slug still deep-link correctly once data lands.
+    const match = pages.find(p => p.slug === viewParam)
+    if (match) {
+      setActivePage(match)
+      setView('page')
+    }
+  }, [viewParam, pages])
+
+  const base = tenantId ? `/storefront/${tenantId}` : ''
+  const homePath = base || '/'
+  const shopPath = `${base}/shop`
+  const pagePath = (slug) => `${base}/${slug}`
+
+  const nav = {
+    view, activePage, shopCategory, setShopCategory,
+    // Guard against re-pushing the same route on every call (e.g. typing in
+    // the search box calls navigateShop on each keystroke) — only push a
+    // new history entry when the target view actually differs.
+    navigateHome: () => { if (viewParam) navigate(homePath) },
+    navigateShop: () => { if (viewParam !== 'shop') navigate(shopPath) },
+    navigateToPage: (page) => { if (viewParam !== page.slug) navigate(pagePath(page.slug)) },
+  }
+
+  return <StorefrontPreviewBody {...props} nav={nav} />
+}
+
+function UnroutedStorefrontPreview(props) {
+  const [view, setView] = useState('home')
+  const [activePage, setActivePage] = useState(null)
+  const [shopCategory, setShopCategory] = useState('all')
+
+  const nav = {
+    view, activePage, shopCategory, setShopCategory,
+    navigateHome: () => { setView('home'); setActivePage(null) },
+    navigateShop: () => setView('shop'),
+    navigateToPage: (page) => { setActivePage(page); setView('page') },
+  }
+
+  return <StorefrontPreviewBody {...props} nav={nav} />
+}
+
+function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 'desktop', settings, theme, pages = [], nav }) {
   const INK = theme?.ink || DEFAULT_INK
   const GOLD = theme?.accent || DEFAULT_GOLD
   const CREAM = theme?.soft || DEFAULT_CREAM
@@ -53,23 +146,10 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
   const [navOpen, setNavOpen] = useState(false)
   const [announceIdx, setAnnounceIdx] = useState(0)
   const [testiIdx, setTestiIdx] = useState(0)
-  const [view, setView] = useState('home')           // 'home' | 'shop' | 'page'
+  const { view, activePage, shopCategory, setShopCategory, navigateHome, navigateShop, navigateToPage } = nav
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [shopCategory, setShopCategory] = useState('all')
   const [selectedAttrs, setSelectedAttrs] = useState({})
-  const [activePage, setActivePage] = useState(null)
-
-  // Direct-link support: if the URL named a custom page slug, jump straight to
-  // it once that page's data has arrived (pages may still be loading on mount).
-  useEffect(() => {
-    if (!initialPageSlug) return
-    const match = pages.find(p => p.slug === initialPageSlug)
-    if (match) {
-      setActivePage(match)
-      setView('page')
-    }
-  }, [initialPageSlug, pages])
 
   const isMobile = device === 'mobile'
 
@@ -78,7 +158,7 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
 
   const scrollToSection = (key) => {
     setNavOpen(false)
-    setView('home')
+    navigateHome()
     setTimeout(() => {
       document.getElementById(sectionId(key))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, 50)
@@ -187,7 +267,7 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
 
   function goShop(category) {
     setShopCategory(category || 'all')
-    setView('shop')
+    navigateShop()
     setNavOpen(false)
   }
 
@@ -198,7 +278,7 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
   // misattribute the DOM node between them and navigation would break after
   // visiting the custom page. Resolve it by letting the custom page win.
   const pageByLabel = new Map(pages.map(p => [(p.title || '').trim().toLowerCase(), p]))
-  const openCustomPage = (p) => { setActivePage(p); setView('page'); setNavOpen(false) }
+  const openCustomPage = (p) => { navigateToPage(p); setNavOpen(false) }
 
   const builtInLinks = [
     { label: 'Home', action: () => scrollToSection('hero') },
@@ -459,7 +539,7 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
                   className="bg-transparent outline-none w-full text-xs text-gray-700 placeholder:text-gray-400"
                   placeholder="Search products"
                   value={searchQuery}
-                  onChange={e => { setSearchQuery(e.target.value); if (e.target.value) setView('shop') }}
+                  onChange={e => { setSearchQuery(e.target.value); if (e.target.value) navigateShop() }}
                 />
                 {searchQuery && (
                   <button onClick={() => setSearchQuery('')} className="text-gray-400 hover:text-gray-600 flex-shrink-0"><X size={11} /></button>
@@ -488,7 +568,7 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
                   className="bg-transparent outline-none w-full text-xs text-gray-700 placeholder:text-gray-400"
                   placeholder="Search products"
                   value={searchQuery}
-                  onChange={e => { setSearchQuery(e.target.value); if (e.target.value) { setView('shop'); setNavOpen(false) } }}
+                  onChange={e => { setSearchQuery(e.target.value); if (e.target.value) { navigateShop(); setNavOpen(false) } }}
                 />
               </div>
             </div>
@@ -510,7 +590,7 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
       {view === 'page' && activePage && (
         <div className={isMobile ? 'px-5 py-6' : 'px-8 py-8'}>
           <button
-            onClick={() => { setView('home'); setActivePage(null) }}
+            onClick={() => navigateHome()}
             className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition mb-6"
           >
             <ArrowLeft size={15} /> Back to Home
@@ -565,7 +645,7 @@ export default function StorefrontPreview({ business, products, whatsapp, domain
       {view === 'shop' && (
         <div className={isMobile ? 'px-5 py-6' : 'px-8 py-8'}>
           <button
-            onClick={() => { setView('home'); setSearchQuery(''); setShopCategory('all') }}
+            onClick={() => { navigateHome(); setSearchQuery(''); setShopCategory('all') }}
             className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition mb-6"
           >
             <ArrowLeft size={15} /> Back to Home
