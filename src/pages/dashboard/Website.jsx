@@ -332,6 +332,7 @@ export default function Website() {
         body: JSON.stringify({ sections: sections.map((s, idx) => ({ id: s.id, name: s.name, active: updated[idx] })) }),
       })
       if (!res.ok) throw new Error('Save failed')
+      setSettings(s => ({ ...(s || {}), hasUnpublishedChanges: true }))
     } catch (err) {
       console.error('Failed to save section visibility:', err)
       setActiveSectionFlags(previous)
@@ -369,6 +370,7 @@ export default function Website() {
         body: JSON.stringify({ sections: reordered.map((s, idx) => ({ id: s.id, name: s.name, active: reorderedFlags[idx] })) }),
       })
       if (!res.ok) throw new Error('Save failed')
+      setSettings(s => ({ ...(s || {}), hasUnpublishedChanges: true }))
     } catch (err) {
       console.error('Failed to reorder sections:', err)
       setSections(previousSections)
@@ -434,7 +436,7 @@ export default function Website() {
         body: JSON.stringify({ navigation: cleaned }),
       })
       if (!res.ok) throw new Error('Save failed')
-      setSettings(s => ({ ...s, navigation: cleaned }))
+      setSettings(s => ({ ...s, navigation: cleaned, hasUnpublishedChanges: true }))
     } catch (err) {
       console.error('Failed to save navigation:', err)
       setSaveError('Could not save that change. Please try again.')
@@ -457,7 +459,7 @@ export default function Website() {
         body: JSON.stringify({ navigation: [] }),
       })
       if (!res.ok) throw new Error('Save failed')
-      setSettings(s => ({ ...s, navigation: [] }))
+      setSettings(s => ({ ...s, navigation: [], hasUnpublishedChanges: true }))
       setNavDraft(null)
     } catch (err) {
       console.error('Failed to reset navigation:', err)
@@ -474,8 +476,9 @@ export default function Website() {
   const selectTemplate = async (templateId) => {
     if (savingSettings) return
     const previousTheme = settings?.theme || {}
+    const previousHasUnpublishedChanges = settings?.hasUnpublishedChanges
     const updatedTheme = { ...previousTheme, templateId, customTheme: {} }
-    setSettings(s => ({ ...(s || {}), theme: updatedTheme }))
+    setSettings(s => ({ ...(s || {}), theme: updatedTheme, hasUnpublishedChanges: true }))
     const token = getStoredAccessToken()
     if (!token) return
     setSavingSettings(true)
@@ -489,28 +492,38 @@ export default function Website() {
       if (!res.ok) throw new Error('Save failed')
     } catch (err) {
       console.error('Failed to save template:', err)
-      setSettings(s => ({ ...(s || {}), theme: previousTheme }))
+      setSettings(s => ({ ...(s || {}), theme: previousTheme, hasUnpublishedChanges: previousHasUnpublishedChanges }))
       setSaveError('Could not save that template. Please try again.')
     } finally {
       setSavingSettings(false)
     }
   }
 
-  // Flip the site from draft to live. Same guard/error pattern as selectTemplate.
-  const publish = async () => {
+  // Promote the staged draft onto the live site. Same guard/error pattern as
+  // selectTemplate. A never-before-published site also needs an explicit
+  // `published: true` write, since promoting the draft alone only updates
+  // the live columns' content — it doesn't flip the live/draft flag itself.
+  const publishChanges = async () => {
     if (savingSettings) return
     const token = getStoredAccessToken()
     if (!token) return
     setSavingSettings(true)
     setSaveError('')
     try {
-      const res = await fetch(`${API_BASE}/website/settings`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ published: true }),
+      const res = await fetch(`${API_BASE}/website/settings/publish`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) throw new Error('Publish failed')
-      setSettings(s => ({ ...(s || {}), published: true }))
+      if (!settings?.published) {
+        const flip = await fetch(`${API_BASE}/website/settings`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ published: true }),
+        })
+        if (!flip.ok) throw new Error('Publish failed')
+      }
+      setSettings(s => ({ ...(s || {}), published: true, hasUnpublishedChanges: false }))
     } catch (err) {
       console.error('Failed to publish:', err)
       setSaveError('Could not publish. Please try again.')
@@ -547,7 +560,7 @@ export default function Website() {
         body: JSON.stringify({ seo, social }),
       })
       if (!res.ok) throw new Error('Save failed')
-      setSettings(s => ({ ...(s || {}), seo, social }))
+      setSettings(s => ({ ...(s || {}), seo, social, hasUnpublishedChanges: true }))
       setDesignForm({})
     } catch (err) {
       console.error('Failed to save SEO/social:', err)
@@ -581,7 +594,7 @@ export default function Website() {
         body: JSON.stringify({ theme: { ...currentTheme, customTheme } }),
       })
       if (!res.ok) throw new Error('Save failed')
-      setSettings(s => ({ ...(s || {}), theme: { ...currentTheme, customTheme } }))
+      setSettings(s => ({ ...(s || {}), theme: { ...currentTheme, customTheme }, hasUnpublishedChanges: true }))
       setCustomThemeForm({})
     } catch (err) {
       console.error('Failed to save custom theme:', err)
@@ -606,7 +619,7 @@ export default function Website() {
         body: JSON.stringify({ theme: { ...currentTheme, customTheme: {} } }),
       })
       if (!res.ok) throw new Error('Reset failed')
-      setSettings(s => ({ ...(s || {}), theme: { ...currentTheme, customTheme: {} } }))
+      setSettings(s => ({ ...(s || {}), theme: { ...currentTheme, customTheme: {} }, hasUnpublishedChanges: true }))
       setCustomThemeForm({})
     } catch (err) {
       console.error('Failed to reset custom theme:', err)
@@ -623,8 +636,9 @@ export default function Website() {
   const applyOutlookToAll = async (id) => {
     if (savingSettings) return
     const previousTheme = settings?.theme || {}
+    const previousHasUnpublishedChanges = settings?.hasUnpublishedChanges
     const updatedTheme = { ...previousTheme, sectionStyles: Object.fromEntries(SECTION_SLOTS.map(s => [s.key, id])) }
-    setSettings(s => ({ ...(s || {}), theme: updatedTheme }))
+    setSettings(s => ({ ...(s || {}), theme: updatedTheme, hasUnpublishedChanges: true }))
     const token = getStoredAccessToken()
     if (!token) return
     setSavingSettings(true)
@@ -638,7 +652,7 @@ export default function Website() {
       if (!res.ok) throw new Error('Save failed')
     } catch (err) {
       console.error('Failed to apply outlook:', err)
-      setSettings(s => ({ ...(s || {}), theme: previousTheme }))
+      setSettings(s => ({ ...(s || {}), theme: previousTheme, hasUnpublishedChanges: previousHasUnpublishedChanges }))
       setSaveError('Could not apply that look. Please try again.')
     } finally {
       setSavingSettings(false)
@@ -650,8 +664,9 @@ export default function Website() {
   const setSectionStyle = async (key, variant) => {
     if (savingSettings) return
     const previousTheme = settings?.theme || {}
+    const previousHasUnpublishedChanges = settings?.hasUnpublishedChanges
     const updatedTheme = { ...previousTheme, sectionStyles: { ...(previousTheme.sectionStyles || {}), [key]: variant } }
-    setSettings(s => ({ ...(s || {}), theme: updatedTheme }))
+    setSettings(s => ({ ...(s || {}), theme: updatedTheme, hasUnpublishedChanges: true }))
     const token = getStoredAccessToken()
     if (!token) return
     setSavingSettings(true)
@@ -665,7 +680,7 @@ export default function Website() {
       if (!res.ok) throw new Error('Save failed')
     } catch (err) {
       console.error('Failed to save section style:', err)
-      setSettings(s => ({ ...(s || {}), theme: previousTheme }))
+      setSettings(s => ({ ...(s || {}), theme: previousTheme, hasUnpublishedChanges: previousHasUnpublishedChanges }))
       setSaveError('Could not save that change. Please try again.')
     } finally {
       setSavingSettings(false)
@@ -679,6 +694,7 @@ export default function Website() {
     if (savingSettings) return
     if (!window.confirm(`Apply the "${tpl.name}" starter template? This overwrites your current color theme, section styles, and section order/visibility.`)) return
     const previousTheme = settings?.theme || {}
+    const previousHasUnpublishedChanges = settings?.hasUnpublishedChanges
     const previousSections = sections
     const previousFlags = activeSectionFlags
     const { templateId, sectionStyles: newSectionStyles, sectionOrder, activeOverrides } = tpl.bundle
@@ -688,7 +704,7 @@ export default function Website() {
       const active = id in activeOverrides ? activeOverrides[id] : base.active
       return { ...base, active }
     })
-    setSettings(s => ({ ...(s || {}), theme: updatedTheme }))
+    setSettings(s => ({ ...(s || {}), theme: updatedTheme, hasUnpublishedChanges: true }))
     setSections(orderedSections)
     setActiveSectionFlags(orderedSections.map(s => s.active))
     const token = getStoredAccessToken()
@@ -707,7 +723,7 @@ export default function Website() {
       if (!res.ok) throw new Error('Save failed')
     } catch (err) {
       console.error('Failed to apply starter template:', err)
-      setSettings(s => ({ ...(s || {}), theme: previousTheme }))
+      setSettings(s => ({ ...(s || {}), theme: previousTheme, hasUnpublishedChanges: previousHasUnpublishedChanges }))
       setSections(previousSections)
       setActiveSectionFlags(previousFlags)
       setSaveError('Could not apply that starter template. Please try again.')
@@ -878,7 +894,7 @@ export default function Website() {
       const json = await res.json().catch(() => null)
       if (!res.ok) throw new Error(json?.message || 'Could not restore that version.')
       const restored = json?.data || json
-      setSettings(restored)
+      setSettings({ ...restored, hasUnpublishedChanges: false })
       if (Array.isArray(restored?.sections) && restored.sections.length) {
         const merged = defaultSections.map(ds => {
           const found = restored.sections.find(s => s.name === ds.name || s.id === ds.id)
@@ -1119,13 +1135,13 @@ export default function Website() {
             <Eye size={15} /> Preview
           </button>
           <button
-            onClick={publish}
-            disabled={savingSettings || settings?.published}
+            onClick={publishChanges}
+            disabled={savingSettings || (settings?.published && !settings?.hasUnpublishedChanges)}
             className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 sm:py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90 active:opacity-80 transition disabled:opacity-60"
             style={{ background: PRIMARY }}
           >
             {savingSettings ? <Loader size={15} className="animate-spin" /> : <Globe size={15} />}
-            {settings?.published ? 'Published' : savingSettings ? 'Publishing...' : 'Publish Changes'}
+            {settings?.published && !settings?.hasUnpublishedChanges ? 'Published' : savingSettings ? 'Publishing...' : 'Publish Changes'}
           </button>
         </div>
       </div>
@@ -1152,6 +1168,12 @@ export default function Website() {
             <div className="flex items-center gap-1.5 text-xs font-semibold flex-shrink-0" style={{ color: PRIMARY }}>
               <CheckCircle size={14} /> {settings?.published ? 'Live' : 'Draft'}
             </div>
+            {settings?.published && settings?.hasUnpublishedChanges ? (
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 flex-shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                Unpublished changes
+              </div>
+            ) : null}
             <button
               onClick={() => {
                 const url = business?.domain
