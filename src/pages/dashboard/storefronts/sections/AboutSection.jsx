@@ -6,16 +6,16 @@ export default function AboutSection({ variant, ctx }) {
 
 // Magazine: big 2-col editorial spread with generous whitespace.
 function MagazineAbout({ ctx }) {
-  const { isMobile, sectionId, DISPLAY, INK, brandName, aboutText, logoUrl } = ctx
+  const { isMobile, sectionId, DISPLAY, INK, brandName, aboutText, aboutTitle, aboutImage } = ctx
   return (
     <div id={sectionId('about')} className={`grid gap-10 items-center ${isMobile ? 'grid-cols-1 px-5 py-14' : 'grid-cols-2 px-10 py-24'}`}>
       <div className={`overflow-hidden aspect-[3/4] bg-gray-50 ${isMobile ? 'order-2' : 'order-1'}`}>
-        {logoUrl
-          ? <img src={logoUrl} alt={brandName} className="w-full h-full object-cover" />
+        {aboutImage
+          ? <img src={aboutImage} alt={brandName} className="w-full h-full object-cover" />
           : <div style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700 }} className="w-full h-full flex items-center justify-center text-6xl opacity-10">{brandName.slice(0, 2).toUpperCase()}</div>}
       </div>
       <div className={isMobile ? 'order-1' : 'order-2'}>
-        <div className="text-xs font-bold uppercase tracking-[0.2em] mb-4 text-gray-400">Our Story</div>
+        <div className="text-xs font-bold uppercase tracking-[0.2em] mb-4 text-gray-400">{aboutTitle}</div>
         <div className="mb-5 leading-tight" style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700, fontSize: isMobile ? 28 : 44, color: INK }}>{brandName}</div>
         <p className="text-base text-gray-600 leading-loose">{aboutText}</p>
       </div>
@@ -35,7 +35,7 @@ function CatalogAbout({ ctx }) {
 }
 
 function BoutiqueAbout({ ctx }) {
-  const { isMobile, sectionId, DISPLAY, INK, CREAM, brandName, aboutText, logoUrl } = ctx
+  const { isMobile, sectionId, DISPLAY, INK, CREAM, brandName, aboutText, aboutImage } = ctx
   return (
     <div id={sectionId('about')} className={`${isMobile ? 'px-5 py-8' : 'px-8 py-14'} grid gap-8 items-center ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`} style={{ background: CREAM }}>
       <div>
@@ -46,8 +46,8 @@ function BoutiqueAbout({ ctx }) {
         <p className="text-sm text-gray-600 leading-relaxed">{aboutText}</p>
       </div>
       <div className="rounded-[var(--sf-radius)] overflow-hidden aspect-video flex items-center justify-center bg-white">
-        {logoUrl
-          ? <img src={logoUrl} alt={brandName} className="w-full h-full object-cover" />
+        {aboutImage
+          ? <img src={aboutImage} alt={brandName} className="w-full h-full object-cover" />
           : <div style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700 }} className="text-4xl opacity-20">{brandName.slice(0, 2).toUpperCase()}</div>}
       </div>
     </div>

@@ -214,6 +214,8 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const heroBgImage = hero.bgImage || ''
 
   const aboutText = builder.about?.text || business?.description || ''
+  const aboutTitle = (builder.about?.title || '').trim() || 'Our Story'
+  const aboutImage = builder.about?.image || logoUrl
 
   const productsCfg = builder.products || {}
   const productCount = productsCfg.count || 8
@@ -379,7 +381,7 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
     INK, GOLD, CREAM, DISPLAY, radius, PASTELS, isMobile,
     brandName, tagline, logoUrl,
     heroHeadline, heroSubtitle, heroCta, heroBg, heroBg2, heroLayout, heroBgImage,
-    aboutText, productsTitle, productCount, products, categoryTags, showProducts,
+    aboutText, aboutTitle, aboutImage, productsTitle, productCount, products, categoryTags, showProducts,
     galleryImages, galleryTitle,
     testiIdx, setTestiIdx, testiPages, visibleTesti, testimonialItems, testimonialsTitle,
     address, instagram, social,

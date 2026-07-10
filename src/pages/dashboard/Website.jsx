@@ -1132,6 +1132,8 @@ export default function Website() {
       })
     } else if (s.id === 2) {
       setSectionForm({ productCount: b.products?.count || 8, productsTitle: b.products?.title || '' })
+    } else if (s.id === 3) {
+      setSectionForm({ about: b.about?.text || business?.description || '', aboutTitle: b.about?.title || '', aboutImage: b.about?.image || '' })
     } else if (s.id === 4) {
       setSectionForm({ galleryImages: [...(b.gallery?.images || [])], galleryTitle: b.gallery?.title || '', newImage: '' })
     } else if (s.id === 5) {
@@ -1192,12 +1194,25 @@ export default function Website() {
         if (!res.ok) throw new Error('Save failed')
       } else if (s.id === 3) {
         const desc = sectionForm.about ?? business?.description ?? ''
-        const res = await fetch(`${API_BASE}/business`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ description: desc }),
-        })
-        if (!res.ok) throw new Error('Save failed')
+        const prevAbout = builder.about || {}
+        builder.about = {
+          text: desc,
+          title: sectionForm.aboutTitle ?? prevAbout.title ?? '',
+          image: sectionForm.aboutImage ?? prevAbout.image ?? '',
+        }
+        const [bizRes, wsRes] = await Promise.all([
+          fetch(`${API_BASE}/business`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ description: desc }),
+          }),
+          fetch(`${API_BASE}/website/settings`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ theme: { ...currentTheme, builder } }),
+          }),
+        ])
+        if (!bizRes.ok || !wsRes.ok) throw new Error('Save failed')
         setBusiness(b => ({ ...b, description: desc }))
       } else if (s.id === 4) {
         builder.gallery = {
@@ -1280,7 +1295,11 @@ export default function Website() {
       title: sectionForm.productsTitle ?? baseBuilder.products?.title ?? '',
     }}
   } else if (editingSectionId === 3) {
-    liveBuilder = { ...baseBuilder, about: { text: sectionForm.about ?? business?.description ?? '' } }
+    liveBuilder = { ...baseBuilder, about: {
+      text: sectionForm.about ?? baseBuilder.about?.text ?? business?.description ?? '',
+      title: sectionForm.aboutTitle ?? baseBuilder.about?.title ?? '',
+      image: sectionForm.aboutImage ?? baseBuilder.about?.image ?? '',
+    }}
   } else if (editingSectionId === 4) {
     liveBuilder = { ...baseBuilder, gallery: {
       title: sectionForm.galleryTitle ?? baseBuilder.gallery?.title ?? '',
@@ -1780,16 +1799,31 @@ export default function Website() {
 
                           {/* --- About --- */}
                           {s.id === 3 && (
-                            <div>
-                              <label className="block text-xs font-semibold text-gray-500 mb-1">About text</label>
-                              <textarea
-                                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
-                                rows={3}
-                                placeholder="Tell your story..."
-                                value={sectionForm.about ?? business?.description ?? ''}
-                                onChange={e => setSectionForm(f => ({ ...f, about: e.target.value }))}
+                            <>
+                              <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Section title</label>
+                                <input className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                                  placeholder="Our Story"
+                                  value={sectionForm.aboutTitle ?? ''}
+                                  onChange={e => setSectionForm(f => ({ ...f, aboutTitle: e.target.value }))} />
+                              </div>
+                              <ImageUploadField
+                                label="Section image (optional)"
+                                value={sectionForm.aboutImage ?? settings?.theme?.builder?.about?.image ?? ''}
+                                onChange={val => setSectionForm(f => ({ ...f, aboutImage: typeof val === 'string' ? val : val.url }))}
+                                hint="Recommended: square, about 800×800. Leave empty to use your logo."
                               />
-                            </div>
+                              <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">About text</label>
+                                <textarea
+                                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                                  rows={3}
+                                  placeholder="Tell your story..."
+                                  value={sectionForm.about ?? business?.description ?? ''}
+                                  onChange={e => setSectionForm(f => ({ ...f, about: e.target.value }))}
+                                />
+                              </div>
+                            </>
                           )}
 
                           {/* --- Gallery --- */}
