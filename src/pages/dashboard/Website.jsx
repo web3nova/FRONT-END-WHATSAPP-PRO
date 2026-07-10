@@ -1980,27 +1980,55 @@ export default function Website() {
                                 />
                               </div>
                               <div className="space-y-2">
-                                {(sectionForm.testimonialItems || []).map((t, idx) => (
-                                  <div key={t.id || idx} className="flex items-start gap-2 bg-white border border-gray-200 rounded-lg p-2.5">
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-1 mb-1">
-                                        {Array.from({ length: 5 }).map((_, si) => (
-                                          <Star key={si} size={11} fill={si < (t.rating || 5) ? '#F0A93A' : 'none'} style={{ color: '#F0A93A' }} />
-                                        ))}
+                                {/* Saved testimonials are edited in place — every field
+                                    writes straight into testimonialItems[idx]. */}
+                                {(sectionForm.testimonialItems || []).map((t, idx) => {
+                                  const patchItem = (patch) => setSectionForm(f => ({
+                                    ...f,
+                                    testimonialItems: f.testimonialItems.map((it, j) => (j === idx ? { ...it, ...patch } : it)),
+                                  }))
+                                  return (
+                                    <div key={t.id || idx} className="bg-white border border-gray-200 rounded-lg p-2.5 space-y-2">
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1">
+                                          {Array.from({ length: 5 }).map((_, si) => (
+                                            <button key={si} type="button" onClick={() => patchItem({ rating: si + 1 })} aria-label={`${si + 1} star${si ? 's' : ''}`} className="p-0.5 -m-0.5">
+                                              <Star size={11} fill={si < (t.rating || 5) ? '#F0A93A' : 'none'} style={{ color: '#F0A93A' }} />
+                                            </button>
+                                          ))}
+                                        </div>
+                                        <button
+                                          onClick={() => setSectionForm(f => ({ ...f, testimonialItems: f.testimonialItems.filter((_, j) => j !== idx) }))}
+                                          aria-label="Remove testimonial"
+                                          className="text-gray-300 hover:text-red-500 p-1 flex-shrink-0"
+                                        >
+                                          <Trash2 size={13} />
+                                        </button>
                                       </div>
-                                      <div className="text-xs text-gray-600 truncate">"{t.text}"</div>
-                                      <div className="text-xs font-semibold text-gray-900 mt-0.5">{t.name}</div>
-                                      {t.role && <div className="text-[11px] text-gray-400">{t.role}</div>}
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <input
+                                          className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-500"
+                                          placeholder="Name"
+                                          value={t.name ?? ''}
+                                          onChange={e => patchItem({ name: e.target.value })}
+                                        />
+                                        <input
+                                          className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-500"
+                                          placeholder="Role / location (optional)"
+                                          value={t.role ?? ''}
+                                          onChange={e => patchItem({ role: e.target.value })}
+                                        />
+                                      </div>
+                                      <textarea
+                                        className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-500"
+                                        rows={2}
+                                        placeholder="What they said"
+                                        value={t.text ?? ''}
+                                        onChange={e => patchItem({ text: e.target.value })}
+                                      />
                                     </div>
-                                    <button
-                                      onClick={() => setSectionForm(f => ({ ...f, testimonialItems: f.testimonialItems.filter((_, j) => j !== idx) }))}
-                                      aria-label="Remove testimonial"
-                                      className="text-gray-300 hover:text-red-500 p-1 flex-shrink-0"
-                                    >
-                                      <Trash2 size={13} />
-                                    </button>
-                                  </div>
-                                ))}
+                                  )
+                                })}
                               </div>
                               <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
                                 <div className="text-xs font-semibold text-gray-500">Add a testimonial</div>
