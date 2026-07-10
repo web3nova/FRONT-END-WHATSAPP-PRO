@@ -1,5 +1,5 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { GoogleMark, Stars } from '../shared'
+import { ChevronLeft, ChevronRight, BadgeCheck } from 'lucide-react'
+import { Stars } from '../shared'
 
 export default function TestimonialsSection({ variant, ctx }) {
   if (variant === 'catalog') return <CatalogTestimonials ctx={ctx} />
@@ -61,7 +61,11 @@ function BoutiqueTestimonials({ ctx }) {
         <div className={`grid gap-4 flex-1 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
           {visibleTesti.map((t, i) => (
             <div key={t.id || i} className="rounded-[var(--sf-radius)] p-6 text-center" style={{ background: '#F4F4F2' }}>
-              <div className="flex justify-center mb-2"><GoogleMark size={20} /></div>
+              {/* Verified-buyer mark — honest trust signal (the old hardcoded
+                  Google logo implied a review source that didn't exist). */}
+              <div className="flex justify-center mb-2" title="Verified customer">
+                <BadgeCheck size={18} style={{ color: INK, opacity: 0.55 }} />
+              </div>
               <Stars value={t.rating || 5} size={13} color={INK} />
               <div className="text-sm font-semibold mt-3" style={{ fontFamily: DISPLAY, fontStyle: 'italic' }}>
                 {t.name || 'Happy customer'}
