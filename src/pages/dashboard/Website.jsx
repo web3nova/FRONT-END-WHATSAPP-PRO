@@ -7,7 +7,7 @@ import { THEMES, FONT_OPTIONS, RADIUS_OPTIONS } from '../../lib/themes'
 import { STARTER_TEMPLATES, recommendedStarterTemplateId } from '../../lib/starterTemplates'
 import ImageUploadField from '../../components/ImageUploadField'
 import StorefrontPreview from './StorefrontPreview'
-import { SECTION_TYPES } from './storefronts/sectionRegistry'
+import { SECTION_TYPES, sectionByType } from './storefronts/sectionRegistry'
 
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
@@ -57,6 +57,7 @@ const BLOCK_TYPES = [
   { type: 'heading', label: 'Heading' },
   { type: 'paragraph', label: 'Paragraph' },
   { type: 'image', label: 'Image' },
+  { type: 'section', label: 'Section' },
 ]
 
 function newBlockKey() {
@@ -64,6 +65,9 @@ function newBlockKey() {
 }
 
 function emptyBlock(type) {
+  if (type === 'section') {
+    return { _key: newBlockKey(), type, sectionType: 'products', variant: 'boutique' }
+  }
   return { _key: newBlockKey(), type, text: '', url: '', storageKey: '' }
 }
 
@@ -177,6 +181,37 @@ function PageForm({ pageForm, setPageForm, isNew }) {
                     ? { url: val, storageKey: '' }
                     : { url: val.url, storageKey: val.storageKey || '' })}
                 />
+              )}
+              {b.type === 'section' && (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      className="w-full text-sm border border-gray-200 rounded-lg px-2.5 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                      value={b.sectionType || 'products'}
+                      onChange={e => {
+                        const entry = sectionByType[e.target.value]
+                        const variant = entry?.variants?.includes(b.variant) ? b.variant : (entry?.variants?.[0] || 'boutique')
+                        updateBlock(i, { sectionType: e.target.value, variant })
+                      }}
+                    >
+                      {SECTION_TYPES.map(s => (
+                        <option key={s.type} value={s.type}>{s.name}</option>
+                      ))}
+                    </select>
+                    <select
+                      className="w-full text-sm border border-gray-200 rounded-lg px-2.5 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                      value={b.variant || 'boutique'}
+                      onChange={e => updateBlock(i, { variant: e.target.value })}
+                    >
+                      {(sectionByType[b.sectionType]?.variants || ['boutique', 'catalog', 'magazine']).map(v => (
+                        <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-snug">
+                    Shows your live storefront section — same content as the homepage version.
+                  </p>
+                </div>
               )}
             </div>
           ))}
@@ -781,7 +816,10 @@ export default function Website() {
     try {
       const isNew = editingPageSlug === 'new'
       const blocks = (pageForm.blocks || [])
-        .filter(b => (b.type === 'image' ? b.url : (b.text || '').trim()))
+        .filter(b => {
+          if (b.type === 'section') return !!b.sectionType
+          return b.type === 'image' ? b.url : (b.text || '').trim()
+        })
         .map(({ _key, ...b }) => b)
       const content = { blocks }
       const res = await fetch(`${API_BASE}/website/pages${isNew ? '' : `/${editingPageSlug}`}`, {

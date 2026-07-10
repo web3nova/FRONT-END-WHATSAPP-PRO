@@ -11,7 +11,7 @@ import {
 } from './storefronts/shared'
 import HeroSection from './storefronts/sections/HeroSection'
 import { ProductCard } from './storefronts/sections/ProductsSection'
-import { sectionByLegacyId, DEFAULT_REORDERABLE_ORDER } from './storefronts/sectionRegistry'
+import { sectionByLegacyId, sectionByType, DEFAULT_REORDERABLE_ORDER } from './storefronts/sectionRegistry'
 
 // This component is the storefront's orchestrator: it owns the shared
 // Nav/Footer chrome and all cross-section state (view, selected product,
@@ -593,40 +593,58 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
       {/* CUSTOM PAGE VIEW                           */}
       {/* ══════════════════════════════════════════ */}
       {view === 'page' && activePage && (
-        <div className={isMobile ? 'px-5 py-6' : 'px-8 py-8'}>
-          <button
-            onClick={() => navigateHome()}
-            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition mb-6"
-          >
-            <ArrowLeft size={15} /> Back to Home
-          </button>
+        <div>
+          <div className={isMobile ? 'px-5 pt-6' : 'px-8 pt-8'}>
+            <button
+              onClick={() => navigateHome()}
+              className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition mb-6"
+            >
+              <ArrowLeft size={15} /> Back to Home
+            </button>
 
-          <div className="mb-4" style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700, fontSize: isMobile ? 26 : 34, color: INK }}>
-            {activePage.title}
+            <div className="mb-4" style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700, fontSize: isMobile ? 26 : 34, color: INK }}>
+              {activePage.title}
+            </div>
           </div>
 
-          <div className="space-y-4 max-w-2xl">
+          <div className={isMobile ? 'space-y-4 pb-6' : 'space-y-4 pb-8'}>
             {activePage.content?.blocks?.length ? (
               activePage.content.blocks.map((b, i) => {
+                // Section blocks are full-bleed and render the same live
+                // storefront section as the homepage, unconstrained by the
+                // max-w-2xl column and side padding the text/image blocks
+                // sit in. Two instances of the same section type on one
+                // page would duplicate the ctx.sectionId(key) DOM id, but
+                // that only matters for homepage scroll anchors, so it's
+                // left as-is (acceptable edge case, not handled here).
+                if (b.type === 'section') {
+                  const entry = sectionByType[b.sectionType]
+                  if (!entry) return null
+                  const { Renderer } = entry
+                  return <Renderer key={i} variant={b.variant || 'boutique'} ctx={ctx} />
+                }
+                const wrapClass = isMobile ? 'px-5 max-w-2xl' : 'px-8 max-w-2xl'
                 if (b.type === 'heading') {
                   return (
-                    <div key={i} style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700, fontSize: isMobile ? 18 : 22, color: INK }}>
+                    <div key={i} className={wrapClass} style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700, fontSize: isMobile ? 18 : 22, color: INK }}>
                       {b.text}
                     </div>
                   )
                 }
                 if (b.type === 'image' && b.url) {
                   return (
-                    <img key={i} src={b.url} alt="" className="w-full rounded-[var(--sf-radius)] object-cover" style={{ maxHeight: 360 }} />
+                    <div key={i} className={wrapClass}>
+                      <img src={b.url} alt="" className="w-full rounded-[var(--sf-radius)] object-cover" style={{ maxHeight: 360 }} />
+                    </div>
                   )
                 }
                 return (
-                  <p key={i} className="text-sm leading-relaxed text-gray-600">{b.text}</p>
+                  <p key={i} className={`${wrapClass} text-sm leading-relaxed text-gray-600`}>{b.text}</p>
                 )
               })
             ) : (
               // Legacy pages saved before block-based content existed.
-              <>
+              <div className={`${isMobile ? 'px-5' : 'px-8'} max-w-2xl space-y-4`}>
                 {activePage.content?.image && (
                   <img
                     src={activePage.content.image}
@@ -638,7 +656,7 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
                 {(activePage.content?.body || '').split(/\n\s*\n/).filter(Boolean).map((para, i) => (
                   <p key={i} className="text-sm leading-relaxed text-gray-600">{para}</p>
                 ))}
-              </>
+              </div>
             )}
           </div>
         </div>
