@@ -79,7 +79,7 @@ function BoutiqueHero({ ctx }) {
   const {
     isMobile, sectionId, DISPLAY, INK,
     heroHeadline, heroSubtitle, heroCta, heroBg, heroBg2, heroLayout, heroBgImage,
-    aboutText, whatsapp, waLink, genericOrderMsg, goShop,
+    whatsapp, waLink, genericOrderMsg, goShop,
   } = ctx
 
   return (
@@ -113,11 +113,6 @@ function BoutiqueHero({ ctx }) {
         <div className="text-white mb-5 leading-tight" style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700, fontSize: isMobile ? 30 : 48 }}>
           {heroHeadline}
         </div>
-        {aboutText && (
-          <div className={`text-sm text-white/70 mb-7 ${heroLayout === 'left' ? 'max-w-md' : heroLayout === 'right' ? 'max-w-md ml-auto' : 'max-w-md mx-auto'}`}>
-            {aboutText.slice(0, isMobile ? 90 : 140)}{aboutText.length > (isMobile ? 90 : 140) ? '…' : ''}
-          </div>
-        )}
         <div className={`flex gap-3 flex-wrap ${heroLayout === 'left' ? '' : heroLayout === 'right' ? 'justify-end' : 'justify-center'}`}>
           {whatsapp ? (
             <a href={waLink(genericOrderMsg)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold px-6 py-3 rounded-full transition hover:opacity-90" style={{ background: '#fff', color: INK }}>

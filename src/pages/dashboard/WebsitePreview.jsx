@@ -79,7 +79,7 @@ export default function WebsitePreview() {
           className="flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition p-1.5 -m-1.5 flex-shrink-0"
         >
           <ArrowLeft size={17} />
-          <span className="hidden sm:inline">Back to editor</span>
+          <span>Editor</span>
         </button>
 
         <div className="flex-1 min-w-0 text-center sm:text-left">
