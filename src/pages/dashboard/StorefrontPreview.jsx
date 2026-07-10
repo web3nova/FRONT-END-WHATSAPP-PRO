@@ -209,6 +209,7 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const heroSubtitle = hero.subtitle || tagline
   const heroCta = hero.cta || 'Order Now'
   const heroBg = hero.bg || INK
+  const heroBg2 = hero.bg2 || ''
   const heroLayout = hero.layout || 'center'
   const heroBgImage = hero.bgImage || ''
 
@@ -377,7 +378,7 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const ctx = {
     INK, GOLD, CREAM, DISPLAY, radius, PASTELS, isMobile,
     brandName, tagline, logoUrl,
-    heroHeadline, heroSubtitle, heroCta, heroBg, heroLayout, heroBgImage,
+    heroHeadline, heroSubtitle, heroCta, heroBg, heroBg2, heroLayout, heroBgImage,
     aboutText, productsTitle, productCount, products, categoryTags, showProducts,
     galleryImages, galleryTitle,
     testiIdx, setTestiIdx, testiPages, visibleTesti, testimonialItems, testimonialsTitle,

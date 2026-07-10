@@ -1128,7 +1128,7 @@ export default function Website() {
     if (s.id === 1) {
       setSectionForm({
         headline: b.hero?.headline || '', subtitle: b.hero?.subtitle || '', cta: b.hero?.cta || '',
-        bg: b.hero?.bg || '', bgImage: b.hero?.bgImage || '', layout: b.hero?.layout || 'center',
+        bg: b.hero?.bg || '', bg2: b.hero?.bg2 || '', bgImage: b.hero?.bgImage || '', layout: b.hero?.layout || 'center',
       })
     } else if (s.id === 2) {
       setSectionForm({ productCount: b.products?.count || 8, productsTitle: b.products?.title || '' })
@@ -1169,6 +1169,7 @@ export default function Website() {
           subtitle: sectionForm.subtitle ?? hero.subtitle ?? '',
           cta: sectionForm.cta ?? hero.cta ?? '',
           bg: sectionForm.bg ?? hero.bg ?? '',
+          bg2: sectionForm.bg2 ?? hero.bg2 ?? '',
           bgImage: sectionForm.bgImage ?? hero.bgImage ?? '',
           layout: sectionForm.layout ?? hero.layout ?? 'center',
         }
@@ -1269,6 +1270,7 @@ export default function Website() {
       subtitle: sectionForm.subtitle ?? hero.subtitle ?? '',
       cta: sectionForm.cta ?? hero.cta ?? '',
       bg: sectionForm.bg ?? hero.bg ?? '',
+      bg2: sectionForm.bg2 ?? hero.bg2 ?? '',
       bgImage: sectionForm.bgImage ?? hero.bgImage ?? '',
       layout: sectionForm.layout ?? hero.layout ?? 'center',
     }}
@@ -1693,7 +1695,7 @@ export default function Website() {
                                 <div>
                                   <label className="block text-xs font-semibold text-gray-500 mb-1">Layout</label>
                                   <div className="flex gap-2">
-                                    {['center', 'left'].map(l => (
+                                    {['center', 'left', 'right'].map(l => (
                                       <button key={l} onClick={() => setSectionForm(f => ({ ...f, layout: l }))}
                                         className={`flex-1 py-2 text-xs font-semibold rounded-lg capitalize border transition ${
                                           (sectionForm.layout ?? settings?.theme?.builder?.hero?.layout ?? 'center') === l
@@ -1716,7 +1718,7 @@ export default function Website() {
                                     label="Image (optional)"
                                     value={sectionForm.bgImage ?? settings?.theme?.builder?.hero?.bgImage ?? ''}
                                     onChange={val => setSectionForm(f => ({ ...f, bgImage: typeof val === 'string' ? val : val.url }))}
-                                    hint="A dark overlay is applied automatically so the headline stays readable."
+                                    hint="Recommended: 1600×900 (landscape). A dark overlay is applied automatically so the headline stays readable."
                                   />
                                   <div className="flex items-center gap-3">
                                     <input
@@ -1730,6 +1732,19 @@ export default function Website() {
                                         ? 'Fallback colour, shown while the image loads or if it fails.'
                                         : 'No image set — the hero is a solid fill of this colour.'}
                                     </span>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <input
+                                      type="color"
+                                      className="w-9 h-9 rounded-lg border border-gray-200 cursor-pointer flex-shrink-0"
+                                      value={sectionForm.bg2 || settings?.theme?.builder?.hero?.bg2 || '#111827'}
+                                      onChange={e => setSectionForm(f => ({ ...f, bg2: e.target.value }))}
+                                    />
+                                    <span className="text-[11px] text-gray-400 leading-snug flex-1">Optional second colour — creates a gradient. </span>
+                                    {(sectionForm.bg2 ?? settings?.theme?.builder?.hero?.bg2) && (
+                                      <button type="button" onClick={() => setSectionForm(f => ({ ...f, bg2: '' }))}
+                                        className="text-[11px] font-semibold text-gray-400 hover:text-red-500 underline">Solid only</button>
+                                    )}
                                   </div>
                                 </div>
                               </div>

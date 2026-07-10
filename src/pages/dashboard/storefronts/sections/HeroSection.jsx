@@ -13,7 +13,7 @@ export default function HeroSection({ variant, ctx }) {
 // Magazine: oversized image, large overlapping serif headline, asymmetric —
 // text block anchored bottom-left over a wide two-thirds-width image feel.
 function MagazineHero({ ctx }) {
-  const { isMobile, sectionId, DISPLAY, INK, heroHeadline, heroSubtitle, heroCta, heroBg, heroBgImage, whatsapp, waLink, genericOrderMsg, goShop } = ctx
+  const { isMobile, sectionId, DISPLAY, INK, heroHeadline, heroSubtitle, heroCta, heroBg, heroBg2, heroBgImage, whatsapp, waLink, genericOrderMsg, goShop } = ctx
   return (
     <div
       id={sectionId('hero')}
@@ -22,7 +22,9 @@ function MagazineHero({ ctx }) {
         minHeight: isMobile ? 380 : 560,
         background: heroBgImage
           ? `linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.6)), url(${heroBgImage}) center/cover no-repeat`
-          : `linear-gradient(135deg, ${heroBg} 0%, ${heroBg}cc 100%)`,
+          : heroBg2
+            ? `linear-gradient(135deg, ${heroBg} 0%, ${heroBg2} 100%)`
+            : `linear-gradient(135deg, ${heroBg} 0%, ${heroBg}cc 100%)`,
       }}
     >
       <div className={isMobile ? 'px-5 pb-10 pt-16' : 'px-10 pb-14 pt-24'}>
@@ -76,7 +78,7 @@ function CatalogHero({ ctx }) {
 function BoutiqueHero({ ctx }) {
   const {
     isMobile, sectionId, DISPLAY, INK,
-    heroHeadline, heroSubtitle, heroCta, heroBg, heroLayout, heroBgImage,
+    heroHeadline, heroSubtitle, heroCta, heroBg, heroBg2, heroLayout, heroBgImage,
     aboutText, whatsapp, waLink, genericOrderMsg, goShop,
   } = ctx
 
@@ -86,10 +88,12 @@ function BoutiqueHero({ ctx }) {
       className={`relative overflow-hidden ${isMobile ? 'px-5 py-12' : 'px-8 py-20'}`}
       style={heroBgImage ? {
         background: `linear-gradient(180deg, rgba(15,23,42,0.35), rgba(15,23,42,0.6)), url(${heroBgImage}) center/cover no-repeat`,
-        textAlign: heroLayout === 'left' ? 'left' : 'center',
+        textAlign: heroLayout === 'left' ? 'left' : heroLayout === 'right' ? 'right' : 'center',
       } : {
-        background: `linear-gradient(135deg, ${heroBg} 0%, ${heroBg}cc 100%)`,
-        textAlign: heroLayout === 'left' ? 'left' : 'center',
+        background: heroBg2
+          ? `linear-gradient(135deg, ${heroBg} 0%, ${heroBg2} 100%)`
+          : `linear-gradient(135deg, ${heroBg} 0%, ${heroBg}cc 100%)`,
+        textAlign: heroLayout === 'left' ? 'left' : heroLayout === 'right' ? 'right' : 'center',
       }}
     >
       {heroBgImage && (
@@ -100,7 +104,7 @@ function BoutiqueHero({ ctx }) {
           {(heroSubtitle || heroHeadline).toUpperCase()}
         </div>
       )}
-      <div className={`relative ${heroLayout === 'left' ? '' : 'max-w-xl mx-auto'}`}>
+      <div className={`relative ${heroLayout === 'left' ? '' : heroLayout === 'right' ? 'max-w-xl ml-auto' : 'max-w-xl mx-auto'}`}>
         {heroSubtitle && (
           <div className="mb-3 text-white/85" style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontSize: isMobile ? 14 : 16 }}>
             {heroSubtitle}
@@ -110,11 +114,11 @@ function BoutiqueHero({ ctx }) {
           {heroHeadline}
         </div>
         {aboutText && (
-          <div className={`text-sm text-white/70 mb-7 ${heroLayout === 'left' ? 'max-w-md' : 'max-w-md mx-auto'}`}>
+          <div className={`text-sm text-white/70 mb-7 ${heroLayout === 'left' ? 'max-w-md' : heroLayout === 'right' ? 'max-w-md ml-auto' : 'max-w-md mx-auto'}`}>
             {aboutText.slice(0, isMobile ? 90 : 140)}{aboutText.length > (isMobile ? 90 : 140) ? '…' : ''}
           </div>
         )}
-        <div className={`flex gap-3 flex-wrap ${heroLayout === 'left' ? '' : 'justify-center'}`}>
+        <div className={`flex gap-3 flex-wrap ${heroLayout === 'left' ? '' : heroLayout === 'right' ? 'justify-end' : 'justify-center'}`}>
           {whatsapp ? (
             <a href={waLink(genericOrderMsg)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold px-6 py-3 rounded-full transition hover:opacity-90" style={{ background: '#fff', color: INK }}>
               {heroCta} <ArrowRight size={15} />
