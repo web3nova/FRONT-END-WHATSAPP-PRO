@@ -61,9 +61,14 @@ export default function WebsitePreview() {
     return () => { ignore = true }
   }, [])
 
-  const brandName = business?.displayName || 'Your Brand'
+  const _brandName = business?.displayName || 'Your Brand'
   const whatsapp = business?.whatsappNumber || ''
-  const domain = business?.domain || `${brandName.toLowerCase().replace(/\s+/g, '')}.web3nova.com`
+  // Same fallback as Website.jsx: custom domain if connected, else the
+  // platform-hosted storefront URL. Never a fabricated domain.
+  const liveUrl = business?.domain
+    ? `https://${business.domain}`
+    : `${window.location.origin}/storefront/${business?.tenantId || ''}`
+  const domain = business?.domain || `${window.location.host}/storefront/${business?.tenantId || ''}`
   const activeTheme = { ...(THEMES[settings?.theme?.templateId] || THEMES.minimal), ...(settings?.theme?.customTheme || {}), sectionStyles: settings?.theme?.sectionStyles || {} }
 
   return (
@@ -103,7 +108,7 @@ export default function WebsitePreview() {
         </div>
 
         <a
-          href={`https://${domain}`}
+          href={liveUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1.5 text-sm font-semibold text-white px-3.5 py-2 rounded-xl flex-shrink-0"
