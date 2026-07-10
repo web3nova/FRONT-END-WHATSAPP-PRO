@@ -560,6 +560,46 @@ export default function Website() {
     }
   }
 
+  // Throw away staged edits and fall back to the live site's settings. The
+  // response is the merged live row, so re-seed settings + section state from
+  // it and clear every draft-local form, same shapes as the initial load.
+  const discardChanges = async () => {
+    if (savingSettings) return
+    if (!window.confirm('Discard all unpublished changes? Your live site stays as it is.')) return
+    const token = getStoredAccessToken()
+    if (!token) return
+    setSavingSettings(true)
+    setSaveError('')
+    try {
+      const res = await fetch(`${API_BASE}/website/settings/discard`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Discard failed')
+      const body = await res.json().catch(() => null)
+      const live = body?.data || body
+      setSettings(live)
+      if (Array.isArray(live?.sections) && live.sections.length) {
+        const merged = defaultSections.map(ds => {
+          const found = live.sections.find(s => s.name === ds.name || s.id === ds.id)
+          return found ? { ...ds, active: found.active ?? ds.active } : ds
+        })
+        setSections(merged)
+        setActiveSectionFlags(merged.map(s => s.active))
+      }
+      setNavDraft(null)
+      setEditingSectionId(null)
+      setSectionForm({})
+      setCustomThemeForm({})
+      setDesignForm({})
+    } catch (err) {
+      console.error('Failed to discard draft:', err)
+      setSaveError('Could not discard changes. Please try again.')
+    } finally {
+      setSavingSettings(false)
+    }
+  }
+
   // Save SEO + social fields together. Same merge/guard/error pattern as saveSection.
   const saveSeoSocial = async () => {
     if (savingSettings) return
@@ -1165,6 +1205,15 @@ export default function Website() {
           >
             <Eye size={15} /> Preview
           </button>
+          {settings?.hasUnpublishedChanges && (
+            <button
+              onClick={discardChanges}
+              disabled={savingSettings}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 sm:py-2 text-sm font-medium border border-gray-200 bg-white text-gray-600 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition disabled:opacity-60"
+            >
+              <X size={15} /> Discard
+            </button>
+          )}
           <button
             onClick={publishChanges}
             disabled={savingSettings || (settings?.published && !settings?.hasUnpublishedChanges)}
