@@ -7,18 +7,16 @@ import { THEMES, FONT_OPTIONS, RADIUS_OPTIONS } from '../../lib/themes'
 import { STARTER_TEMPLATES, recommendedStarterTemplateId } from '../../lib/starterTemplates'
 import ImageUploadField from '../../components/ImageUploadField'
 import StorefrontPreview from './StorefrontPreview'
+import { SECTION_TYPES } from './storefronts/sectionRegistry'
 
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
 
-const defaultSections = [
-  { id: 1, name: 'Hero Section', desc: 'Main banner with headline and CTA', active: true },
-  { id: 2, name: 'Featured Products', desc: 'Showcase your top products', active: true },
-  { id: 3, name: 'About Us', desc: 'Tell your story and brand values', active: true },
-  { id: 4, name: 'Gallery', desc: 'Photo gallery of your work', active: false },
-  { id: 5, name: 'Testimonials', desc: 'Customer reviews and feedback', active: true },
-  { id: 6, name: 'Contact / WhatsApp CTA', desc: 'Let customers reach you', active: true },
-]
+// Derived from the section registry (single source of truth) — keeps the
+// id/name/desc/active shape the rest of this file already expects.
+const defaultSections = SECTION_TYPES.map(s => ({
+  id: s.legacyId, name: s.name, desc: s.description, active: s.defaultActive,
+}))
 
 const OUTLOOKS = [
   { id: 'boutique', name: 'Boutique', description: 'Rounded cards, circular categories, italic serif accents — today\'s look.' },
@@ -26,14 +24,9 @@ const OUTLOOKS = [
   { id: 'magazine', name: 'Magazine', description: 'Editorial, story-led, oversized imagery and big typography.' },
 ]
 
-const SECTION_SLOTS = [
-  { key: 'hero', label: 'Hero' },
-  { key: 'products', label: 'Products' },
-  { key: 'about', label: 'About' },
-  { key: 'gallery', label: 'Gallery' },
-  { key: 'testimonials', label: 'Testimonials' },
-  { key: 'contact', label: 'Contact' },
-]
+// Derived from the section registry — short labels for the per-section style
+// pickers (distinct from the longer `name` used in the Sections list).
+const SECTION_SLOTS = SECTION_TYPES.map(s => ({ key: s.type, label: s.shortLabel }))
 
 const pageList = [
   { name: 'Home', path: '/', status: 'published', sectionId: 1 },

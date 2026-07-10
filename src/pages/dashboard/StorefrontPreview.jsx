@@ -10,11 +10,8 @@ import {
   Facebook, Instagram, Twitter, Youtube,
 } from './storefronts/shared'
 import HeroSection from './storefronts/sections/HeroSection'
-import ProductsSection, { ProductCard } from './storefronts/sections/ProductsSection'
-import AboutSection from './storefronts/sections/AboutSection'
-import GallerySection from './storefronts/sections/GallerySection'
-import TestimonialsSection from './storefronts/sections/TestimonialsSection'
-import ContactSection from './storefronts/sections/ContactSection'
+import { ProductCard } from './storefronts/sections/ProductsSection'
+import { sectionByLegacyId, DEFAULT_REORDERABLE_ORDER } from './storefronts/sectionRegistry'
 
 // This component is the storefront's orchestrator: it owns the shared
 // Nav/Footer chrome and all cross-section state (view, selected product,
@@ -130,7 +127,7 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   // Homepage section order — driven by settings.sections (array order is
   // render order, set via the Sections tab's up/down reorder controls).
   // Hero always renders first regardless; these 5 are the reorderable set.
-  const REORDERABLE_DEFAULT_ORDER = [2, 4, 3, 5, 6]
+  const REORDERABLE_DEFAULT_ORDER = DEFAULT_REORDERABLE_ORDER
 
   const PASTELS = [
     mixHexWithWhite(GOLD, 0.92),
@@ -352,14 +349,22 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   }
 
   // Resolve homepage section order + gating in one map, so the render below
-  // is just "walk the order, skip what's hidden."
-  const SECTION_RENDERERS = {
-    2: { Component: ProductsSection, show: true, styleKey: 'products' },
-    4: { Component: GallerySection, show: showGallery, styleKey: 'gallery' },
-    3: { Component: AboutSection, show: showAbout, styleKey: 'about' },
-    5: { Component: TestimonialsSection, show: showTestimonials, styleKey: 'testimonials' },
-    6: { Component: ContactSection, show: showContact, styleKey: 'contact' },
+  // is just "walk the order, skip what's hidden." Component/styleKey come
+  // from the section registry (single source of truth); `show` gates are
+  // runtime data checks that stay here since they depend on ctx-level state.
+  const SHOW_BY_LEGACY_ID = {
+    2: true,
+    4: showGallery,
+    3: showAbout,
+    5: showTestimonials,
+    6: showContact,
   }
+  const SECTION_RENDERERS = Object.fromEntries(
+    DEFAULT_REORDERABLE_ORDER.map(legacyId => {
+      const { Renderer, type } = sectionByLegacyId[legacyId]
+      return [legacyId, { Component: Renderer, show: SHOW_BY_LEGACY_ID[legacyId], styleKey: type }]
+    })
+  )
   const savedOrder = (settings?.sections || []).map(s => s.id).filter(id => SECTION_RENDERERS[id])
   const missingIds = REORDERABLE_DEFAULT_ORDER.filter(id => !savedOrder.includes(id))
   const sectionOrder = [...savedOrder, ...missingIds]
