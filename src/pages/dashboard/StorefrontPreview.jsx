@@ -587,8 +587,10 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
                   <button onClick={() => setSearchQuery('')} className="text-gray-400 hover:text-gray-600 flex-shrink-0"><X size={11} /></button>
                 )}
               </div>
-              <User size={17} className="text-gray-500" />
-              <div className="relative">
+              <span title="Customer accounts — coming soon">
+                <User size={17} className="text-gray-500" />
+              </span>
+              <div className="relative" title="No checkout cart — orders happen in WhatsApp chat">
                 <ShoppingBag size={17} className="text-gray-500" />
                 <span className="absolute -top-1.5 -right-1.5 text-[9px] font-bold text-white rounded-full w-3.5 h-3.5 flex items-center justify-center" style={{ background: INK }}>
                   {products.length > 9 ? '9+' : products.length}
@@ -622,6 +624,7 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
       <div
         className="absolute z-20 text-white text-[10px] font-bold tracking-widest px-1.5 py-2 rounded-l-md"
         style={{ background: INK, top: isMobile ? 92 : 112, right: 0, writingMode: 'vertical-rl' }}
+        title="Prices shown in Nigerian Naira"
       >
         NGN
       </div>

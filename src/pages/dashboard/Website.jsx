@@ -2366,8 +2366,8 @@ export default function Website() {
                 <ImageUploadField
                   label="Social share image (optional)"
                   value={designForm.seoOgImage ?? settings?.seo?.ogImage ?? ''}
-                  onChange={val => setDesignForm(f => ({ ...f, seoOgImage: val }))}
-                  hint="Shown when your storefront link is shared on social media or WhatsApp."
+                  onChange={val => setDesignForm(f => ({ ...f, seoOgImage: typeof val === 'string' ? val : val.url }))}
+                  hint="Shown when your storefront link is shared on social media or WhatsApp. Recommended: 1200×630 (landscape) — this is the card image chat apps show."
                 />
 
                 <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1 pt-2">Social links</div>
