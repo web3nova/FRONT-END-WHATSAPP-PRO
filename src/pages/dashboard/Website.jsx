@@ -28,12 +28,20 @@ const OUTLOOKS = [
 // pickers (distinct from the longer `name` used in the Sections list).
 const SECTION_SLOTS = SECTION_TYPES.map(s => ({ key: s.type, label: s.shortLabel }))
 
-const pageList = [
-  { name: 'Home', path: '/', status: 'published', sectionId: 1 },
-  { name: 'Shop / Products', path: '/shop', status: 'published', sectionId: 2 },
-  { name: 'About', path: '/about', status: 'published', sectionId: 3 },
-  { name: 'Contact', path: '/contact', status: 'published', sectionId: 6 },
-]
+// Home/Shop are always live; About/Contact mirror their section toggles so
+// the Pages tab doesn't claim "published" for a hidden section.
+function builtInPages(sections, flags) {
+  const isActive = (id) => {
+    const idx = sections.findIndex(s => s.id === id)
+    return idx === -1 ? true : !!flags[idx]
+  }
+  return [
+    { name: 'Home', path: '/', status: 'published', sectionId: 1 },
+    { name: 'Shop / Products', path: '/shop', status: 'published', sectionId: 2 },
+    { name: 'About', path: '/about', status: isActive(3) ? 'published' : 'hidden', sectionId: 3 },
+    { name: 'Contact', path: '/contact', status: isActive(6) ? 'published' : 'hidden', sectionId: 6 },
+  ]
+}
 
 const sectionIcons = { 0: Layout, 1: Image, 2: Type, 3: Image, 4: Type, 5: Globe, 6: Grid3x3 }
 
@@ -70,6 +78,44 @@ function emptyBlock(type) {
   }
   return { _key: newBlockKey(), type, text: '', url: '', storageKey: '' }
 }
+
+function sectionBlock(sectionType, variant = 'boutique') {
+  return { _key: newBlockKey(), type: 'section', sectionType, variant }
+}
+
+// Starter layouts for new pages (WordPress-style pattern picker). A pattern
+// is just a pre-filled block list — fully editable after insertion, saved
+// through the same content.blocks shape as hand-built pages.
+const PAGE_PATTERNS = [
+  { id: 'blank', name: 'Blank', desc: 'Start from scratch.', blocks: () => [emptyBlock('paragraph')] },
+  {
+    id: 'about', name: 'About', desc: 'Your story, plus the About and Testimonials sections.',
+    blocks: () => [
+      { ...emptyBlock('heading'), text: 'Our Story' },
+      emptyBlock('paragraph'),
+      sectionBlock('about'),
+      sectionBlock('testimonials'),
+    ],
+  },
+  {
+    id: 'faq', name: 'FAQ', desc: 'Question-and-answer layout, ending with your Contact section.',
+    blocks: () => [
+      { ...emptyBlock('heading'), text: 'Frequently Asked Questions' },
+      emptyBlock('paragraph'),
+      emptyBlock('heading'),
+      emptyBlock('paragraph'),
+      sectionBlock('contact'),
+    ],
+  },
+  {
+    id: 'lookbook', name: 'Lookbook', desc: 'Image-led page with your Gallery and featured products.',
+    blocks: () => [
+      { ...emptyBlock('heading'), text: 'Lookbook' },
+      sectionBlock('gallery', 'magazine'),
+      sectionBlock('products'),
+    ],
+  },
+]
 
 // Collapsible category used to break the Design tab into digestible chunks
 // instead of one long scrolling form.
@@ -142,6 +188,37 @@ function PageForm({ pageForm, setPageForm, isNew }) {
           />
         </div>
       </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-gray-500 mb-1">Search &amp; share description <span className="font-normal text-gray-400">(optional)</span></label>
+        <textarea
+          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+          rows={2}
+          placeholder="Shown in search results and link previews for this page."
+          value={pageForm.seoDescription ?? ''}
+          onChange={e => setPageForm(f => ({ ...f, seoDescription: e.target.value }))}
+        />
+      </div>
+
+      {isNew && (
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 mb-1.5">Start from a layout</label>
+          <div className="grid grid-cols-2 gap-2">
+            {PAGE_PATTERNS.map(pat => (
+              <button
+                key={pat.id}
+                type="button"
+                onClick={() => setPageForm(f => ({ ...f, blocks: pat.blocks() }))}
+                className="text-left border border-gray-200 rounded-lg px-3 py-2 hover:border-blue-400 hover:bg-blue-50/40 transition"
+              >
+                <div className="text-xs font-semibold text-gray-800">{pat.name}</div>
+                <div className="text-[10px] text-gray-400 leading-snug mt-0.5">{pat.desc}</div>
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-gray-400 mt-1.5">Picking a layout replaces the blocks below — you can edit everything after.</p>
+        </div>
+      )}
 
       <div>
         <label className="block text-xs font-semibold text-gray-500 mb-1.5">Content</label>
@@ -340,6 +417,20 @@ export default function Website() {
   const sectionStyles = settings?.theme?.sectionStyles || {}
   const firstSlotStyle = sectionStyles[SECTION_SLOTS[0].key] || 'boutique'
   const activeOutlook = SECTION_SLOTS.every(s => (sectionStyles[s.key] || 'boutique') === firstSlotStyle) ? firstSlotStyle : null
+  const pageList = builtInPages(sections, activeSectionFlags)
+
+  // Preview-only overlays (WordPress-Customizer rule: every control change
+  // previews before save). In-progress Colors & Fonts and social edits are
+  // layered onto what the preview renders, but NEVER merged back into
+  // `settings` — publish/discard must only ever see saved state.
+  const previewTheme = { ...activeTheme, ...customThemeForm }
+  const previewSocial = {
+    facebook: designForm.socialFacebook ?? settings?.social?.facebook ?? '',
+    instagram: designForm.socialInstagram ?? settings?.social?.instagram ?? '',
+    twitter: designForm.socialTwitter ?? settings?.social?.twitter ?? '',
+    tiktok: designForm.socialTiktok ?? settings?.social?.tiktok ?? '',
+    youtube: designForm.socialYoutube ?? settings?.social?.youtube ?? '',
+  }
 
   // Persist a toggle immediately so it survives a refresh, not just local state.
   // Blocked while another save is in flight, and reverted if the request fails,
@@ -855,6 +946,7 @@ export default function Website() {
         slug: p.slug,
         blocks: existingBlocks.length ? existingBlocks : [emptyBlock('paragraph')],
         published: !!p.published,
+        seoDescription: p.content?.seoDescription || '',
       })
       setEditingPageSlug(p.slug)
     } else {
@@ -888,6 +980,7 @@ export default function Website() {
         })
         .map(({ _key, ...b }) => b)
       const content = { blocks }
+      if (pageForm.seoDescription?.trim()) content.seoDescription = pageForm.seoDescription.trim()
       const res = await fetch(`${API_BASE}/website/pages${isNew ? '' : `/${editingPageSlug}`}`, {
         method: isNew ? 'POST' : 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -1196,6 +1289,7 @@ export default function Website() {
     theme: { ...(settings?.theme || {}), builder: liveBuilder },
     sections: sections.map((s, idx) => ({ id: s.id, name: s.name, active: activeSectionFlags[idx] })),
     navigation: navDraft ?? settings?.navigation,
+    social: previewSocial,
   }
   const previewWhatsapp = editingSectionId === 6 ? (sectionForm.whatsapp ?? whatsapp) : whatsapp
 
@@ -1353,7 +1447,7 @@ export default function Website() {
                       </div>
                       <span
                         className="text-xs font-semibold px-2 py-0.5 rounded-lg flex-shrink-0"
-                        style={{ background: '#dce5fd', color: PRIMARY }}
+                        style={p.status === 'published' ? { background: '#dce5fd', color: PRIMARY } : { background: '#f3f4f6', color: '#9ca3af' }}
                       >
                         {p.status}
                       </span>
@@ -1600,24 +1694,33 @@ export default function Website() {
                                 </div>
                               </div>
 
-                              <ImageUploadField
-                                label="Background image (optional)"
-                                value={sectionForm.bgImage ?? settings?.theme?.builder?.hero?.bgImage ?? ''}
-                                onChange={val => setSectionForm(f => ({ ...f, bgImage: typeof val === 'string' ? val : val.url }))}
-                                hint="A dark overlay is applied automatically so the headline stays readable. Leave empty to use a solid colour instead."
-                              />
-
-                              {!(sectionForm.bgImage ?? settings?.theme?.builder?.hero?.bgImage) && (
-                                <div>
-                                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Background colour</label>
-                                  <input
-                                    type="color"
-                                    className="w-9 h-9 rounded-lg border border-gray-200 cursor-pointer"
-                                    value={sectionForm.bg ?? settings?.theme?.builder?.hero?.bg ?? PRIMARY}
-                                    onChange={e => setSectionForm(f => ({ ...f, bg: e.target.value }))}
+                              {/* One grouped Background control (image + colour together),
+                                  so it's obvious a taller hero without an image just shows
+                                  more of the flat colour. */}
+                              <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Background</label>
+                                <div className="space-y-3 border border-gray-100 rounded-lg p-3">
+                                  <ImageUploadField
+                                    label="Image (optional)"
+                                    value={sectionForm.bgImage ?? settings?.theme?.builder?.hero?.bgImage ?? ''}
+                                    onChange={val => setSectionForm(f => ({ ...f, bgImage: typeof val === 'string' ? val : val.url }))}
+                                    hint="A dark overlay is applied automatically so the headline stays readable."
                                   />
+                                  <div className="flex items-center gap-3">
+                                    <input
+                                      type="color"
+                                      className="w-9 h-9 rounded-lg border border-gray-200 cursor-pointer flex-shrink-0"
+                                      value={sectionForm.bg ?? settings?.theme?.builder?.hero?.bg ?? PRIMARY}
+                                      onChange={e => setSectionForm(f => ({ ...f, bg: e.target.value }))}
+                                    />
+                                    <span className="text-[11px] text-gray-400 leading-snug">
+                                      {(sectionForm.bgImage ?? settings?.theme?.builder?.hero?.bgImage)
+                                        ? 'Fallback colour, shown while the image loads or if it fails.'
+                                        : 'No image set — the hero is a solid fill of this colour.'}
+                                    </span>
+                                  </div>
                                 </div>
-                              )}
+                              </div>
                             </>
                           )}
 
@@ -2344,7 +2447,7 @@ export default function Website() {
               className="bg-white overflow-hidden transition-all duration-300 w-full"
               style={previewDevice === 'mobile' ? { maxWidth: 340, borderRadius: 16 } : { maxWidth: '100%' }}
             >
-              <StorefrontPreview business={business} products={products} whatsapp={previewWhatsapp} domain={domain} device={previewDevice} settings={previewSettings} theme={activeTheme} pages={customPages} />
+              <StorefrontPreview business={business} products={products} whatsapp={previewWhatsapp} domain={domain} device={previewDevice} settings={previewSettings} theme={previewTheme} pages={customPages} />
             </div>
           </div>
         </div>
