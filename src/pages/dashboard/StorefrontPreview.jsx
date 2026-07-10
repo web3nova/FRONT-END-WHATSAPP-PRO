@@ -437,10 +437,10 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
             style={{ maxHeight: '92vh', borderRadius: isMobile ? 'var(--sf-radius) var(--sf-radius) 0 0' : 'var(--sf-radius)' }}
           >
             {/* Image */}
-            <div className="relative flex items-center justify-center" style={{ background: PASTELS[0], minHeight: 220 }}>
+            <div className="relative" style={{ background: PASTELS[0] }}>
               {selectedProduct.imageUrl
-                ? <img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="w-full object-contain" style={{ maxHeight: 300 }} />
-                : <div className="text-5xl opacity-20 py-10">📦</div>}
+                ? <img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="w-full object-cover" style={{ maxHeight: 440, minHeight: 280 }} />
+                : <div className="flex items-center justify-center text-5xl opacity-20" style={{ minHeight: 220 }}>📦</div>}
               <button
                 onClick={() => setSelectedProduct(null)}
                 className="absolute top-3 right-3 w-9 h-9 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-gray-50 transition"
