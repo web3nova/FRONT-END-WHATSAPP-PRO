@@ -46,13 +46,13 @@ function CatalogProductCard({ ctx, p, i }) {
           : <div className="text-2xl opacity-30">📦</div>}
         {soldOut && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            <span className="bg-white text-[9px] font-bold px-2 py-0.5 rounded text-gray-800">Sold Out</span>
+            <span className="bg-white text-[11px] font-bold px-2 py-0.5 rounded text-gray-800">Sold Out</span>
           </div>
         )}
       </div>
       <div className="p-2">
         <div className="text-[10px] text-gray-400 truncate">{p.category || 'General'}</div>
-        <div className="text-xs font-semibold text-gray-900 truncate mb-1">{p.name}</div>
+        <div className="text-xs font-semibold text-gray-900 line-clamp-2 mb-1">{p.name}</div>
         <div className="text-sm font-bold" style={{ color: INK }}>₦{((p.priceMinor || 0) / 100).toLocaleString()}</div>
       </div>
     </div>
@@ -76,14 +76,17 @@ function BoutiqueProductCard({ ctx, p, i, compact }) {
           : <div className="text-3xl opacity-30">📦</div>}
         {soldOut && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            <span className="bg-white text-[10px] font-bold px-2.5 py-1 rounded-full text-gray-800">Sold Out</span>
+            <span className="bg-white text-[11px] font-bold px-2.5 py-1 rounded-full text-gray-800">Sold Out</span>
           </div>
         )}
       </div>
       <div className="text-[10px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: GOLD }}>
         {p.category || 'Featured'}
       </div>
-      <div className="leading-snug mb-1" style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700, color: INK, fontSize: compact ? 13 : 14 }}>
+      <div
+        className="leading-snug mb-1 line-clamp-2"
+        style={{ fontFamily: DISPLAY, fontStyle: 'italic', fontWeight: 700, color: INK, fontSize: compact ? 13 : 14 }}
+      >
         {p.name}
       </div>
       {p.review && (
@@ -181,7 +184,7 @@ function CatalogProducts({ variant, ctx }) {
             <div className="text-sm font-bold text-gray-900">{productsTitle}</div>
             <button onClick={() => goShop('all')} className="text-[11px] font-medium text-gray-400 underline underline-offset-2 flex-shrink-0">View All</button>
           </div>
-          <div className={`grid gap-2 sm:gap-3 ${isMobile ? 'grid-cols-3' : 'grid-cols-5'}`}>
+          <div className={`grid gap-2 sm:gap-3 ${isMobile ? 'grid-cols-2 gap-3' : 'grid-cols-5'}`}>
             {products.slice(0, productCount).map((p, i) => <ProductCard key={p.id || i} variant={variant} ctx={ctx} p={p} i={i} />)}
           </div>
         </div>

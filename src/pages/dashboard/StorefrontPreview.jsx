@@ -178,7 +178,19 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedAttrs, setSelectedAttrs] = useState({})
 
-  const isMobile = device === 'mobile'
+  // 'auto' = live storefront: follow the real viewport. Explicit
+  // 'desktop'/'mobile' = builder preview toggle, unchanged behavior.
+  const [viewportMobile, setViewportMobile] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches
+  )
+  useEffect(() => {
+    if (device !== 'auto') return
+    const mq = window.matchMedia('(max-width: 640px)')
+    const onChange = (e) => setViewportMobile(e.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [device])
+  const isMobile = device === 'auto' ? viewportMobile : device === 'mobile'
 
   const instanceId = useRef(`sf-${Math.random().toString(36).slice(2, 9)}`).current
   const sectionId = (key) => `${instanceId}-${key}`
