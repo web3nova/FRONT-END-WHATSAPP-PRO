@@ -92,10 +92,12 @@ function sectionBlock(sectionType, variant = 'boutique') {
 // through the same content.blocks shape as hand-built pages.
 const PAGE_PATTERNS = [
   { id: 'blank', name: 'Blank', desc: 'Start from scratch.', blocks: () => [emptyBlock('paragraph')] },
+  // No leading heading blocks in these — the page's own title already renders
+  // large at the top of the storefront page (and the About section brings its
+  // own title too); a heading block would just triple up.
   {
     id: 'about', name: 'About', desc: 'Your story, plus the About and Testimonials sections.',
     blocks: () => [
-      { ...emptyBlock('heading'), text: 'Our Story' },
       emptyBlock('paragraph'),
       sectionBlock('about'),
       sectionBlock('testimonials'),
@@ -104,7 +106,6 @@ const PAGE_PATTERNS = [
   {
     id: 'faq', name: 'FAQ', desc: 'Question-and-answer layout, ending with your Contact section.',
     blocks: () => [
-      { ...emptyBlock('heading'), text: 'Frequently Asked Questions' },
       emptyBlock('qa'),
       emptyBlock('qa'),
       emptyBlock('qa'),
@@ -114,7 +115,6 @@ const PAGE_PATTERNS = [
   {
     id: 'lookbook', name: 'Lookbook', desc: 'Image-led page with your Gallery and featured products.',
     blocks: () => [
-      { ...emptyBlock('heading'), text: 'Lookbook' },
       sectionBlock('gallery', 'magazine'),
       sectionBlock('products'),
     ],
