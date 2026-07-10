@@ -600,6 +600,32 @@ export default function Website() {
     }
   }
 
+  // Take the live storefront offline. `published` is a live-only column that
+  // bypasses draft (see backend updateSettings), so this takes effect
+  // immediately; publishChanges already handles turning it back on.
+  const unpublishSite = async () => {
+    if (savingSettings) return
+    if (!window.confirm('Take your site offline? Visitors will see "storefront not found" until you publish again.')) return
+    const token = getStoredAccessToken()
+    if (!token) return
+    setSavingSettings(true)
+    setSaveError('')
+    try {
+      const res = await fetch(`${API_BASE}/website/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ published: false }),
+      })
+      if (!res.ok) throw new Error('Unpublish failed')
+      setSettings(s => ({ ...(s || {}), published: false }))
+    } catch (err) {
+      console.error('Failed to unpublish:', err)
+      setSaveError('Could not take the site offline. Please try again.')
+    } finally {
+      setSavingSettings(false)
+    }
+  }
+
   // Save SEO + social fields together. Same merge/guard/error pattern as saveSection.
   const saveSeoSocial = async () => {
     if (savingSettings) return
@@ -1248,6 +1274,15 @@ export default function Website() {
             <div className="flex items-center gap-1.5 text-xs font-semibold flex-shrink-0" style={{ color: PRIMARY }}>
               <CheckCircle size={14} /> {settings?.published ? 'Live' : 'Draft'}
             </div>
+            {settings?.published && (
+              <button
+                onClick={unpublishSite}
+                disabled={savingSettings}
+                className="text-xs font-semibold text-gray-400 hover:text-red-500 transition underline flex-shrink-0 disabled:opacity-60"
+              >
+                Take offline
+              </button>
+            )}
             {settings?.published && settings?.hasUnpublishedChanges ? (
               <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 flex-shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
