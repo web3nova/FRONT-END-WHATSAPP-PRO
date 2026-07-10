@@ -410,6 +410,18 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const missingIds = REORDERABLE_DEFAULT_ORDER.filter(id => !savedOrder.includes(id))
   const sectionOrder = [...savedOrder, ...missingIds]
 
+  // Optional per-section background (solid or two-colour gradient) from the
+  // section editors. Empty = no wrapper style, sections render as always.
+  const sectionBgStyle = (styleKey) => {
+    const cfg = builder[styleKey] || {}
+    if (!cfg.bg) return undefined
+    return {
+      background: cfg.bg2
+        ? `linear-gradient(135deg, ${cfg.bg} 0%, ${cfg.bg2} 100%)`
+        : cfg.bg,
+    }
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="bg-white relative" style={{ fontFamily: BODY, '--sf-radius': `${radius}px` }}>
@@ -665,7 +677,11 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
                   const entry = sectionByType[b.sectionType]
                   if (!entry) return null
                   const { Renderer } = entry
-                  return <Renderer key={i} variant={b.variant || 'boutique'} ctx={ctx} />
+                  return (
+                    <div key={i} style={sectionBgStyle(b.sectionType)}>
+                      <Renderer variant={b.variant || 'boutique'} ctx={ctx} />
+                    </div>
+                  )
                 }
                 const wrapClass = isMobile ? 'px-5 max-w-2xl' : 'px-8 max-w-2xl'
                 if (b.type === 'heading') {
@@ -813,7 +829,11 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
           {sectionOrder.map(id => {
             const { Component, show, styleKey } = SECTION_RENDERERS[id]
             if (!show) return null
-            return <Component key={id} variant={sectionStyles[styleKey] || 'boutique'} ctx={ctx} />
+            return (
+              <div key={id} style={sectionBgStyle(styleKey)}>
+                <Component variant={sectionStyles[styleKey] || 'boutique'} ctx={ctx} />
+              </div>
+            )
           })}
         </>
       )}

@@ -148,6 +148,31 @@ function DesignAccordionSection({ title, subtitle, isOpen, onToggle, children })
   )
 }
 
+// Optional per-section background: solid colour, or gradient when a second
+// colour is set. Empty string = theme default. Used by every section editor.
+function SectionBackgroundControl({ bg, bg2, onChange }) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-gray-500 mb-1.5">Section background <span className="font-normal text-gray-400">(optional)</span></label>
+      <div className="flex items-center gap-3 border border-gray-100 rounded-lg p-3">
+        <input type="color" className="w-9 h-9 rounded-lg border border-gray-200 cursor-pointer flex-shrink-0"
+          value={bg || '#ffffff'}
+          onChange={e => onChange({ bg: e.target.value, bg2 })} />
+        <input type="color" className="w-9 h-9 rounded-lg border border-gray-200 cursor-pointer flex-shrink-0"
+          value={bg2 || '#ffffff'}
+          onChange={e => onChange({ bg, bg2: e.target.value })} />
+        <span className="text-[11px] text-gray-400 leading-snug flex-1">
+          First colour fills the section; add the second for a gradient. Pick light colours — section text stays dark.
+        </span>
+        {(bg || bg2) && (
+          <button type="button" onClick={() => onChange({ bg: '', bg2: '' })}
+            className="text-[11px] font-semibold text-gray-400 hover:text-red-500 underline flex-shrink-0">Default</button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // Create/edit form for a custom CMS page — shared between the "new page" and
 // "edit page" panels in the Pages tab. Content is a simple ordered list of
 // blocks (heading/paragraph/image) rather than one plain-text field.
@@ -1147,19 +1172,20 @@ export default function Website() {
         bg: b.hero?.bg || '', bg2: b.hero?.bg2 || '', bgImage: b.hero?.bgImage || '', layout: b.hero?.layout || 'center',
       })
     } else if (s.id === 2) {
-      setSectionForm({ productCount: b.products?.count || 8, productsTitle: b.products?.title || '' })
+      setSectionForm({ productCount: b.products?.count || 8, productsTitle: b.products?.title || '', sectionBg: b.products?.bg || '', sectionBg2: b.products?.bg2 || '' })
     } else if (s.id === 3) {
-      setSectionForm({ about: b.about?.text || business?.description || '', aboutTitle: b.about?.title || '', aboutImage: b.about?.image || '' })
+      setSectionForm({ about: b.about?.text || business?.description || '', aboutTitle: b.about?.title || '', aboutImage: b.about?.image || '', sectionBg: b.about?.bg || '', sectionBg2: b.about?.bg2 || '' })
     } else if (s.id === 4) {
-      setSectionForm({ galleryImages: [...(b.gallery?.images || [])], galleryTitle: b.gallery?.title || '', newImage: '' })
+      setSectionForm({ galleryImages: [...(b.gallery?.images || [])], galleryTitle: b.gallery?.title || '', newImage: '', sectionBg: b.gallery?.bg || '', sectionBg2: b.gallery?.bg2 || '' })
     } else if (s.id === 5) {
       setSectionForm({
         testimonialItems: [...(b.testimonials?.items || [])],
         testimonialsTitle: b.testimonials?.title || '',
         newName: '', newText: '', newRating: 5,
+        sectionBg: b.testimonials?.bg || '', sectionBg2: b.testimonials?.bg2 || '',
       })
     } else if (s.id === 6) {
-      setSectionForm({ whatsapp: business?.whatsappNumber || '', address: b.contact?.address || '', instagram: b.contact?.instagram || '' })
+      setSectionForm({ whatsapp: business?.whatsappNumber || '', address: b.contact?.address || '', instagram: b.contact?.instagram || '', sectionBg: b.contact?.bg || '', sectionBg2: b.contact?.bg2 || '' })
     } else {
       setSectionForm({})
     }
@@ -1201,6 +1227,8 @@ export default function Website() {
         builder.products = {
           count: sectionForm.productCount ?? builder.products?.count ?? 8,
           title: sectionForm.productsTitle ?? builder.products?.title ?? '',
+          bg: sectionForm.sectionBg ?? builder.products?.bg ?? '',
+          bg2: sectionForm.sectionBg2 ?? builder.products?.bg2 ?? '',
         }
         const res = await fetch(`${API_BASE}/website/settings`, {
           method: 'PUT',
@@ -1215,6 +1243,8 @@ export default function Website() {
           text: desc,
           title: sectionForm.aboutTitle ?? prevAbout.title ?? '',
           image: sectionForm.aboutImage ?? prevAbout.image ?? '',
+          bg: sectionForm.sectionBg ?? prevAbout.bg ?? '',
+          bg2: sectionForm.sectionBg2 ?? prevAbout.bg2 ?? '',
         }
         const [bizRes, wsRes] = await Promise.all([
           fetch(`${API_BASE}/business`, {
@@ -1234,6 +1264,8 @@ export default function Website() {
         builder.gallery = {
           title: sectionForm.galleryTitle ?? builder.gallery?.title ?? '',
           images: sectionForm.galleryImages ?? builder.gallery?.images ?? [],
+          bg: sectionForm.sectionBg ?? builder.gallery?.bg ?? '',
+          bg2: sectionForm.sectionBg2 ?? builder.gallery?.bg2 ?? '',
         }
         const res = await fetch(`${API_BASE}/website/settings`, {
           method: 'PUT',
@@ -1245,6 +1277,8 @@ export default function Website() {
         builder.testimonials = {
           title: sectionForm.testimonialsTitle ?? builder.testimonials?.title ?? '',
           items: sectionForm.testimonialItems ?? builder.testimonials?.items ?? [],
+          bg: sectionForm.sectionBg ?? builder.testimonials?.bg ?? '',
+          bg2: sectionForm.sectionBg2 ?? builder.testimonials?.bg2 ?? '',
         }
         const res = await fetch(`${API_BASE}/website/settings`, {
           method: 'PUT',
@@ -1257,6 +1291,8 @@ export default function Website() {
         builder.contact = {
           address: sectionForm.address ?? builder.contact?.address ?? '',
           instagram: sectionForm.instagram ?? builder.contact?.instagram ?? '',
+          bg: sectionForm.sectionBg ?? builder.contact?.bg ?? '',
+          bg2: sectionForm.sectionBg2 ?? builder.contact?.bg2 ?? '',
         }
         const [bizRes, wsRes] = await Promise.all([
           fetch(`${API_BASE}/business`, {
@@ -1309,27 +1345,37 @@ export default function Website() {
     liveBuilder = { ...baseBuilder, products: {
       count: sectionForm.productCount ?? baseBuilder.products?.count ?? 8,
       title: sectionForm.productsTitle ?? baseBuilder.products?.title ?? '',
+      bg: sectionForm.sectionBg ?? baseBuilder.products?.bg ?? '',
+      bg2: sectionForm.sectionBg2 ?? baseBuilder.products?.bg2 ?? '',
     }}
   } else if (editingSectionId === 3) {
     liveBuilder = { ...baseBuilder, about: {
       text: sectionForm.about ?? baseBuilder.about?.text ?? business?.description ?? '',
       title: sectionForm.aboutTitle ?? baseBuilder.about?.title ?? '',
       image: sectionForm.aboutImage ?? baseBuilder.about?.image ?? '',
+      bg: sectionForm.sectionBg ?? baseBuilder.about?.bg ?? '',
+      bg2: sectionForm.sectionBg2 ?? baseBuilder.about?.bg2 ?? '',
     }}
   } else if (editingSectionId === 4) {
     liveBuilder = { ...baseBuilder, gallery: {
       title: sectionForm.galleryTitle ?? baseBuilder.gallery?.title ?? '',
       images: sectionForm.galleryImages ?? baseBuilder.gallery?.images ?? [],
+      bg: sectionForm.sectionBg ?? baseBuilder.gallery?.bg ?? '',
+      bg2: sectionForm.sectionBg2 ?? baseBuilder.gallery?.bg2 ?? '',
     }}
   } else if (editingSectionId === 5) {
     liveBuilder = { ...baseBuilder, testimonials: {
       title: sectionForm.testimonialsTitle ?? baseBuilder.testimonials?.title ?? '',
       items: sectionForm.testimonialItems ?? baseBuilder.testimonials?.items ?? [],
+      bg: sectionForm.sectionBg ?? baseBuilder.testimonials?.bg ?? '',
+      bg2: sectionForm.sectionBg2 ?? baseBuilder.testimonials?.bg2 ?? '',
     }}
   } else if (editingSectionId === 6) {
     liveBuilder = { ...baseBuilder, contact: {
       address: sectionForm.address ?? baseBuilder.contact?.address ?? '',
       instagram: sectionForm.instagram ?? baseBuilder.contact?.instagram ?? '',
+      bg: sectionForm.sectionBg ?? baseBuilder.contact?.bg ?? '',
+      bg2: sectionForm.sectionBg2 ?? baseBuilder.contact?.bg2 ?? '',
     }}
   }
 
@@ -1810,6 +1856,11 @@ export default function Website() {
                                 </div>
                                 <p className="text-xs text-gray-400 italic mt-2">Products come from your <button onClick={() => navigate('/dashboard/products')} className="underline" style={{ color: PRIMARY }}>product catalog</button>, most recent first.</p>
                               </div>
+                              <SectionBackgroundControl
+                                bg={sectionForm.sectionBg ?? ''}
+                                bg2={sectionForm.sectionBg2 ?? ''}
+                                onChange={({ bg, bg2 }) => setSectionForm(f => ({ ...f, sectionBg: bg, sectionBg2: bg2 }))}
+                              />
                             </>
                           )}
 
@@ -1839,6 +1890,11 @@ export default function Website() {
                                   onChange={e => setSectionForm(f => ({ ...f, about: e.target.value }))}
                                 />
                               </div>
+                              <SectionBackgroundControl
+                                bg={sectionForm.sectionBg ?? ''}
+                                bg2={sectionForm.sectionBg2 ?? ''}
+                                onChange={({ bg, bg2 }) => setSectionForm(f => ({ ...f, sectionBg: bg, sectionBg2: bg2 }))}
+                              />
                             </>
                           )}
 
@@ -1903,6 +1959,11 @@ export default function Website() {
                                   <Plus size={13} /> Add to gallery
                                 </button>
                               </div>
+                              <SectionBackgroundControl
+                                bg={sectionForm.sectionBg ?? ''}
+                                bg2={sectionForm.sectionBg2 ?? ''}
+                                onChange={({ bg, bg2 }) => setSectionForm(f => ({ ...f, sectionBg: bg, sectionBg2: bg2 }))}
+                              />
                             </>
                           )}
 
@@ -1990,6 +2051,11 @@ export default function Website() {
                                   </button>
                                 </div>
                               </div>
+                              <SectionBackgroundControl
+                                bg={sectionForm.sectionBg ?? ''}
+                                bg2={sectionForm.sectionBg2 ?? ''}
+                                onChange={({ bg, bg2 }) => setSectionForm(f => ({ ...f, sectionBg: bg, sectionBg2: bg2 }))}
+                              />
                             </>
                           )}
 
@@ -2023,6 +2089,11 @@ export default function Website() {
                                   onChange={e => setSectionForm(f => ({ ...f, instagram: e.target.value }))}
                                 />
                               </div>
+                              <SectionBackgroundControl
+                                bg={sectionForm.sectionBg ?? ''}
+                                bg2={sectionForm.sectionBg2 ?? ''}
+                                onChange={({ bg, bg2 }) => setSectionForm(f => ({ ...f, sectionBg: bg, sectionBg2: bg2 }))}
+                              />
                             </>
                           )}
 
