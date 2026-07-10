@@ -224,6 +224,7 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
 
   const testimonialsCfg = builder.testimonials || {}
   const testimonialItems = Array.isArray(testimonialsCfg.items) ? testimonialsCfg.items.filter(t => t?.text) : []
+  const testimonialsTitle = testimonialsCfg.title || 'What customers say'
 
   const contactCfg = builder.contact || {}
   const address = contactCfg.address || ''
@@ -379,7 +380,7 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
     heroHeadline, heroSubtitle, heroCta, heroBg, heroLayout, heroBgImage,
     aboutText, productsTitle, productCount, products, categoryTags, showProducts,
     galleryImages, galleryTitle,
-    testiIdx, setTestiIdx, testiPages, visibleTesti, testimonialItems,
+    testiIdx, setTestiIdx, testiPages, visibleTesti, testimonialItems, testimonialsTitle,
     address, instagram, social,
     whatsapp, waLink, genericOrderMsg,
     sectionId, goShop, openProduct,

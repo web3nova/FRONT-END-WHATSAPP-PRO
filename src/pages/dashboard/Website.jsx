@@ -1863,6 +1863,7 @@ export default function Website() {
                                       </div>
                                       <div className="text-xs text-gray-600 truncate">"{t.text}"</div>
                                       <div className="text-xs font-semibold text-gray-900 mt-0.5">{t.name}</div>
+                                      {t.role && <div className="text-[11px] text-gray-400">{t.role}</div>}
                                     </div>
                                     <button
                                       onClick={() => setSectionForm(f => ({ ...f, testimonialItems: f.testimonialItems.filter((_, j) => j !== idx) }))}
@@ -1881,6 +1882,12 @@ export default function Website() {
                                   placeholder="Customer name"
                                   value={sectionForm.newName ?? ''}
                                   onChange={e => setSectionForm(f => ({ ...f, newName: e.target.value }))}
+                                />
+                                <input
+                                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                                  placeholder="Role / location (optional)"
+                                  value={sectionForm.newRole ?? ''}
+                                  onChange={e => setSectionForm(f => ({ ...f, newRole: e.target.value }))}
                                 />
                                 <textarea
                                   className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
@@ -1902,11 +1909,12 @@ export default function Website() {
                                       const name = (sectionForm.newName || '').trim()
                                       const text = (sectionForm.newText || '').trim()
                                       if (!name || !text) return
-                                      const item = { id: Date.now().toString(), name, text, rating: sectionForm.newRating ?? 5 }
+                                      const role = (sectionForm.newRole || '').trim()
+                                      const item = { id: Date.now().toString(), name, text, rating: sectionForm.newRating ?? 5, role }
                                       setSectionForm(f => ({
                                         ...f,
                                         testimonialItems: [...(f.testimonialItems || []), item],
-                                        newName: '', newText: '', newRating: 5,
+                                        newName: '', newText: '', newRating: 5, newRole: '',
                                       }))
                                     }}
                                     className="px-3 py-1.5 text-xs font-semibold text-white rounded-lg flex items-center gap-1"
