@@ -59,6 +59,11 @@ function RoutedStorefrontPreview(props) {
   const [activePage, setActivePage] = useState(null)
   const [shopCategory, setShopCategory] = useState('all')
 
+  const base = tenantId ? `/storefront/${tenantId}` : ''
+  const homePath = base || '/'
+  const shopPath = `${base}/shop`
+  const pagePath = (slug) => `${base}/${slug}`
+
   // URL is the source of truth: read :view on mount and whenever it changes
   // (browser back/forward, or a navigate() call below) and derive view state.
   useEffect(() => {
@@ -72,20 +77,45 @@ function RoutedStorefrontPreview(props) {
       setActivePage(null)
       return
     }
-    // Custom page slug. `pages` may still be loading on first mount — this
-    // effect re-runs once it arrives (see dependency array) so direct links
-    // to a page slug still deep-link correctly once data lands.
     const match = pages.find(p => p.slug === viewParam)
     if (match) {
       setActivePage(match)
       setView('page')
+    } else {
+      // Unknown or unpublished slug. `pages` is complete by the time this
+      // mounts (StorefrontPage only renders us after data lands), so redirect
+      // to the canonical home URL instead of silently rendering Home under a
+      // wrong address.
+      navigate(homePath, { replace: true })
     }
-  }, [viewParam, pages])
+  }, [viewParam, pages, homePath, navigate])
 
-  const base = tenantId ? `/storefront/${tenantId}` : ''
-  const homePath = base || '/'
-  const shopPath = `${base}/shop`
-  const pagePath = (slug) => `${base}/${slug}`
+  // Keep the tab title and meta description in sync with the current view.
+  // StorefrontPage sets the site-level tags once on load; this layers the
+  // per-view value on top, on the live (routed) storefront only — the
+  // unrouted builder preview must never touch the dashboard's title.
+  const { business, settings } = props
+  useEffect(() => {
+    const brand = business?.displayName || ''
+    const siteTitle = settings?.seo?.title || brand
+    if (view === 'shop') {
+      document.title = brand ? `Shop — ${brand}` : 'Shop'
+    } else if (view === 'page' && activePage) {
+      document.title = brand ? `${activePage.title} — ${brand}` : activePage.title
+      const desc = activePage.content?.seoDescription
+      if (desc) {
+        let tag = document.querySelector('meta[name="description"]')
+        if (!tag) {
+          tag = document.createElement('meta')
+          tag.setAttribute('name', 'description')
+          document.head.appendChild(tag)
+        }
+        tag.content = desc
+      }
+    } else if (siteTitle) {
+      document.title = siteTitle
+    }
+  }, [view, activePage, business, settings])
 
   const nav = {
     view, activePage, shopCategory, setShopCategory,
@@ -156,9 +186,16 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const scrollToSection = (key) => {
     setNavOpen(false)
     navigateHome()
-    setTimeout(() => {
-      document.getElementById(sectionId(key))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, 50)
+    // On the routed storefront navigateHome() triggers a real route change,
+    // so the target section may not be mounted yet — poll briefly (up to ~1s)
+    // instead of hoping one 50ms tick is enough.
+    let attempts = 0
+    const tryScroll = () => {
+      const el = document.getElementById(sectionId(key))
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      else if (attempts++ < 20) setTimeout(tryScroll, 50)
+    }
+    setTimeout(tryScroll, 50)
   }
 
   // ── Business / builder data ───────────────────────────────────────────────
