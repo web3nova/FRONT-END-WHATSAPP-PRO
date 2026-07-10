@@ -124,6 +124,52 @@ export const THEMES = {
     font: 'Sora',
     radius: 14,
   },
+  forest: {
+    id: 'forest',
+    name: 'Forest',
+    description: 'Deep greens and warm cream — natural, grounded, organic',
+    ink: '#14532d',
+    accent: '#16a34a',
+    soft: '#f0fdf4',
+    font: 'Lora',
+    radius: 12,
+  },
+  // NOTE: an existing 'ocean' key/id above already covers a "breezy coastal
+  // blues" preset. The plan for this round specified a second, distinct
+  // "Ocean" preset (navy/teal, calm-trustworthy) — since object keys and
+  // theme ids must be unique, it's added here as 'deepOcean' with the name
+  // "Deep Ocean" (same colours/values the plan specified) instead of
+  // silently overwriting the pre-existing 'ocean' entry.
+  deepOcean: {
+    id: 'deepOcean',
+    name: 'Deep Ocean',
+    description: 'Navy and teal over cool white — calm and trustworthy',
+    ink: '#0c4a6e',
+    accent: '#0d9488',
+    soft: '#f0f9ff',
+    font: 'Inter',
+    radius: 16,
+  },
+  blush: {
+    id: 'blush',
+    name: 'Blush',
+    description: 'Rose and charcoal — soft, warm, beauty-forward',
+    ink: '#3f3f46',
+    accent: '#e11d48',
+    soft: '#fff1f2',
+    font: 'Playfair Display',
+    radius: 20,
+  },
+  noir: {
+    id: 'noir',
+    name: 'Noir',
+    description: 'Black, gold accents — premium night-mode luxury',
+    ink: '#111111',
+    accent: '#ca8a04',
+    soft: '#fafaf9',
+    font: 'Archivo',
+    radius: 2,
+  },
 }
 
 // Broader font list for the custom-override dropdown — includes every theme

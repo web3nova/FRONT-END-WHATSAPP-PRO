@@ -614,13 +614,16 @@ export default function Website() {
 
   // Swap the whole visual template. Saves immediately, same pattern as toggle().
   // Blocked while another save is in flight, and reverted if the request fails.
-  // Switching the base preset also clears any custom overrides — tweaks made on
-  // top of the old preset shouldn't silently bleed into a newly chosen look.
+  // Switching the base preset clears custom color/radius overrides — tweaks
+  // made on top of the old preset shouldn't silently bleed into a newly
+  // chosen look — but a chosen font is a personal choice, not a color
+  // decision, so it survives the switch.
   const selectTemplate = async (templateId) => {
     if (savingSettings) return
     const previousTheme = settings?.theme || {}
     const previousHasUnpublishedChanges = settings?.hasUnpublishedChanges
-    const updatedTheme = { ...previousTheme, templateId, customTheme: {} }
+    const previousCustom = previousTheme.customTheme || {}
+    const updatedTheme = { ...previousTheme, templateId, customTheme: previousCustom.font ? { font: previousCustom.font } : {} }
     setSettings(s => ({ ...(s || {}), theme: updatedTheme, hasUnpublishedChanges: true }))
     const token = getStoredAccessToken()
     if (!token) return
@@ -1886,6 +1889,7 @@ export default function Website() {
                                     newImage: typeof val === 'string' ? { url: val, storageKey: null } : val,
                                   }))}
                                   aspect="square"
+                                  hint="Recommended: square, about 1000×1000 — gallery images are cropped to a square grid."
                                 />
                                 <button
                                   onClick={() => {
