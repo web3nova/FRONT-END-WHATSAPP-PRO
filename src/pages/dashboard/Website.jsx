@@ -2577,19 +2577,36 @@ export default function Website() {
                 <p className="text-xs text-gray-400 text-center py-8 px-4">No history yet — every save from here on will be recorded, so you can undo a change.</p>
               ) : (
                 <div className="divide-y divide-gray-50">
-                  {revisions.map(r => (
-                    <div key={r.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                      <span className="text-xs text-gray-600">{timeAgo(r.createdAt)}</span>
-                      <button
-                        onClick={() => restoreRevisionAction(r.id)}
-                        disabled={restoringId === r.id}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-blue-500 hover:text-blue-600 transition disabled:opacity-60"
-                      >
-                        {restoringId === r.id ? <Loader size={12} className="animate-spin" /> : null}
-                        Restore
-                      </button>
-                    </div>
-                  ))}
+                  {revisions.map(r => {
+                    const snapTheme = THEMES[r.snapshot?.theme?.templateId]?.name || 'Custom'
+                    const snapSections = Array.isArray(r.snapshot?.sections)
+                      ? r.snapshot.sections.filter(s => s.active !== false).length
+                      : null
+                    return (
+                      <div key={r.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                        <div className="min-w-0">
+                          <span className="text-xs text-gray-600">{timeAgo(r.createdAt)}</span>
+                          <div className="flex gap-1.5 mt-1 flex-wrap">
+                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{snapTheme} theme</span>
+                            {snapSections !== null && (
+                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{snapSections} sections on</span>
+                            )}
+                            {Array.isArray(r.snapshot?.navigation) && r.snapshot.navigation.length > 0 && (
+                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">custom menu</span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => restoreRevisionAction(r.id)}
+                          disabled={restoringId === r.id}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-blue-500 hover:text-blue-600 transition disabled:opacity-60 flex-shrink-0"
+                        >
+                          {restoringId === r.id ? <Loader size={12} className="animate-spin" /> : null}
+                          Restore
+                        </button>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>
