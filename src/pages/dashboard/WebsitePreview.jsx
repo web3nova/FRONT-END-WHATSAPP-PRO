@@ -61,7 +61,6 @@ export default function WebsitePreview() {
     return () => { ignore = true }
   }, [])
 
-  const _brandName = business?.displayName || 'Your Brand'
   const whatsapp = business?.whatsappNumber || ''
   // Same fallback as Website.jsx: custom domain if connected, else the
   // platform-hosted storefront URL. Never a fabricated domain.
@@ -76,7 +75,7 @@ export default function WebsitePreview() {
       {/* Top bar */}
       <div className="flex-shrink-0 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/dashboard/website')}
           className="flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition p-1.5 -m-1.5 flex-shrink-0"
         >
           <ArrowLeft size={17} />
@@ -150,7 +149,7 @@ export default function WebsitePreview() {
           <div className="flex flex-col items-center gap-2 text-center py-16 px-6 max-w-sm">
             <AlertCircle size={22} className="text-red-400" />
             <div className="text-sm font-semibold text-gray-700">{error}</div>
-            <button onClick={() => navigate(-1)} className="mt-2 px-4 py-2.5 text-sm font-semibold text-white rounded-xl" style={{ background: PRIMARY }}>
+            <button onClick={() => navigate('/dashboard/website')} className="mt-2 px-4 py-2.5 text-sm font-semibold text-white rounded-xl" style={{ background: PRIMARY }}>
               Back to editor
             </button>
           </div>
