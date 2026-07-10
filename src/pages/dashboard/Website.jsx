@@ -419,6 +419,18 @@ export default function Website() {
   const activeOutlook = SECTION_SLOTS.every(s => (sectionStyles[s.key] || 'boutique') === firstSlotStyle) ? firstSlotStyle : null
   const pageList = builtInPages(sections, activeSectionFlags)
 
+  // Which starter template (if any) matches the currently saved theme —
+  // powers the "Applied" state on the starter cards, distinct from the
+  // category-based "For you" recommendation.
+  const activeStarterId = STARTER_TEMPLATES.find(t =>
+    t.bundle.templateId === activeTemplateId &&
+    SECTION_SLOTS.every(s => (sectionStyles[s.key] || 'boutique') === (t.bundle.sectionStyles[s.key] || 'boutique'))
+  )?.id ?? null
+
+  // Menu edits live only in navDraft until "Save menu" — surface that so
+  // leaving the page doesn't silently discard them.
+  const navDirty = navDraft !== null && JSON.stringify(navDraft) !== JSON.stringify(settings?.navigation || [])
+
   // Preview-only overlays (WordPress-Customizer rule: every control change
   // previews before save). In-progress Colors & Fonts and social edits are
   // layered onto what the preview renders, but NEVER merged back into
@@ -1417,7 +1429,7 @@ export default function Website() {
                 className="flex-1 py-2 sm:py-1.5 text-xs font-semibold rounded-lg capitalize transition"
                 style={tab === t ? { background: PRIMARY, color: '#fff' } : { color: '#9ca3af' }}
               >
-                {t}
+                {t}{t === 'navigation' && navDirty ? <span className="text-amber-400"> •</span> : null}
               </button>
             ))}
           </div>
@@ -1989,6 +2001,12 @@ export default function Website() {
                 </div>
               )}
 
+              {navDirty && (
+                <div className="px-4 py-2.5 border-b border-gray-100 text-xs font-medium text-amber-700 bg-amber-50">
+                  Unsaved menu changes — they only exist in this editor until you click <b>Save menu</b>. Leaving the page discards them.
+                </div>
+              )}
+
               {navDraft === null || navDraft.length === 0 ? (
                 <div className="px-4 py-6 space-y-3 text-center">
                   <p className="text-xs text-gray-400">
@@ -2115,15 +2133,20 @@ export default function Website() {
                 <div className="grid grid-cols-2 gap-3">
                   {STARTER_TEMPLATES.map(tpl => {
                     const isRecommended = recommendedStarterTemplateId(business?.category) === tpl.id
+                    const isApplied = activeStarterId === tpl.id
                     return (
                       <button
                         key={tpl.id}
                         onClick={() => applyStarterTemplate(tpl)}
                         disabled={savingSettings}
                         className="text-left rounded-xl border-2 p-3 transition relative disabled:opacity-60"
-                        style={{ borderColor: isRecommended ? PRIMARY : '#e5e7eb' }}
+                        style={{ borderColor: isApplied ? '#16a34a' : '#e5e7eb' }}
                       >
-                        {isRecommended && (
+                        {isApplied ? (
+                          <span className="absolute top-2 right-2 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded" style={{ background: '#dcfce7', color: '#16a34a' }}>
+                            Applied
+                          </span>
+                        ) : isRecommended && (
                           <span className="absolute top-2 right-2 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded" style={{ background: '#dce5fd', color: PRIMARY }}>
                             For you
                           </span>
