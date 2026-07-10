@@ -682,6 +682,17 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
                     </div>
                   )
                 }
+                if (b.type === 'qa') {
+                  return (
+                    <details key={i} className={`${wrapClass} group`}>
+                      <summary className="cursor-pointer list-none flex items-center justify-between gap-3 border border-gray-100 rounded-[var(--sf-radius)] px-4 py-3 text-sm font-semibold" style={{ color: INK }}>
+                        {b.question}
+                        <span className="text-gray-300 transition-transform group-open:rotate-45 text-lg leading-none">+</span>
+                      </summary>
+                      <p className="text-sm leading-relaxed text-gray-600 px-4 pt-2 pb-1">{b.answer}</p>
+                    </details>
+                  )
+                }
                 return (
                   <p key={i} className={`${wrapClass} text-sm leading-relaxed text-gray-600`}>{b.text}</p>
                 )

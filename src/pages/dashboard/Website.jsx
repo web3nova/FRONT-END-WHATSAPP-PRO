@@ -66,6 +66,7 @@ const BLOCK_TYPES = [
   { type: 'paragraph', label: 'Paragraph' },
   { type: 'image', label: 'Image' },
   { type: 'section', label: 'Section' },
+  { type: 'qa', label: 'Q&A' },
 ]
 
 function newBlockKey() {
@@ -75,6 +76,9 @@ function newBlockKey() {
 function emptyBlock(type) {
   if (type === 'section') {
     return { _key: newBlockKey(), type, sectionType: 'products', variant: 'boutique' }
+  }
+  if (type === 'qa') {
+    return { _key: newBlockKey(), type, question: '', answer: '' }
   }
   return { _key: newBlockKey(), type, text: '', url: '', storageKey: '' }
 }
@@ -101,9 +105,9 @@ const PAGE_PATTERNS = [
     id: 'faq', name: 'FAQ', desc: 'Question-and-answer layout, ending with your Contact section.',
     blocks: () => [
       { ...emptyBlock('heading'), text: 'Frequently Asked Questions' },
-      emptyBlock('paragraph'),
-      emptyBlock('heading'),
-      emptyBlock('paragraph'),
+      emptyBlock('qa'),
+      emptyBlock('qa'),
+      emptyBlock('qa'),
       sectionBlock('contact'),
     ],
   },
@@ -258,6 +262,14 @@ function PageForm({ pageForm, setPageForm, isNew }) {
                     ? { url: val, storageKey: '' }
                     : { url: val.url, storageKey: val.storageKey || '' })}
                 />
+              )}
+              {b.type === 'qa' && (
+                <div className="space-y-2">
+                  <input className="w-full text-sm font-semibold border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                    placeholder="Question" value={b.question ?? ''} onChange={e => updateBlock(i, { question: e.target.value })} />
+                  <textarea className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                    rows={2} placeholder="Answer" value={b.answer ?? ''} onChange={e => updateBlock(i, { answer: e.target.value })} />
+                </div>
               )}
               {b.type === 'section' && (
                 <div className="space-y-2">
@@ -988,6 +1000,7 @@ export default function Website() {
       const blocks = (pageForm.blocks || [])
         .filter(b => {
           if (b.type === 'section') return !!b.sectionType
+          if (b.type === 'qa') return (b.question || '').trim()
           return b.type === 'image' ? b.url : (b.text || '').trim()
         })
         .map(({ _key, ...b }) => b)
