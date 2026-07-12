@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { X, Loader, LogIn, UserPlus, Globe, Fingerprint } from 'lucide-react'
 import { useCustomerAuth } from '../context/CustomerAuthContext'
-import { API_BASE } from '../lib/apiConfig'
 
 const VENDOR_COLORS = {
   primary: '#4166F5',
@@ -16,6 +15,7 @@ const VENDOR_COLORS = {
 }
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5173'
 
 export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = {} }) {
   const colors = { ...VENDOR_COLORS, ...theme }
@@ -33,6 +33,7 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
   const [showPassword, setShowPassword] = useState(false)
   const [confirmPassword, setConfirmPassword] = useState('')
   const [passkeyLoading, setPasskeyLoading] = useState(false)
+  const [isFedCMUnsupported, setIsFedCMUnsupported] = useState(false)
 
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID || !open) return
@@ -81,11 +82,8 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
 
       const result = body?.data ?? body
       if (result.token && result.customer) {
-        // Store the returned customer and token directly via the auth context
-        // by using the signup flow with received data
         localStorage.setItem('customer_token', result.token)
         localStorage.setItem('customer_data', JSON.stringify(result.customer))
-        // Reload to pick up the new auth state
         window.location.reload()
       }
 
@@ -93,7 +91,11 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
       onClose()
     } catch (err) {
       console.error('Google auth error:', err)
-      setError(err.message || 'Google authentication failed. Please try again.')
+      if (err.message.includes('FedCM') || err.message.includes('NetworkError') || err.message.includes('SecurityError')) {
+        setError('Google OAuth is currently unavailable. Please try phone/email login or restart your browser.')
+      } else {
+        setError(err.message || 'Google authentication failed. Please try again.')
+      }
     } finally {
       setGoogleLoading(false)
     }
@@ -108,7 +110,11 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
     try {
       window.google.accounts.id.prompt((notification) => {
         if (notification.isNotDisplayed()) {
-          console.error('Google OAuth not displayed:', notification.getNotDisplayedReason())
+          const reason = notification.getNotDisplayedReason()
+          console.error('Google OAuth not displayed:', reason)
+          if (reason === 'UnconditionalBlock' || reason === 'UserBlocked' || reason === 'WebOAuthDisabled') {
+            setError('Google OAuth requires browser permissions. Try using phone/email login or check your browser settings.')
+          }
         } else if (notification.isSkippedMoment()) {
           console.log('Google OAuth skipped')
         } else if (notification.isDismissedMoment()) {
@@ -117,9 +123,22 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
       })
     } catch (err) {
       console.error('Google button error:', err)
-      setError('Failed to initialize Google login. Please try again.')
+      setError('Google login requires browser support. Use phone/email login instead.')
     } finally {
       setGoogleLoading(false)
+    }
+  }
+
+  const handleFallbackGoogleSignIn = () => {
+    if (!GOOGLE_CLIENT_ID) return
+
+    setError('')
+    try {
+      window.open(`https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(window.location.origin)}/customer-auth/google/callback&response_type=code&scope=openid profile email&prompt=consent&access_type=offline`, '_blank')
+      setError('Redirected to Google for authentication. Check your browser for the login window.')
+    } catch (err) {
+      console.error('Fallback Google sign-in error:', err)
+      setError('Unable to initiate Google OAuth. Please use phone/email login.')
     }
   }
 
