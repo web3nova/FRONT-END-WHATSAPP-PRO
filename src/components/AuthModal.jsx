@@ -112,8 +112,15 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
         if (notification.isNotDisplayed()) {
           const reason = notification.getNotDisplayedReason()
           console.error('Google OAuth not displayed:', reason)
+          
           if (reason === 'UnconditionalBlock' || reason === 'UserBlocked' || reason === 'WebOAuthDisabled') {
-            setError('Google OAuth requires browser permissions. Try using phone/email login or check your browser settings.')
+            setError('Google OAuth disabled by browser. Use phone/email login.')
+          } else if (reason === 'ProviderConfigFileNotListed') {
+            setError('Google OAuth origin not configured. Please use phone/email login.')
+          } else if (reason === 'OriginNotAllowed') {
+            setError('Origin not authorized for Google OAuth. Please use phone/email login.')
+          } else {
+            setError('Google OAuth unavailable. Use phone/email login.')
           }
         } else if (notification.isSkippedMoment()) {
           console.log('Google OAuth skipped')
@@ -123,7 +130,14 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
       })
     } catch (err) {
       console.error('Google button error:', err)
-      setError('Google login requires browser support. Use phone/email login instead.')
+      
+      if (err.message.includes('FedCM') || err.message.includes('NetworkError') || err.message.includes('ProviderConfigFileNotListed') || err.message.includes('OriginNotAllowed')) {
+        setError('Google OAuth requires browser support. Use phone/email login.')
+      } else if (err.message.includes('SecurityError') || err.message.includes('SecurityError: The relying party ID')) {
+        setError('Auth security configuration issue. Use phone/email login.')
+      } else {
+        setError('Google login unavailable. Use phone/email login.')
+      }
     } finally {
       setGoogleLoading(false)
     }
