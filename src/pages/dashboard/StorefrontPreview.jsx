@@ -1,7 +1,7 @@
 import {
   Menu, X, Star, ShieldCheck, MessageCircle,
   Search, User, ShoppingBag, ChevronLeft, ChevronRight, ArrowLeft,
-  Plus, Trash2,
+  Plus, Trash2, LogOut, Package, Clock, ChevronDown,
 } from 'lucide-react'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
@@ -122,8 +122,9 @@ function RoutedStorefrontPreview(props) {
     }
   }, [view, activePage, business, settings])
 
+  const accountPath = `${base}/account`
   const nav = {
-    view, activePage, shopCategory, setShopCategory,
+    view, activePage, shopCategory, setShopCategory, accountPath,
     // Guard against re-pushing the same route on every call (e.g. typing in
     // the search box calls navigateShop on each keystroke) — only push a
     // new history entry when the target view actually differs.
@@ -141,7 +142,7 @@ function UnroutedStorefrontPreview(props) {
   const [shopCategory, setShopCategory] = useState('all')
 
   const nav = {
-    view, activePage, shopCategory, setShopCategory,
+    view, activePage, shopCategory, setShopCategory, accountPath: `/account`,
     navigateHome: () => { setView('home'); setActivePage(null) },
     navigateShop: () => setView('shop'),
     navigateToPage: (page) => { setActivePage(page); setView('page') },
@@ -151,7 +152,7 @@ function UnroutedStorefrontPreview(props) {
 }
 
 function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 'desktop', settings, theme, pages = [], nav, paymentConfig, tenantId: tenantIdProp }) {
-   const { customer: authCustomer, token: authToken, googleLogin } = useCustomerAuth()
+   const { customer, token, logout } = useCustomerAuth()
    const INK = theme?.ink || DEFAULT_INK
    const GOLD = theme?.accent || DEFAULT_GOLD
    const CREAM = theme?.soft || DEFAULT_CREAM
@@ -159,16 +160,6 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
    const radius = theme?.radius ?? DEFAULT_RADIUS
    const DISPLAY = `'${fontName}', ui-serif, Georgia, serif`
    const sectionStyles = theme?.sectionStyles || {}
-
-   // Google login handler for storefront
-   const handleGoogleLogin = async () => {
-     try {
-       await googleLogin()
-     } catch (err) {
-       console.error('Google login failed:', err)
-       alert('Google login failed. Please try again.')
-     }
-   }
 
    // Homepage section order — driven by settings.sections (array order is
   // render order, set via the Sections tab's up/down reorder controls).
@@ -189,10 +180,11 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const [navOpen, setNavOpen] = useState(false)
   const [announceIdx, setAnnounceIdx] = useState(0)
   const [testiIdx, setTestiIdx] = useState(0)
-  const { view, activePage, shopCategory, setShopCategory, navigateHome, navigateShop, navigateToPage } = nav
+  const { view, activePage, shopCategory, setShopCategory, navigateHome, navigateShop, navigateToPage, accountPath } = nav
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedAttrs, setSelectedAttrs] = useState({})
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
 
   // ── Cart / Checkout ────────────────────────────────────────────────────────
   const [cart, setCart] = useState([])
@@ -389,9 +381,6 @@ async function placeOrder() {
   const cleanWhatsapp = (whatsapp || '').replace(/\D/g, '')
   const waLink = (msg) => `https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent(msg)}`
   const genericOrderMsg = `Hi ${brandName}! I'd like to place an order.`
-
-  // Customer authentication state
-  const { customer, token, logout } = useCustomerAuth()
 
   const showAbout = isSectionActive(settings, 3) && aboutText
   const showProducts = isSectionActive(settings, 2) && products.length > 0
@@ -766,9 +755,11 @@ async function placeOrder() {
                   </span>
                 )}
               </button>
-              {token ? (
-                <Link to="account" className="flex items-center gap-1.5 px-2 py-1 text-sm font-medium rounded-lg transition hover:bg-gray-100" style={{ color: INK }} onClick={() => setNavOpen(false)}>
-                  <User size={16} /> Account
+              {token && customer ? (
+                <Link to={accountPath} className="flex items-center gap-1.5 px-2 py-1 text-sm font-medium rounded-lg transition hover:bg-gray-100" style={{ color: INK }} onClick={() => setNavOpen(false)}>
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold" style={{ background: INK }}>
+                    {customer.name ? customer.name.charAt(0).toUpperCase() : '👤'}
+                  </div>
                 </Link>
               ) : (
                 <button onClick={() => setShowAuthModal(true)} className="flex items-center gap-1.5 px-2 py-1 text-sm font-medium rounded-lg transition hover:bg-gray-100" style={{ color: INK }}>
@@ -808,9 +799,58 @@ async function placeOrder() {
                   <button onClick={() => setSearchQuery('')} className="text-gray-400 hover:text-gray-600 flex-shrink-0"><X size={11} /></button>
                 )}
               </div>
-              <span title="Customer accounts — coming soon">
-                <User size={17} className="text-gray-500" />
-              </span>
+              {token && customer ? (
+                <div
+                  className="relative"
+                  onBlur={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget)) {
+                      setUserMenuOpen(false)
+                    }
+                  }}
+                >
+                  <button
+                    onClick={() => setUserMenuOpen(v => !v)}
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-gray-50 transition"
+                  >
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: INK }}>
+                      {customer.name ? customer.name.charAt(0).toUpperCase() : '👤'}
+                    </div>
+                    <ChevronDown size={12} className="text-gray-400" />
+                  </button>
+                  {userMenuOpen && (
+                    <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-gray-100 rounded-xl shadow-lg z-50 py-1.5">
+                      <div className="px-3 py-2 border-b border-gray-50">
+                        <div className="text-sm font-semibold text-gray-900 truncate">{customer.name || 'Customer'}</div>
+                        <div className="text-xs text-gray-400 truncate">{customer.phone || customer.email || ''}</div>
+                      </div>
+                      <Link
+                        to={accountPath}
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
+                      >
+                        <Package size={14} /> My Orders
+                      </Link>
+                      <Link
+                        to={accountPath}
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
+                      >
+                        <Clock size={14} /> Cart History
+                      </Link>
+                      <div className="border-t border-gray-50 mt-1 pt-1">
+                        <button
+                          onClick={() => { logout(); setUserMenuOpen(false) }}
+                          className="flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition w-full text-left"
+                        >
+                          <LogOut size={14} /> Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button onClick={() => setShowAuthModal(true)} className="flex items-center gap-1.5 px-2 py-1 text-sm font-medium rounded-lg hover:bg-gray-100 transition" style={{ color: INK }}>
+                  <User size={16} /> Sign In
+                </button>
+              )}
               <button onClick={() => setCartOpen(true)} className="relative">
                 <ShoppingBag size={17} className="text-gray-500" />
                 {cartCount > 0 && (

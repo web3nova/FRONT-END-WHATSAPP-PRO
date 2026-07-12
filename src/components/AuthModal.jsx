@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { X, Loader, User, LogIn, UserPlus, Mail, Globe, Fingerprint } from 'lucide-react'
+import { X, Loader, LogIn, UserPlus, Globe, Fingerprint } from 'lucide-react'
 import { useCustomerAuth } from '../context/CustomerAuthContext'
+import { API_BASE } from '../lib/apiConfig'
 
-// Vendor custom theme colors - easily customizable per vendor
 const VENDOR_COLORS = {
   primary: '#4166F5',
   secondary: '#1a1a2e',
@@ -15,13 +15,12 @@ const VENDOR_COLORS = {
   border: '#e5e7eb',
 }
 
-// Google OAuth configuration
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
 export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = {} }) {
   const colors = { ...VENDOR_COLORS, ...theme }
 
-  const { login, signup, googleLogin } = useCustomerAuth()
+  const { login, signup, customer, token } = useCustomerAuth()
   const [mode, setMode] = useState('login')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -30,12 +29,16 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [googleLoading, setGoogleLoading] = useState(false)
-  const [authMethod, setAuthMethod] = useState('phone') // 'phone' or 'email'
+  const [authMethod, setAuthMethod] = useState('phone')
   const [showPassword, setShowPassword] = useState(false)
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [passkeyLoading, setPasskeyLoading] = useState(false)
 
   useEffect(() => {
-    if (!GOOGLE_CLIENT_ID) return
+    if (!GOOGLE_CLIENT_ID || !open) return
+
+    const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]')
+    if (existingScript) return
 
     const script = document.createElement('script')
     script.src = 'https://accounts.google.com/gsi/client'
@@ -54,11 +57,10 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
     document.head.appendChild(script)
 
     return () => {
-      if (script.parentNode) {
-        script.parentNode.removeChild(script)
-      }
+      const s = document.querySelector('script[src="https://accounts.google.com/gsi/client"]')
+      if (s && s.parentNode) s.parentNode.removeChild(s)
     }
-  }, [])
+  }, [open])
 
   const handleGoogleResponse = async (response) => {
     setGoogleLoading(true)
@@ -68,30 +70,27 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
       const idToken = response.credential
       if (!idToken) throw new Error('Google authentication failed')
 
-      const backendApiUrl = import.meta.env.VITE_API_BASE || 'http://localhost:5173'
-      const res = await fetch(`${backendApiUrl}/customer-auth/google`, {
+      const res = await fetch(`${API_BASE}/customer-auth/google`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tenantId,
-          idToken,
-          name: response.name,
-          email: response.email,
-          picture: response.picture,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId, idToken }),
       })
 
-      const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.message || 'Google authentication failed')
+      const body = await res.json()
+      if (!res.ok) throw new Error(body?.message || 'Google authentication failed')
+
+      const result = body?.data ?? body
+      if (result.token && result.customer) {
+        // Store the returned customer and token directly via the auth context
+        // by using the signup flow with received data
+        localStorage.setItem('customer_token', result.token)
+        localStorage.setItem('customer_data', JSON.stringify(result.customer))
+        // Reload to pick up the new auth state
+        window.location.reload()
       }
 
-      await login(tenantId, response.email, data.tempPassword || 'google-oauth')
       onSuccess?.()
       onClose()
-
     } catch (err) {
       console.error('Google auth error:', err)
       setError(err.message || 'Google authentication failed. Please try again.')
@@ -124,6 +123,83 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
     }
   }
 
+  const handlePasskeyLogin = async () => {
+    if (!tenantId || passkeyLoading) return
+    setPasskeyLoading(true)
+    setError('')
+
+    try {
+      // Start passkey auth
+      const startRes = await fetch(`${API_BASE}/customer-auth/passkey/login/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId }),
+      })
+      const startBody = await startRes.json()
+      if (!startRes.ok) throw new Error(startBody?.message || 'Passkey auth failed')
+      const startData = startBody?.data ?? startBody
+
+      // Use WebAuthn API
+      const credential = await navigator.credentials.get({
+        publicKey: {
+          challenge: Uint8Array.from(atob(startData.challenge), c => c.charCodeAt(0)),
+          rpId: startData.rpId || window.location.hostname,
+          allowCredentials: [],
+          userVerification: 'preferred',
+        },
+        signal: new AbortController().signal,
+      })
+
+      if (!credential) throw new Error('Passkey authentication cancelled')
+
+      // Complete passkey auth
+      const completeRes = await fetch(`${API_BASE}/customer-auth/passkey/login/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenantId,
+          credential: {
+            id: credential.id,
+            type: credential.type,
+            rawId: credential.id,
+            response: credential.response ? {
+              clientDataJSON: arrayBufferToBase64(credential.response.clientDataJSON),
+              authenticatorData: arrayBufferToBase64(credential.response.authenticatorData),
+              signature: arrayBufferToBase64(credential.response.signature),
+              userHandle: credential.response.userHandle
+                ? arrayBufferToBase64(credential.response.userHandle)
+                : null,
+            } : null,
+          },
+        }),
+      })
+      const completeBody = await completeRes.json()
+      if (!completeRes.ok) throw new Error(completeBody?.message || 'Passkey verification failed')
+      const completeData = completeBody?.data ?? completeBody
+
+      if (completeData.token && completeData.customer) {
+        localStorage.setItem('customer_token', completeData.token)
+        localStorage.setItem('customer_data', JSON.stringify(completeData.customer))
+        window.location.reload()
+      }
+
+      onSuccess?.()
+      onClose()
+    } catch (err) {
+      console.error('Passkey error:', err)
+      setError(err.message || 'Passkey authentication failed. Please try again.')
+    } finally {
+      setPasskeyLoading(false)
+    }
+  }
+
+  function arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer)
+    let binary = ''
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
+    return btoa(binary)
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
@@ -145,17 +221,9 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
     setLoading(true)
     try {
       if (mode === 'signup') {
-        if (authMethod === 'email') {
-          await signup(tenantId, name.trim(), email.trim(), password)
-        } else {
-          await signup(tenantId, name.trim(), phone.trim(), password)
-        }
+        await signup(tenantId, name.trim(), phone.trim(), password)
       } else {
-        if (authMethod === 'email') {
-          await login(tenantId, email.trim(), password)
-        } else {
-          await login(tenantId, phone.trim(), password)
-        }
+        await login(tenantId, phone.trim(), password)
       }
       onSuccess?.()
       onClose()
@@ -211,7 +279,6 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
             </div>
           )}
 
-          {/* Authentication Method Toggle */}
           <div className="flex rounded-lg bg-gray-100 p-1">
             <button
               type="button"
@@ -328,7 +395,6 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
             )}
           </button>
 
-          {/* Divider */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-200" />
@@ -338,9 +404,7 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
             </div>
           </div>
 
-          {/* Social Sign In Options */}
           <div className="grid grid-cols-2 gap-3">
-            {/* Google Sign In */}
             <button
               type="button"
               onClick={handleGoogleLogin}
@@ -357,15 +421,20 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
               )}
             </button>
 
-            {/* Passkey / Bi-pattern Sign In */}
             <button
               type="button"
-              onClick={() => setError('Passkey sign-in is coming soon!')}
-              disabled={loading}
+              onClick={handlePasskeyLogin}
+              disabled={loading || passkeyLoading}
               className="flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Fingerprint size={18} style={{ color: colors.secondary }} />
-              <span className="text-sm font-medium text-gray-700">Passkey</span>
+              {passkeyLoading ? (
+                <Loader size={16} className="animate-spin" />
+              ) : (
+                <>
+                  <Fingerprint size={18} style={{ color: colors.secondary }} />
+                  <span className="text-sm font-medium text-gray-700">Passkey</span>
+                </>
+              )}
             </button>
           </div>
 
