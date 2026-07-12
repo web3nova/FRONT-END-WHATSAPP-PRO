@@ -15,24 +15,18 @@ const API_ORIGIN = (() => {
   }
 })()
 
-const isLocalhost = typeof window !== 'undefined' &&
-  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-
 export function resolveImageUrl(url) {
   if (!url) return ''
-  // Strip incorrectly stored localhost:5173 prefix (old bug).
-  // These become relative paths; Vite proxy rewrites them in dev.
+  // Strip the backend origin so images load from the current origin.
+  // On localhost the Vite dev proxy rewrites /assets/ to the backend;
+  // on Vercel the edge middleware does the same — keeps images same-origin
+  // and avoids Cross-Origin-Resource-Policy blocks.
+  if (API_ORIGIN && url.startsWith(API_ORIGIN)) return url.slice(API_ORIGIN.length)
+  // Strip incorrectly stored localhost:5173 prefix (old backend bug).
   if (url.startsWith('http://localhost:5173')) return url.slice(21)
   if (url.startsWith('https://localhost:5173')) return url.slice(22)
-
-  // On localhost, strip the backend origin so Vite proxy handles
-  // Cross-Origin-Resource-Policy. On production, keep the full URL.
-  if (isLocalhost && API_ORIGIN && url.startsWith(API_ORIGIN)) {
-    return url.slice(API_ORIGIN.length)
-  }
-
-  if (url.startsWith('http://') || url.startsWith('https://')) return url
-  if (url.startsWith('/')) return `${API_ORIGIN}${url}`
+  // Already a relative path — keep as-is.
+  if (url.startsWith('/')) return url
   return url
 }
 
