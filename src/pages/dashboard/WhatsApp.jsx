@@ -9,6 +9,7 @@ import { fetchWhatsappAccount, connectWhatsapp } from '../../api/whatsappApi'
 import { listConversations, getConversationMessages, takeOverConversation, releaseConversation, sendStaffMessage, sendStaffMedia, subscribeToEvents } from '../../api/conversationsApi'
 import { createOrder } from '../../api/ordersApi'
 import { createQuote } from '../../api/quotesApi'
+import { resolveImageUrl } from '../../lib/utils'
 
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
@@ -692,13 +693,13 @@ export default function WhatsAppPage() {
                             >
                               {(msg.media || []).map((m, i) => (
                                 m.mimeType?.startsWith('image/') ? (
-                                  <a key={m.id || i} href={m.url} target="_blank" rel="noopener noreferrer">
-                                    <img src={m.url} alt="" className="rounded-lg max-w-full mb-2 max-h-64 object-contain" />
+                                  <a key={m.id || i} href={resolveImageUrl(m.url)} target="_blank" rel="noopener noreferrer">
+                                    <img src={resolveImageUrl(m.url)} alt="" className="rounded-lg max-w-full mb-2 max-h-64 object-contain" />
                                   </a>
                                 ) : m.mimeType?.startsWith('video/') ? (
-                                  <video key={m.id || i} src={m.url} controls className="rounded-lg max-w-full mb-2 max-h-64" />
+                                  <video key={m.id || i} src={resolveImageUrl(m.url)} controls className="rounded-lg max-w-full mb-2 max-h-64" />
                                 ) : m.mimeType?.startsWith('audio/') ? (
-                                  <audio key={m.id || i} src={m.url} controls className="mb-2 w-full" />
+                                  <audio key={m.id || i} src={resolveImageUrl(m.url)} controls className="mb-2 w-full" />
                                 ) : (
                                   <a key={m.id || i} href={m.url} target="_blank" rel="noopener noreferrer" className="underline text-xs block mb-2">
                                     📎 Attachment

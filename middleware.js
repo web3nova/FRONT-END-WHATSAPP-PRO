@@ -43,7 +43,12 @@ export default async function middleware(request) {
     const seo = data?.settings?.seo || {}
     const title = escapeHtml(seo.title || business.displayName || 'Storefront')
     const description = escapeHtml(seo.description || business.description || `Shop ${seo.title || business.displayName || ''}`.trim())
-    const image = escapeHtml(seo.ogImage || business.logoUrl || '')
+    const rawImage = seo.ogImage || business.logoUrl || ''
+    const image = escapeHtml(
+      rawImage && !rawImage.startsWith('http')
+        ? `${new URL(apiBase).origin}${rawImage}`
+        : rawImage
+    )
     const pageUrl = escapeHtml(url.href)
 
     const html = `<!doctype html><html><head>

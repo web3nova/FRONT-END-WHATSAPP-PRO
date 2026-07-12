@@ -3,10 +3,11 @@ import { useParams, Link } from 'react-router-dom'
 import { Loader, AlertCircle, ArrowLeft } from 'lucide-react'
 import { API_BASE } from '../lib/apiConfig'
 import { THEMES } from '../lib/themes'
+import { resolveImageUrl } from '../lib/utils'
 import StorefrontPreview from './dashboard/StorefrontPreview'
 
 export default function StorefrontPage({ domain: domainProp } = {}) {
-  const { tenantId } = useParams()
+  const { tenantId, slug } = useParams()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [data, setData] = useState(null)
@@ -15,9 +16,11 @@ export default function StorefrontPage({ domain: domainProp } = {}) {
     let ignore = false
     async function load() {
       try {
-        const query = domainProp
-          ? `domain=${encodeURIComponent(domainProp)}`
-          : `tenantId=${tenantId}`
+        const query = slug
+          ? `slug=${encodeURIComponent(slug)}`
+          : domainProp
+            ? `domain=${encodeURIComponent(domainProp)}`
+            : `tenantId=${tenantId}`
         const res = await fetch(`${API_BASE}/website/storefront?${query}`)
         if (!res.ok) {
           if (res.status === 404) throw new Error('Storefront not found. The business may not be published yet.')
@@ -59,7 +62,7 @@ export default function StorefrontPage({ domain: domainProp } = {}) {
     setMeta('description', seo.description || business.description || `Shop ${title}`)
     setMeta('og:title', title, true)
     setMeta('og:description', seo.description || business.description, true)
-    setMeta('og:image', seo.ogImage || business.logoUrl, true)
+    setMeta('og:image', resolveImageUrl(seo.ogImage || business.logoUrl), true)
     setMeta('og:type', 'website', true)
     if (domain) setMeta('og:url', `https://${domain}`, true)
 

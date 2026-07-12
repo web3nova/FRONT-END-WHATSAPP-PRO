@@ -8,6 +8,7 @@ import {
   Globe, CheckCircle, RefreshCw, Copy
 } from 'lucide-react'
 import { apiFetch } from '../../lib/apiFetch'
+import { resolveImageUrl } from '../../lib/utils'
 import { useBusinessProfile } from '../../hooks/useBusinessProfile'
 import { useAuth } from '../../context/AuthContext'
 import { fetchWhatsappAccount, fetchWhatsappBusinessProfile, updateWhatsappBusinessProfile, disconnectWhatsapp, uploadWhatsappProfilePicture, requestWhatsappDisplayNameChange } from '../../api/whatsappApi'
@@ -494,7 +495,7 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
                   onClick={() => picInputRef.current?.click()}
                 >
                   {picPreview || waProfile?.profile_picture_url ? (
-                    <img src={picPreview || waProfile?.profile_picture_url} alt="Profile" className="w-full h-full object-cover" />
+                    <img src={picPreview || resolveImageUrl(waProfile?.profile_picture_url || '')} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
                     <Upload size={18} className="text-gray-300" />
                   )}
@@ -1035,7 +1036,7 @@ export default function Settings() {
     }
   }
 
-  const logoUrl = logoFile ? URL.createObjectURL(logoFile) : profile?.logoUrl || null
+  const logoUrl = logoFile ? URL.createObjectURL(logoFile) : resolveImageUrl(profile?.logoUrl || '') || null
   const initials = (form.displayName || 'PS').split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase()
 
   return (

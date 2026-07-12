@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Plus, Search, Edit2, Trash2, Package, Tag, Star, X } from 'lucide-react'
 import { API_BASE } from '../../lib/apiConfig'
 import { getStoredAccessToken, clearStoredAuth } from '../../lib/auth'
+import { resolveImageUrl } from '../../lib/utils'
 import { useAuth } from '../../context/AuthContext'
 
 const PRIMARY = '#4166F5'
@@ -302,7 +303,7 @@ export default function Products() {
                 {/* Image */}
                 <div className="h-40 sm:h-44 flex items-center justify-center relative overflow-hidden" style={{ background: CREAM }}>
                   {p.imageUrl ? (
-                    <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                    <img src={resolveImageUrl(p.imageUrl)} alt={p.name} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: placeholderColors[i % placeholderColors.length] }}>
                       <Package size={28} className="text-white" />
@@ -394,7 +395,7 @@ export default function Products() {
                   <div className="flex items-start gap-3">
                     <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0" style={{ background: placeholderColors[i % placeholderColors.length] }}>
                       {p.imageUrl ? (
-                        <img src={p.imageUrl} alt="" className="w-full h-full object-cover" />
+                        <img src={resolveImageUrl(p.imageUrl)} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <Package size={18} className="text-white" />
                       )}
@@ -461,7 +462,7 @@ export default function Products() {
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0" style={{ background: placeholderColors[i % placeholderColors.length] }}>
                             {p.imageUrl ? (
-                              <img src={p.imageUrl} alt="" className="w-full h-full object-cover" />
+                              <img src={resolveImageUrl(p.imageUrl)} alt="" className="w-full h-full object-cover" />
                             ) : (
                               <Package size={15} className="text-white" />
                             )}

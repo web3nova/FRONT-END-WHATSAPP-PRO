@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { X, Trash2, Upload, Plus } from 'lucide-react'
+import { resolveImageUrl } from '../../lib/utils'
 
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
@@ -72,7 +73,7 @@ export default function ProductForm({ initialData, onSubmit, loading, error }) {
       setSpecs(initialData.specifications || [])
       setFeatures(initialData.features || [])
       setFaqs(initialData.faqs || [])
-      if (initialData.imageUrl) setPreviewUrl(initialData.imageUrl)
+      if (initialData.imageUrl) setPreviewUrl(resolveImageUrl(initialData.imageUrl))
     }
   }, [initialData])
 

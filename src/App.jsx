@@ -167,6 +167,12 @@ export default function App() {
                 element={<StorefrontPage />}
               />
 
+              {/* Slug-based storefront URL */}
+              <Route
+                path="/b/:slug/:view?"
+                element={<StorefrontPage />}
+              />
+
               {/* Website Builder */}
 
               <Route

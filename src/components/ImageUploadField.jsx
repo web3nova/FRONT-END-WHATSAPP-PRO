@@ -2,10 +2,17 @@ import { useRef, useState } from 'react'
 import { Image, Link, Upload, Loader, Images, X, Trash2 } from 'lucide-react'
 import { API_BASE } from '../lib/apiConfig'
 import { getStoredAccessToken } from '../lib/auth'
+import { resolveImageUrl } from '../lib/utils'
 
 const PRIMARY = '#4166F5'
 
-export default function ImageUploadField({ label, value, onChange, hint, aspect }) {
+function isValidImageUrl(url) {
+  if (!url) return false
+  if (url.includes('localhost')) return false
+  return true
+}
+
+export default function ImageUploadField({ label, value, onChange, hint, aspect, onUploadStart, onUploadComplete }) {
   const fileInputRef = useRef()
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
@@ -14,12 +21,18 @@ export default function ImageUploadField({ label, value, onChange, hint, aspect 
   const [libraryLoading, setLibraryLoading] = useState(false)
   const [libraryError, setLibraryError] = useState('')
   const [deletingId, setDeletingId] = useState('')
+  const [externalUploading, setExternalUploading] = useState(false)
 
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
 
+    if (onUploadStart) {
+      setExternalUploading(true)
+      onUploadStart(file)
+    }
+    
     setError('')
     setUploading(true)
     try {
@@ -35,13 +48,23 @@ export default function ImageUploadField({ label, value, onChange, hint, aspect 
       if (!res.ok) {
         throw new Error(json?.message || 'Could not upload image.')
       }
-      // Uploaded files carry a storageKey (for later deletion); URLs pasted into
-      // the text field are plain strings — callers normalize both shapes.
-      onChange(json?.data || json)
+      const result = json?.data || json
+      console.log('[ImageUploadField] upload response:', JSON.stringify(result))
+      console.log('[ImageUploadField] resolved URL:', resolveImageUrl(result.url || ''))
+      if (onUploadStart) {
+        onUploadComplete?.(result)
+      } else {
+        onChange(result)
+      }
     } catch (err) {
-      setError(err.message || 'Could not upload image.')
+      if (onUploadStart) {
+        onUploadComplete?.(null, err)
+      } else {
+        setError(err.message || 'Could not upload image.')
+      }
     } finally {
       setUploading(false)
+      setExternalUploading(false)
     }
   }
 
@@ -54,7 +77,13 @@ export default function ImageUploadField({ label, value, onChange, hint, aspect 
       const res = await fetch(`${API_BASE}/website/media?limit=60`, { headers: { Authorization: `Bearer ${token}` } })
       const json = await res.json().catch(() => null)
       if (!res.ok) throw new Error(json?.message || 'Could not load your media library.')
-      setLibraryItems(Array.isArray(json?.data) ? json.data : [])
+      const items = Array.isArray(json?.data) ? json.data : []
+      console.log('[ImageUploadField] media library items:', items.length)
+      items.forEach((item, i) => {
+        console.log(`[ImageUploadField] library item #${i}:`, JSON.stringify(item))
+        console.log(`[ImageUploadField] library item #${i} resolved:`, resolveImageUrl(item.url || ''))
+      })
+      setLibraryItems(items)
     } catch (err) {
       setLibraryError(err.message || 'Could not load your media library.')
     } finally {
@@ -63,6 +92,7 @@ export default function ImageUploadField({ label, value, onChange, hint, aspect 
   }
 
   const selectFromLibrary = (item) => {
+    console.log('[ImageUploadField] selected from library:', JSON.stringify(item))
     onChange({ url: item.url, storageKey: item.storageKey })
     setLibraryOpen(false)
   }
@@ -95,8 +125,11 @@ export default function ImageUploadField({ label, value, onChange, hint, aspect 
           <input
             className="w-full text-sm border border-gray-200 rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
             placeholder="Paste an image URL"
-            value={value || ''}
-            onChange={e => onChange(e.target.value)}
+            value={isValidImageUrl(value) ? value : ''}
+            onChange={e => {
+              console.log('[ImageUploadField] paste URL:', e.target.value)
+              onChange(e.target.value)
+            }}
             disabled={uploading}
           />
         </div>
@@ -135,8 +168,14 @@ export default function ImageUploadField({ label, value, onChange, hint, aspect 
           className="w-10 h-10 rounded-lg border border-dashed border-gray-200 flex items-center justify-center flex-shrink-0 bg-gray-50 overflow-hidden"
           style={value ? { borderStyle: 'solid', borderColor: PRIMARY } : {}}
         >
-          {value ? (
-            <img src={value} alt="" className="w-full h-full object-cover" />
+          {isValidImageUrl(value) ? (
+            <img
+              src={resolveImageUrl(value)}
+              alt=""
+              className="w-full h-full object-cover"
+              onError={e => console.log('[ImageUploadField] THUMB FAILED:', resolveImageUrl(value), e.type)}
+              onLoad={e => console.log('[ImageUploadField] THUMB LOADED:', resolveImageUrl(value))}
+            />
           ) : (
             <Image size={14} className="text-gray-300" />
           )}
@@ -179,7 +218,13 @@ export default function ImageUploadField({ label, value, onChange, hint, aspect 
                         onClick={() => selectFromLibrary(item)}
                         className="w-full aspect-square rounded-lg overflow-hidden border border-gray-200 hover:border-blue-500 transition"
                       >
-                        <img src={item.url} alt="" className="w-full h-full object-cover" />
+                        <img
+                          src={resolveImageUrl(item.url)}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          onError={e => console.log('[ImageUploadField] IMG LOAD FAILED:', resolveImageUrl(item.url), e.type)}
+                          onLoad={e => console.log('[ImageUploadField] IMG LOADED:', resolveImageUrl(item.url))}
+                        />
                       </button>
                       <button
                         type="button"

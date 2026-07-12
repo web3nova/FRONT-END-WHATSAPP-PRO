@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Globe, Eye, CheckCircle, ExternalLink, Layout, Image, Type, ToggleLeft, ToggleRight, Plus, Loader, Monitor, Smartphone, ChevronDown, ChevronUp, Save, Trash2, Star, Grid3x3, Check, History, X } from 'lucide-react'
+import { Globe, Eye, CheckCircle, ExternalLink, Layout, Image, Type, ToggleLeft, ToggleRight, Plus, Loader, Monitor, Smartphone, ChevronDown, ChevronUp, Save, Trash2, Star, Grid3x3, Check, History, X, Upload } from 'lucide-react'
 import { API_BASE } from '../../lib/apiConfig'
 import { getStoredAccessToken } from '../../lib/auth'
+import { resolveImageUrl, slugify } from '../../lib/utils'
 import { THEMES, FONT_OPTIONS, RADIUS_OPTIONS } from '../../lib/themes'
 import { STARTER_TEMPLATES, recommendedStarterTemplateId } from '../../lib/starterTemplates'
 import ImageUploadField from '../../components/ImageUploadField'
@@ -55,10 +56,6 @@ function timeAgo(dateStr) {
   const days = Math.floor(hrs / 24)
   if (days < 7) return `${days}d ago`
   return new Date(dateStr).toLocaleDateString()
-}
-
-function slugify(str) {
-  return (str || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
 }
 
 const BLOCK_TYPES = [
@@ -442,9 +439,10 @@ export default function Website() {
   const brandName = business?.displayName || 'Your Brand'
   const whatsapp = business?.whatsappNumber || ''
   const tenantId = business?.tenantId || ''
+  const brandSlug = slugify(brandName)
   const storefrontUrl = business?.domain
     ? `https://${business.domain}`
-    : `${window.location.protocol}//${window.location.host}/storefront/${tenantId || ''}`
+    : `${window.location.protocol}//${window.location.host}/b/${brandSlug}`
   const domain = storefrontUrl
 
   const activeTemplateId = settings?.theme?.templateId || 'minimal'
@@ -1482,7 +1480,7 @@ export default function Website() {
               onClick={() => {
                 const url = business?.domain
                   ? `https://${business.domain}`
-                  : `${window.location.origin}/storefront/${business?.tenantId || ''}`
+                  : `${window.location.origin}/b/${brandSlug}`
                 window.open(url, '_blank', 'noopener,noreferrer')
               }}
               className="flex items-center gap-1.5 text-xs font-semibold text-white px-3 py-2 sm:py-1.5 rounded-lg hover:opacity-90 active:opacity-80 transition flex-shrink-0"
@@ -1798,7 +1796,11 @@ export default function Website() {
                                   <ImageUploadField
                                     label="Image (optional)"
                                     value={sectionForm.bgImage ?? settings?.theme?.builder?.hero?.bgImage ?? ''}
-                                    onChange={val => setSectionForm(f => ({ ...f, bgImage: typeof val === 'string' ? val : val.url }))}
+                                    onChange={val => {
+                                      const stored = typeof val === 'string' ? val : val.url
+                                      console.log('[Website] bgImage onChange got:', JSON.stringify(val), '→ stored:', stored)
+                                      setSectionForm(f => ({ ...f, bgImage: stored }))
+                                    }}
                                     hint="Recommended: 1600×900 (landscape). A dark overlay is applied automatically so the headline stays readable."
                                   />
                                   <div className="flex items-center gap-3">
@@ -1915,7 +1917,7 @@ export default function Website() {
                                 <div className="grid grid-cols-4 gap-2 mb-3">
                                   {(sectionForm.galleryImages || []).map((img, idx) => (
                                     <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group">
-                                      <img src={img?.url ?? img} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover" />
+                                      <img src={resolveImageUrl(img?.url ?? img)} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover" />
                                       <button
                                         onClick={() => {
                                           setSectionForm(f => ({ ...f, galleryImages: f.galleryImages.filter((_, j) => j !== idx) }))
@@ -1937,27 +1939,69 @@ export default function Website() {
                                     </div>
                                   ))}
                                 </div>
-                                <ImageUploadField
-                                  label="Add a photo"
-                                  value={sectionForm.newImage?.url ?? ''}
-                                  onChange={val => setSectionForm(f => ({
-                                    ...f,
-                                    newImage: typeof val === 'string' ? { url: val, storageKey: null } : val,
-                                  }))}
-                                  aspect="square"
-                                  hint="Recommended: square, about 1000×1000 — gallery images are cropped to a square grid."
-                                />
-                                <button
-                                  onClick={() => {
-                                    if (!sectionForm.newImage?.url) return
-                                    setSectionForm(f => ({ ...f, galleryImages: [...(f.galleryImages || []), f.newImage], newImage: null }))
-                                  }}
-                                  disabled={!sectionForm.newImage?.url}
-                                  className="mt-2 px-3 py-2 text-xs font-semibold text-white rounded-lg flex items-center gap-1 disabled:opacity-40"
-                                  style={{ background: PRIMARY }}
-                                >
-                                  <Plus size={13} /> Add to gallery
-                                </button>
+                                 <ImageUploadField
+                                   label="Add a photo"
+                                   value={sectionForm.newImage?.url ?? ''}
+                                   onChange={val => {
+                                     setSectionForm(f => ({
+                                       ...f,
+                                       newImage: val,
+                                     }))
+                                   }}
+                                   aspect="square"
+                                   hint="Recommended: square, about 1000×1000 — gallery images are cropped to a square grid."
+                                 />
+                                 <div className="flex gap-2 mt-2">
+                                   <button
+                                     onClick={() => {
+                                       if (!sectionForm.newImage?.url) return
+                                       setSectionForm(f => ({ ...f, galleryImages: [...(f.galleryImages || []), f.newImage], newImage: null }))
+                                     }}
+                                     disabled={!sectionForm.newImage?.url}
+                                     className="px-3 py-2 text-xs font-semibold text-white rounded-lg flex items-center gap-1 disabled:opacity-40"
+                                     style={{ background: PRIMARY }}
+                                   >
+                                     <Plus size={13} /> Add to gallery (local)
+                                   </button>
+                                   <button
+                                     onClick={async () => {
+                                       if (!sectionForm.newImage?.url) return
+                                       const token = getStoredAccessToken()
+                                       if (!token) return
+                                       
+                                       try {
+                                         // Upload directly to backend
+                                         const uploadUrl = `${API_BASE}/website/image`
+                                         const uploadRes = await fetch(uploadUrl, {
+                                           method: 'POST',
+                                           headers: { Authorization: `Bearer ${token}` },
+                                           body: new FormData()
+                                         })
+                                         
+                                         if (!uploadRes.ok) {
+                                           throw new Error('Failed to upload image')
+                                         }
+                                         
+                                         const uploadData = await uploadRes.json()
+                                         const uploadedImage = typeof uploadData === 'string' ? uploadData : (uploadData?.url || uploadData)
+                                         
+                                         // Add uploaded image to gallery
+                                         setSectionForm(f => ({
+                                           ...f,
+                                           galleryImages: [...(f.galleryImages || []), { url: uploadedImage, storageKey: uploadData?.storageKey }],
+                                           newImage: null
+                                         }))
+                                       } catch (err) {
+                                         console.error('Upload failed:', err)
+                                         alert('Failed to upload image. Please try again.')
+                                       }
+                                     }}
+                                     disabled={!sectionForm.newImage?.url}
+                                     className="px-3 py-2 text-xs font-semibold border border-gray-200 rounded-lg flex items-center gap-1 disabled:opacity-40 hover:bg-gray-50 transition"
+                                   >
+                                     <Upload size={13} /> Upload & add
+                                   </button>
+                                 </div>
                               </div>
                               <SectionBackgroundControl
                                 bg={sectionForm.sectionBg ?? ''}

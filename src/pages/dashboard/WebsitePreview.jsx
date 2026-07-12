@@ -4,6 +4,7 @@ import { ArrowLeft, Monitor, Smartphone, ExternalLink, Loader, AlertCircle } fro
 import { API_BASE } from '../../lib/apiConfig'
 import { getStoredAccessToken } from '../../lib/auth'
 import { THEMES } from '../../lib/themes'
+import { slugify } from '../../lib/utils'
 import StorefrontPreview from './StorefrontPreview'
 
 const PRIMARY = '#4166F5'
@@ -62,12 +63,13 @@ export default function WebsitePreview() {
   }, [])
 
   const whatsapp = business?.whatsappNumber || ''
+  const brandSlug = slugify(business?.displayName || '')
   // Same fallback as Website.jsx: custom domain if connected, else the
   // platform-hosted storefront URL. Never a fabricated domain.
   const liveUrl = business?.domain
     ? `https://${business.domain}`
-    : `${window.location.origin}/storefront/${business?.tenantId || ''}`
-  const domain = business?.domain || `${window.location.host}/storefront/${business?.tenantId || ''}`
+    : `${window.location.origin}/b/${brandSlug}`
+  const domain = business?.domain || `${window.location.host}/b/${brandSlug}`
   const activeTheme = { ...(THEMES[settings?.theme?.templateId] || THEMES.minimal), ...(settings?.theme?.customTheme || {}), sectionStyles: settings?.theme?.sectionStyles || {} }
 
   return (

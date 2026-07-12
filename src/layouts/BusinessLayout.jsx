@@ -4,6 +4,7 @@ import onboardingApi from '../services/onboardingService'
 import { useAuth } from '../context/AuthContext'
 import { apiFetch } from '../lib/apiFetch'
 import { isOwner, isAdmin } from '../utils/permissions'
+import { resolveImageUrl } from '../lib/utils'
 import {
   LayoutDashboard, ShoppingBag, Package, Users, MessageCircle,
   Globe, BarChart3, BookOpen, Settings, Bell, Search, ExternalLink, Menu, X, CreditCard,
@@ -188,7 +189,7 @@ export default function BusinessLayout() {
         const profile = await onboardingApi.getProfile()
         if (!cancelled) {
           setBusinessName(profile?.displayName || profile?.businessName || '')
-          setLogoUrl(profile?.logoUrl || '')
+          setLogoUrl(resolveImageUrl(profile?.logoUrl || ''))
           setChecking(false)
         }
         return

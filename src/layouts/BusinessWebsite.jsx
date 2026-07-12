@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronUp, ChevronDown } from "lucide-react";
 import { API_BASE } from "../lib/apiConfig";
 import { getStoredAccessToken } from "../lib/auth";
+import { resolveImageUrl } from "../lib/utils";
 
 const COLORS = {
   offWhite: "#F8F4E8",
@@ -98,7 +99,7 @@ const Chip = ({ label, onRemove }) => (
 
 const ImgBox = ({ src, onRemove }) => (
   <div style={{ position: "relative", width: 90, height: 90, borderRadius: 10, overflow: "hidden", border: `1.5px solid ${COLORS.border}` }}>
-    <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+    <img src={resolveImageUrl(src)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
     <button onClick={onRemove} style={{ position: "absolute", top: 4, right: 4, background: "rgba(0,0,0,0.55)", border: "none", borderRadius: "50%", width: 22, height: 22, color: "#fff", cursor: "pointer", fontSize: 14, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>x</button>
   </div>
 );
@@ -151,14 +152,40 @@ const paymentOptions = [
 
 function BusinessProfile({ data, setData }) {
   const logoRef = useRef();
+  const heroBgRef = useRef();
   const [handleInput, setHandleInput] = useState("");
   const [reviewInput, setReviewInput] = useState({ name: "", text: "", rating: 5 });
+  const [heroBgUploading, setHeroBgUploading] = useState(false);
 
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const url = URL.createObjectURL(file);
     setData(d => ({ ...d, logoUrl: url, logoName: file.name, logoFile: file }));
+  };
+
+  const handleHeroBgUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setHeroBgUploading(true);
+    try {
+      const token = getStoredAccessToken();
+      const fd = new FormData();
+      fd.append('image', file);
+      const res = await fetch(`${API_BASE}/website/image`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.message || 'Upload failed');
+      const result = json?.data || json;
+      setData(d => ({ ...d, heroBgImage: result.url }));
+    } catch (err) {
+      alert('Hero background upload failed: ' + err.message);
+    } finally {
+      setHeroBgUploading(false);
+    }
   };
 
   const addHandle = () => {
@@ -200,7 +227,7 @@ function BusinessProfile({ data, setData }) {
             >
               {data.logoUrl
                 ? <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "center" }}>
-                    <img src={data.logoUrl} alt="logo" style={{ width: 40, height: 40, borderRadius: 8, objectFit: "cover" }} />
+                    <img src={resolveImageUrl(data.logoUrl)} alt="logo" style={{ width: 40, height: 40, borderRadius: 8, objectFit: "cover" }} />
                     <span style={{ fontSize: 13, color: COLORS.muted }}>{data.logoName}</span>
                   </div>
                 : <span style={{ fontSize: 13, color: COLORS.muted }}>Click to upload logo</span>
@@ -278,6 +305,51 @@ function BusinessProfile({ data, setData }) {
               />
             ))}
           </div>
+        </Field>
+        <Field>
+          <Label>Background image</Label>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input
+              placeholder="Paste an image URL"
+              value={data.heroBgImage || ""}
+              onChange={e => setData(d => ({ ...d, heroBgImage: e.target.value }))}
+              style={{
+                flex: 1, padding: "10px 14px", fontSize: 14, borderRadius: 10,
+                border: `1.5px solid ${COLORS.border}`, outline: "none",
+                fontFamily: "inherit", boxSizing: "border-box",
+              }}
+              onFocus={e => (e.target.style.border = `1.5px solid ${COLORS.blue}`)}
+              onBlur={e => (e.target.style.border = `1.5px solid ${COLORS.border}`)}
+            />
+            <button
+              type="button"
+              onClick={() => heroBgRef.current?.click()}
+              disabled={heroBgUploading}
+              style={{
+                padding: "10px 16px", borderRadius: 8, fontSize: 13, fontWeight: 700,
+                cursor: heroBgUploading ? "not-allowed" : "pointer",
+                background: COLORS.blue, color: "#fff", border: "none",
+                whiteSpace: "nowrap", opacity: heroBgUploading ? 0.6 : 1,
+              }}
+            >
+              {heroBgUploading ? "Uploading..." : "Upload"}
+            </button>
+            {data.heroBgImage && (
+              <button
+                type="button"
+                onClick={() => setData(d => ({ ...d, heroBgImage: '' }))}
+                style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 18, padding: "4px" }}
+              >
+                x
+              </button>
+            )}
+          </div>
+          <input ref={heroBgRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleHeroBgUpload} />
+          {data.heroBgImage && (
+            <div style={{ marginTop: 8, width: "100%", height: 100, borderRadius: 8, overflow: "hidden", border: `1.5px solid ${COLORS.border}` }}>
+              <img src={resolveImageUrl(data.heroBgImage)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            </div>
+          )}
         </Field>
       </SectionCard>
 
@@ -468,7 +540,7 @@ function ProductsUpload({ data, setData }) {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
             {(data.products || []).map((p, i) => (
               <div key={p.id} style={{ background: COLORS.white, border: `1.5px solid ${COLORS.border}`, borderRadius: 12, overflow: "hidden" }}>
-                {p.images?.[0] && <img src={p.images[0].url} alt={p.name} style={{ width: "100%", height: 120, objectFit: "cover" }} />}
+                {p.images?.[0] && <img src={resolveImageUrl(p.images[0].url)} alt={p.name} style={{ width: "100%", height: 120, objectFit: "cover" }} />}
                 <div style={{ padding: "10px 12px" }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: COLORS.text, marginBottom: 2 }}>{p.name}</div>
                   <div style={{ fontSize: 13, color: COLORS.blue, fontWeight: 700, marginBottom: 4 }}>N{Number(p.price).toLocaleString()}</div>
@@ -566,7 +638,7 @@ function WebsitePreview({ data }) {
       {/* Nav */}
       <nav style={{ background: COLORS.white, padding: "14px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1.5px solid ${COLORS.border}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {data.logoUrl && <img src={data.logoUrl} alt="logo" style={{ width: 36, height: 36, borderRadius: 8, objectFit: "cover" }} />}
+          {data.logoUrl && <img src={resolveImageUrl(data.logoUrl)} alt="logo" style={{ width: 36, height: 36, borderRadius: 8, objectFit: "cover" }} />}
           <span style={{ fontWeight: 800, fontSize: 18, color: COLORS.blue }}>{data.brandName || "Your Brand"}</span>
         </div>
         <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
@@ -581,10 +653,14 @@ function WebsitePreview({ data }) {
 
       {/* Hero */}
       <div style={{
-        background: data.heroBg ? `linear-gradient(135deg, ${data.heroBg} 0%, ${data.heroBg}dd 100%)` : `linear-gradient(135deg, ${COLORS.blue} 0%, #2d4fd4 100%)`,
+        background: data.heroBgImage
+          ? `linear-gradient(180deg, rgba(15,23,42,0.45), rgba(15,23,42,0.65)), url(${resolveImageUrl(data.heroBgImage)}) center/cover no-repeat`
+          : data.heroBg
+            ? `linear-gradient(135deg, ${data.heroBg} 0%, ${data.heroBg}dd 100%)`
+            : `linear-gradient(135deg, ${COLORS.blue} 0%, #2d4fd4 100%)`,
         padding: "56px 32px", textAlign: data.heroLayout === "left" ? "left" : "center",
       }}>
-        {data.logoUrl && <img src={data.logoUrl} alt="logo" style={{ width: 80, height: 80, borderRadius: 16, objectFit: "cover", marginBottom: 20, border: "3px solid rgba(255,255,255,0.3)" }} />}
+        {data.logoUrl && <img src={resolveImageUrl(data.logoUrl)} alt="logo" style={{ width: 80, height: 80, borderRadius: 16, objectFit: "cover", marginBottom: 20, border: "3px solid rgba(255,255,255,0.3)" }} />}
         <h1 style={{ color: "#fff", fontSize: 34, fontWeight: 800, margin: "0 0 12px", lineHeight: 1.2 }}>{data.heroHeadline || data.brandName || "Welcome to Our Store"}</h1>
         {(data.heroSubtitle || data.motto) && <p style={{ color: "rgba(255,255,255,0.85)", fontSize: 18, margin: "0 0 28px", fontStyle: "italic" }}>"{data.heroSubtitle || data.motto}"</p>}
         <div style={{ display: "flex", gap: 12, justifyContent: data.heroLayout === "left" ? "flex-start" : "center" }}>
@@ -609,7 +685,7 @@ function WebsitePreview({ data }) {
             {data.products.map(p => (
               <div key={p.id} style={{ background: COLORS.white, borderRadius: 14, border: `1.5px solid ${COLORS.border}`, overflow: "hidden" }}>
                 {p.images?.[0]
-                  ? <img src={p.images[0].url} alt={p.name} style={{ width: "100%", height: 140, objectFit: "cover" }} />
+                  ? <img src={resolveImageUrl(p.images[0].url)} alt={p.name} style={{ width: "100%", height: 140, objectFit: "cover" }} />
                   : <div style={{ width: "100%", height: 140, background: COLORS.blueLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: COLORS.muted }}>No image</div>
                 }
                 <div style={{ padding: "12px 14px" }}>
@@ -694,7 +770,7 @@ function WebsitePreview({ data }) {
               ? <p style={{ color: COLORS.muted, fontSize: 14, textAlign: "center", marginTop: 40 }}>Your cart is empty</p>
               : cart.map(item => (
                   <div key={item.id} style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 14 }}>
-                    {item.images?.[0] && <img src={item.images[0].url} alt={item.name} style={{ width: 50, height: 50, borderRadius: 8, objectFit: "cover" }} />}
+                    {item.images?.[0] && <img src={resolveImageUrl(item.images[0].url)} alt={item.name} style={{ width: 50, height: 50, borderRadius: 8, objectFit: "cover" }} />}
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, fontSize: 13, color: COLORS.text }}>{item.name}</div>
                       <div style={{ fontSize: 13, color: COLORS.blue, fontWeight: 700 }}>N{(Number(item.price) * item.qty).toLocaleString()}</div>
@@ -853,6 +929,7 @@ export default function BusinessWebsiteBuilder() {
               heroSubtitle: b.hero?.subtitle || '',
               heroCta: b.hero?.cta || '',
               heroBg: b.hero?.bg || '',
+              heroBgImage: b.hero?.bgImage || '',
               heroLayout: b.hero?.layout || 'center',
             }));
           }
@@ -923,12 +1000,13 @@ export default function BusinessWebsiteBuilder() {
         checkoutFields: data.checkoutFields,
         reviews: data.reviews,
       };
-      if (data.heroHeadline || data.heroSubtitle || data.heroCta || data.heroBg || data.heroLayout) {
+      if (data.heroHeadline || data.heroSubtitle || data.heroCta || data.heroBg || data.heroBgImage || data.heroLayout) {
         themeBuilder.hero = {
           headline: data.heroHeadline || '',
           subtitle: data.heroSubtitle || '',
           cta: data.heroCta || '',
           bg: data.heroBg || '',
+          bgImage: data.heroBgImage || '',
           layout: data.heroLayout || 'center',
         };
       }
