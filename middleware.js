@@ -6,6 +6,11 @@
 
 const BOT_RE = /facebookexternalhit|whatsapp|twitterbot|linkedinbot|telegrambot|slackbot|discord|pinterest|snapchat|googlebot|bingbot/i
 
+// Same backend base URL the SPA uses (VITE_API_URL in the Vercel project env).
+const API_BASE = (() => {
+  try { return new URL(process.env.VITE_API_URL || '').origin } catch { return '' }
+})()
+
 // Hosts where the SPA itself lives — storefronts appear under /storefront/:tenantId.
 // Any other host is a tenant's custom domain, where the storefront is the root.
 const PLATFORM_HOSTS = new Set(['biziq.online', 'www.biziq.online', 'localhost'])
@@ -14,6 +19,16 @@ const escapeHtml = (s = '') =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 
 export default async function middleware(request) {
+  const url = new URL(request.url)
+
+  // Proxy /assets/* to the backend (bypasses Cross-Origin-Resource-Policy).
+  // The Vite dev server does this via its own proxy; on Vercel the edge
+  // middleware handles it so images load same-origin in production too.
+  if (API_BASE && url.pathname.startsWith('/assets/')) {
+    const target = `${API_BASE}${url.pathname}${url.search}`
+    return fetch(target, { headers: { accept: request.headers.get('accept') || '*/*' } })
+  }
+
   const ua = request.headers.get('user-agent') || ''
   if (!BOT_RE.test(ua)) return
 
@@ -73,5 +88,5 @@ export const config = {
   // Storefront paths on platform hosts; root/shop/page paths for custom
   // domains. Non-storefront platform paths produce no query above and fall
   // through even for bots.
-  matcher: ['/storefront/:path*', '/', '/shop', '/:view'],
+  matcher: ['/storefront/:path*', '/assets/:path*', '/', '/shop', '/:view'],
 }
