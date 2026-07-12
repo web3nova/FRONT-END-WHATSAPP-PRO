@@ -32,7 +32,6 @@ export default async function middleware(request) {
   const ua = request.headers.get('user-agent') || ''
   if (!BOT_RE.test(ua)) return
 
-  const url = new URL(request.url)
   const host = url.hostname
   const isPlatformHost = PLATFORM_HOSTS.has(host) || host.endsWith('.vercel.app')
 
