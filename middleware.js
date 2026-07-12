@@ -21,10 +21,10 @@ const escapeHtml = (s = '') =>
 export default async function middleware(request) {
   const url = new URL(request.url)
 
-  // Proxy /assets/* to the backend (bypasses Cross-Origin-Resource-Policy).
-  // The Vite dev server does this via its own proxy; on Vercel the edge
-  // middleware handles it so images load same-origin in production too.
-  if (API_BASE && url.pathname.startsWith('/assets/')) {
+  // Proxy /assets/website-images/* and /assets/product-images/* to the backend
+  // (bypasses Cross-Origin-Resource-Policy). Only these sub-paths are backend
+  // assets — frontend build files under /assets/index-* must NOT be proxied.
+  if (API_BASE && url.pathname.startsWith('/assets/website-images/')) {
     const target = `${API_BASE}${url.pathname}${url.search}`
     return fetch(target, { headers: { accept: request.headers.get('accept') || '*/*' } })
   }
@@ -87,5 +87,5 @@ export const config = {
   // Storefront paths on platform hosts; root/shop/page paths for custom
   // domains. Non-storefront platform paths produce no query above and fall
   // through even for bots.
-  matcher: ['/storefront/:path*', '/assets/:path*', '/', '/shop', '/:view'],
+  matcher: ['/storefront/:path*', '/assets/website-images/:path*', '/', '/shop', '/:view'],
 }
