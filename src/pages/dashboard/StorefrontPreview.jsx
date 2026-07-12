@@ -4,7 +4,7 @@ import {
   Plus, Trash2,
 } from 'lucide-react'
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, Link } from 'react-router-dom'
 import {
   DEFAULT_INK, DEFAULT_CREAM, DEFAULT_GOLD, DEFAULT_FONT, DEFAULT_RADIUS, BODY,
   isSectionActive, mixHexWithWhite, socialHref, isSoldOut, useThemeFont,
@@ -15,6 +15,8 @@ import { ProductCard } from './storefronts/sections/ProductsSection'
 import { sectionByLegacyId, sectionByType, DEFAULT_REORDERABLE_ORDER } from './storefronts/sectionRegistry'
 import { resolveImageUrl } from '../../lib/utils'
 import { publicCreateOrder } from '../../api/ordersApi'
+import AuthModal from '../../components/AuthModal'
+import { useCustomerAuth } from '../../context/CustomerAuthContext'
 
 // This component is the storefront's orchestrator: it owns the shared
 // Nav/Footer chrome and all cross-section state (view, selected product,
@@ -148,16 +150,27 @@ function UnroutedStorefrontPreview(props) {
   return <StorefrontPreviewBody {...props} nav={nav} />
 }
 
-function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 'desktop', settings, theme, pages = [], nav }) {
-  const INK = theme?.ink || DEFAULT_INK
-  const GOLD = theme?.accent || DEFAULT_GOLD
-  const CREAM = theme?.soft || DEFAULT_CREAM
-  const fontName = theme?.font || DEFAULT_FONT
-  const radius = theme?.radius ?? DEFAULT_RADIUS
-  const DISPLAY = `'${fontName}', ui-serif, Georgia, serif`
-  const sectionStyles = theme?.sectionStyles || {}
+function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 'desktop', settings, theme, pages = [], nav, paymentConfig, tenantId: tenantIdProp }) {
+   const { customer: authCustomer, token: authToken, googleLogin } = useCustomerAuth()
+   const INK = theme?.ink || DEFAULT_INK
+   const GOLD = theme?.accent || DEFAULT_GOLD
+   const CREAM = theme?.soft || DEFAULT_CREAM
+   const fontName = theme?.font || DEFAULT_FONT
+   const radius = theme?.radius ?? DEFAULT_RADIUS
+   const DISPLAY = `'${fontName}', ui-serif, Georgia, serif`
+   const sectionStyles = theme?.sectionStyles || {}
 
-  // Homepage section order — driven by settings.sections (array order is
+   // Google login handler for storefront
+   const handleGoogleLogin = async () => {
+     try {
+       await googleLogin()
+     } catch (err) {
+       console.error('Google login failed:', err)
+       alert('Google login failed. Please try again.')
+     }
+   }
+
+   // Homepage section order — driven by settings.sections (array order is
   // render order, set via the Sections tab's up/down reorder controls).
   // Hero always renders first regardless; these 5 are the reorderable set.
   const REORDERABLE_DEFAULT_ORDER = DEFAULT_REORDERABLE_ORDER
@@ -188,9 +201,17 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const [checkoutForm, setCheckoutForm] = useState({ name: '', phone: '', email: '', address: '' })
   const [placingOrder, setPlacingOrder] = useState(false)
   const [orderPlaced, setOrderPlaced] = useState(false)
+  const [selectedDelivery, setSelectedDelivery] = useState('')
+  const [selectedPayment, setSelectedPayment] = useState('')
+  const [paymentRedirect, setPaymentRedirect] = useState(null)
+  const [bankTransferInfo, setBankTransferInfo] = useState(null)
+  const [showAuthModal, setShowAuthModal] = useState(false)
 
   const deliveryLabels = { pickup: 'Store Pickup', local: 'Local Delivery', nationwide: 'Nationwide Shipping', digital: 'Digital / Instant' }
   const paymentLabels = { bank: 'Bank Transfer', card: 'Credit/Debit Card', paystack: 'Paystack', flutterwave: 'Flutterwave', cash: 'Cash on Delivery', crypto: 'Crypto' }
+
+  const deliveryOptions = settings?.theme?.builder?.delivery || []
+  const paymentOptions = settings?.theme?.builder?.payments || []
 
   function addToCart(product, attrs = {}) {
     const key = `${product.id}_${JSON.stringify(attrs)}`
@@ -212,33 +233,67 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const cartCount = cart.reduce((s, i) => s + i.qty, 0)
   const cartTotal = cart.reduce((s, i) => s + (i.product.priceMinor || 0) * i.qty, 0)
 
-  async function placeOrder() {
-    if (!checkoutForm.name || !checkoutForm.phone || !checkoutForm.address) return
+async function placeOrder() {
+    // Require user authentication before checkout
+    if (!token) {
+      setCheckoutOpen(false)
+      setShowAuthModal(true)
+      return
+    }
+
+    if (!checkoutForm.name?.trim() || !checkoutForm.phone?.trim() || !checkoutForm.address?.trim()) return
+    if (!selectedPayment) { alert('Please select a payment method.'); return }
     setPlacingOrder(true)
     try {
-      await publicCreateOrder({
-        customerName: checkoutForm.name,
-        customerPhone: checkoutForm.phone,
-        customerEmail: checkoutForm.email,
-        customerAddress: checkoutForm.address,
-        tenantId: business?.tenantId || '',
-        items: cart.map(i => ({
-          productId: i.product.id,
-          name: i.product.name,
-          priceMinor: i.product.priceMinor || 0,
-          quantity: i.qty,
-          attributes: i.attrs,
-        })),
-        totalMinor: cartTotal,
-        currency: 'NGN',
-        status: 'pending',
-        source: 'storefront',
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers.Authorization = `Bearer ${token}`
+      
+      const result = await fetch(`${API_BASE}/orders/public`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          customerName: checkoutForm.name,
+          customerPhone: checkoutForm.phone,
+          customerEmail: checkoutForm.email,
+          customerAddress: checkoutForm.address,
+          tenantId: tenantIdProp || business?.tenantId || '',
+          items: cart.map(i => ({
+            productId: i.product.id,
+            name: i.product.name,
+            priceMinor: i.product.priceMinor || 0,
+            quantity: i.qty,
+            attributes: i.attrs,
+          })),
+          totalMinor: cartTotal,
+          currency: 'NGN',
+          deliveryMethod: selectedDelivery,
+          paymentMethod: selectedPayment,
+        }),
       })
+      const body = await result.json().catch(() => null)
+      if (!result.ok) throw new Error(body?.message || `Failed to place order (${result.status})`)
+      const publicOrderResult = body?.data ?? body
+      
       setCheckoutOpen(false)
       setCart([])
       setCheckoutForm({ name: '', phone: '', email: '', address: '' })
-      setOrderPlaced(true)
-      setTimeout(() => setOrderPlaced(false), 5000)
+      setSelectedDelivery('')
+      setSelectedPayment('')
+      
+      if (publicOrderResult?.payment?.checkoutUrl) {
+        setPaymentRedirect(publicOrderResult.payment.checkoutUrl)
+      } else if (selectedPayment === 'bank' && publicOrderResult?.bankDetails) {
+        setBankTransferInfo({
+          orderRef: publicOrderResult?.order?.reference || '',
+          total: publicOrderResult?.order?.totalMinor || cartTotal,
+          currency: publicOrderResult?.order?.currency || 'NGN',
+          ...publicOrderResult.bankDetails,
+        })
+      } else {
+        // Redirect to account page for order tracking
+        const base = slug ? `/b/${slug}` : `/storefront/${tenantIdProp || business?.tenantId || ''}`
+        window.location.href = `${base}/account`
+      }
     } catch (err) {
       console.error('Failed to place order:', err)
       alert('Failed to place order. Please try again.')
@@ -246,6 +301,16 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
       setPlacingOrder(false)
     }
   }
+
+  // Redirect to payment gateway when URL is set
+  useEffect(() => {
+    if (paymentRedirect) {
+      window.open(paymentRedirect, '_blank')
+      setPaymentRedirect(null)
+      setOrderPlaced(true)
+      setTimeout(() => setOrderPlaced(false), 5000)
+    }
+  }, [paymentRedirect])
 
   // 'auto' = live storefront: follow the real viewport. Explicit
   // 'desktop'/'mobile' = builder preview toggle, unchanged behavior.
@@ -293,7 +358,6 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const heroBg2 = hero.bg2 || ''
   const heroLayout = hero.layout || 'center'
   const heroBgImage = resolveImageUrl(hero.bgImage || '')
-  console.log('[StorefrontPreview] hero.bgImage raw:', hero.bgImage, '→ resolved:', heroBgImage)
 
   const aboutText = builder.about?.text || business?.description || ''
   const aboutTitle = (builder.about?.title || '').trim() || 'Our Story'
@@ -325,6 +389,9 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const cleanWhatsapp = (whatsapp || '').replace(/\D/g, '')
   const waLink = (msg) => `https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent(msg)}`
   const genericOrderMsg = `Hi ${brandName}! I'd like to place an order.`
+
+  // Customer authentication state
+  const { customer, token, logout } = useCustomerAuth()
 
   const showAbout = isSectionActive(settings, 3) && aboutText
   const showProducts = isSectionActive(settings, 2) && products.length > 0
@@ -506,9 +573,48 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
     }
   }
 
+  // Handle Google login success - redirect to customer account
+  useEffect(() => {
+    if (customer && token) {
+      // Customer is now authenticated via Google
+      console.log('Customer authenticated successfully:', customer.name)
+      // If checkout form wasn't pre-filled, user can proceed with checkout
+      if (!checkoutForm.name && checkoutForm.phone && checkoutForm.address) {
+        setCheckoutForm(f => ({
+          ...f,
+          name: customer.name || f.name,
+          phone: customer.phone || f.phone,
+          email: customer.email || f.email,
+        }))
+      }
+    }
+  }, [customer, token, checkoutForm.name, checkoutForm.phone, checkoutForm.address])
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="bg-white relative" style={{ fontFamily: BODY, '--sf-radius': `${radius}px` }}>
+
+      {/* ── Auth Modal for customer login/signup before checkout ── */}
+      {showAuthModal && (
+        <AuthModal
+          tenantId={tenantIdProp || business?.tenantId || ''}
+          open={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={() => {
+            setShowAuthModal(false)
+            // Pre-fill checkout form with customer data if available
+            if (customer) {
+              setCheckoutForm(f => ({
+                ...f,
+                name: customer.name || f.name,
+                phone: customer.phone || f.phone,
+                email: customer.email || f.email,
+              }))
+            }
+            setCheckoutOpen(true)
+          }}
+        />
+      )}
 
       {/* ── Product Detail Modal ── */}
       {selectedProduct && (
@@ -650,12 +756,29 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
         </div>
 
         {isMobile ? (
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <button onClick={() => goShop('all')} aria-label="Search"><Search size={17} className="text-gray-500" /></button>
-            <button onClick={() => setNavOpen(v => !v)} aria-label="Menu" className="p-1 text-gray-600">
-              {navOpen ? <X size={19} /> : <Menu size={19} />}
-            </button>
-          </div>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <button onClick={() => goShop('all')} aria-label="Search"><Search size={17} className="text-gray-500" /></button>
+              <button onClick={() => setCartOpen(true)} className="relative p-1">
+                <ShoppingBag size={17} className="text-gray-500" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 text-[9px] font-bold text-white rounded-full w-3.5 h-3.5 flex items-center justify-center" style={{ background: INK }}>
+                    {cartCount > 9 ? '9+' : cartCount}
+                  </span>
+                )}
+              </button>
+              {token ? (
+                <Link to="account" className="flex items-center gap-1.5 px-2 py-1 text-sm font-medium rounded-lg transition hover:bg-gray-100" style={{ color: INK }} onClick={() => setNavOpen(false)}>
+                  <User size={16} /> Account
+                </Link>
+              ) : (
+                <button onClick={() => setShowAuthModal(true)} className="flex items-center gap-1.5 px-2 py-1 text-sm font-medium rounded-lg transition hover:bg-gray-100" style={{ color: INK }}>
+                  <User size={16} /> Sign In
+                </button>
+              )}
+              <button onClick={() => setNavOpen(v => !v)} aria-label="Menu" className="p-1 text-gray-600">
+                {navOpen ? <X size={19} /> : <Menu size={19} />}
+              </button>
+            </div>
         ) : (
           <>
             <div className="flex gap-7 text-xs font-semibold tracking-wide flex-shrink-0">
@@ -1064,22 +1187,22 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
 
       {/* ── Checkout Modal ── */}
       {checkoutOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => { if (!placingOrder) setCheckoutOpen(false) }}>
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => { if (!placingOrder) setCheckoutOpen(false) }}>
           <div
-            className="bg-white w-full max-w-lg mx-auto max-h-[90vh] overflow-y-auto"
-            style={{ borderRadius: 'var(--sf-radius)' }}
+            className="bg-white w-full sm:max-w-lg sm:mx-auto sm:max-h-[85vh] flex flex-col"
+            style={{ borderRadius: isMobile ? 'var(--sf-radius) var(--sf-radius) 0 0' : 'var(--sf-radius)', maxHeight: isMobile ? '92%' : '85vh' }}
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
               <h2 className="text-lg font-bold" style={{ color: INK }}>Checkout</h2>
               <button onClick={() => { if (!placingOrder) setCheckoutOpen(false) }} className="p-1 text-gray-400 hover:text-gray-600 transition">
                 <X size={18} />
               </button>
             </div>
 
-            {/* Form */}
-            <div className="px-6 py-4 space-y-4">
+            {/* Scrollable form area */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
               <div>
                 <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Full Name *</label>
                 <input
@@ -1087,6 +1210,7 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
                   placeholder="Your full name"
                   value={checkoutForm.name}
                   onChange={e => setCheckoutForm(f => ({ ...f, name: e.target.value }))}
+                  onBlur={e => setCheckoutForm(f => (f.name === e.target.value ? f : { ...f, name: e.target.value }))}
                   disabled={placingOrder}
                 />
               </div>
@@ -1097,6 +1221,7 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
                   placeholder="08012345678"
                   value={checkoutForm.phone}
                   onChange={e => setCheckoutForm(f => ({ ...f, phone: e.target.value }))}
+                  onBlur={e => setCheckoutForm(f => (f.phone === e.target.value ? f : { ...f, phone: e.target.value }))}
                   disabled={placingOrder}
                 />
               </div>
@@ -1108,6 +1233,7 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
                   placeholder="you@example.com"
                   value={checkoutForm.email}
                   onChange={e => setCheckoutForm(f => ({ ...f, email: e.target.value }))}
+                  onBlur={e => setCheckoutForm(f => (f.email === e.target.value ? f : { ...f, email: e.target.value }))}
                   disabled={placingOrder}
                 />
               </div>
@@ -1119,9 +1245,56 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
                   placeholder="Street, City, State"
                   value={checkoutForm.address}
                   onChange={e => setCheckoutForm(f => ({ ...f, address: e.target.value }))}
+                  onBlur={e => setCheckoutForm(f => (f.address === e.target.value ? f : { ...f, address: e.target.value }))}
                   disabled={placingOrder}
                 />
               </div>
+
+              {/* Delivery Method */}
+              {deliveryOptions.length > 0 && (
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Delivery Method *</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {deliveryOptions.map(key => (
+                      <button
+                        key={key}
+                        onClick={() => setSelectedDelivery(key)}
+                        disabled={placingOrder}
+                        className={`px-3 py-2.5 text-xs font-semibold rounded-xl border transition ${
+                          selectedDelivery === key
+                            ? 'border-gray-800 bg-gray-800 text-white'
+                            : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                        }`}
+                      >
+                        {deliveryLabels[key] || key}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Payment Method */}
+              {paymentOptions.length > 0 && (
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Payment Method *</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {paymentOptions.map(key => (
+                      <button
+                        key={key}
+                        onClick={() => setSelectedPayment(key)}
+                        disabled={placingOrder}
+                        className={`px-3 py-2.5 text-xs font-semibold rounded-xl border transition ${
+                          selectedPayment === key
+                            ? 'border-gray-800 bg-gray-800 text-white'
+                            : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                        }`}
+                      >
+                        {paymentLabels[key] || key}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Order Summary */}
               <div className="bg-gray-50 rounded-xl p-4">
@@ -1137,19 +1310,63 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
                   <span>₦ {(cartTotal / 100).toLocaleString()}</span>
                 </div>
               </div>
+            </div>
 
+            {/* Sticky Place Order button */}
+            <div className="px-5 py-4 border-t border-gray-100 flex-shrink-0 bg-white">
               <button
                 onClick={placeOrder}
-                disabled={placingOrder || !checkoutForm.name || !checkoutForm.phone || !checkoutForm.address}
-                className="w-full py-3.5 rounded-full text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={placingOrder || !checkoutForm.name?.trim() || !checkoutForm.phone?.trim() || !checkoutForm.address?.trim() || (deliveryOptions.length > 0 && !selectedDelivery) || (paymentOptions.length > 0 && !selectedPayment)}
+                className="w-full py-3.5 rounded-full text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ background: INK }}
               >
-                {placingOrder ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-                    Placing Order…
-                  </span>
-                ) : 'Place Order'}
+                {placingOrder ? 'Placing Order…' : 'Place Order'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Bank Transfer Info Modal ── */}
+      {bankTransferInfo && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => setBankTransferInfo(null)}>
+          <div className="bg-white w-full max-w-md mx-auto rounded-2xl shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-5 border-b border-gray-100">
+              <h2 className="text-lg font-bold" style={{ color: INK }}>Bank Transfer Details</h2>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div className="bg-blue-50 text-blue-700 text-sm p-3 rounded-xl">
+                Please transfer the exact amount to the account below. Your order will be confirmed once payment is received.
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Order Reference</span>
+                  <span className="font-bold" style={{ color: INK }}>#{bankTransferInfo.orderRef}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Amount</span>
+                  <span className="font-bold" style={{ color: INK }}>₦ {(bankTransferInfo.total / 100).toLocaleString()}</span>
+                </div>
+                <div className="border-t border-gray-200 my-2" />
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Bank</span>
+                  <span className="font-semibold">{bankTransferInfo.bankName}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Account Name</span>
+                  <span className="font-semibold">{bankTransferInfo.accountName}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Account Number</span>
+                  <span className="font-bold text-lg tracking-wider" style={{ color: INK }}>{bankTransferInfo.accountNumber}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => { setBankTransferInfo(null); setOrderPlaced(true); setTimeout(() => setOrderPlaced(false), 5000) }}
+                className="w-full py-3 rounded-full text-sm font-bold text-white transition hover:opacity-90"
+                style={{ background: INK }}
+              >
+                I'll transfer later
               </button>
             </div>
           </div>
@@ -1157,10 +1374,26 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
       )}
 
       {/* ── Order Success Toast ── */}
-      {orderPlaced && (
+      {orderPlaced && !bankTransferInfo && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] bg-green-600 text-white px-6 py-3.5 rounded-full shadow-xl text-sm font-bold flex items-center gap-2 animate-bounce">
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-          Order placed successfully!
+          {paymentRedirect ? 'Opening payment page…' : 'Order placed successfully!'}
+        </div>
+      )}
+
+      {/* ── Mobile floating cart FAB ── */}
+      {isMobile && cartCount > 0 && (
+        <div className="fixed bottom-24 right-4 z-30">
+          <button
+            onClick={() => setCartOpen(true)}
+            className="w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl hover:scale-105 transition"
+            style={{ background: INK }}
+          >
+            <ShoppingBag size={20} />
+            <span className="absolute -top-1 -right-1 text-[10px] font-bold text-white rounded-full w-5 h-5 flex items-center justify-center" style={{ background: '#ef4444' }}>
+              {cartCount > 9 ? '9+' : cartCount}
+            </span>
+          </button>
         </div>
       )}
 

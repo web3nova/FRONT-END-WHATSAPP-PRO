@@ -105,6 +105,8 @@ export default function StorefrontPage({ domain: domainProp } = {}) {
   const pages = data?.pages || []
   const whatsapp = business?.whatsappNumber || ''
   const domain = data?.tenant?.domain || ''
+  const storeTenantId = data?.tenant?.id || ''
+  const paymentConfig = data?.paymentConfig || {}
   const activeTheme = { ...(THEMES[settings?.theme?.templateId] || THEMES.minimal), ...(settings?.theme?.customTheme || {}), sectionStyles: settings?.theme?.sectionStyles || {} }
 
   return (
@@ -126,6 +128,8 @@ export default function StorefrontPage({ domain: domainProp } = {}) {
           settings={settings}
           theme={activeTheme}
           pages={pages}
+          paymentConfig={paymentConfig}
+          tenantId={storeTenantId}
           routed
         />
       </div>

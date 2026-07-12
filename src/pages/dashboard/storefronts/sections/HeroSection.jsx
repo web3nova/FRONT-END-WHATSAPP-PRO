@@ -13,7 +13,7 @@ export default function HeroSection({ variant, ctx }) {
 // Magazine: oversized image, large overlapping serif headline, asymmetric —
 // text block anchored bottom-left over a wide two-thirds-width image feel.
 function MagazineHero({ ctx }) {
-  const { isMobile, sectionId, DISPLAY, INK, heroHeadline, heroSubtitle, heroCta, heroBg, heroBg2, heroBgImage, whatsapp, waLink, genericOrderMsg, goShop } = ctx
+  const { isMobile, sectionId, DISPLAY, INK, heroHeadline, heroSubtitle, heroCta, heroBg, heroBg2, heroBgImage, goShop } = ctx
   return (
     <div
       id={sectionId('hero')}
@@ -33,11 +33,9 @@ function MagazineHero({ ctx }) {
           {heroHeadline}
         </div>
         <div className="flex gap-3 flex-wrap">
-          {whatsapp && (
-            <a href={waLink(genericOrderMsg)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold px-6 py-3 transition hover:opacity-90" style={{ background: '#fff', color: INK }}>
-              {heroCta}
-            </a>
-          )}
+          <button onClick={() => goShop('all')} className="inline-flex items-center gap-2 text-sm font-semibold px-6 py-3 transition hover:opacity-90" style={{ background: '#fff', color: INK }}>
+            {heroCta}
+          </button>
           <button onClick={() => goShop('all')} className="text-sm font-semibold px-6 py-3 border border-white/50 text-white hover:bg-white/10 transition">
             Explore
           </button>
@@ -50,7 +48,7 @@ function MagazineHero({ ctx }) {
 // Catalog: slim promo-strip treatment — no big background image, single row,
 // headline + CTA inline, so a heavier section can visually lead right after it.
 function CatalogHero({ ctx }) {
-  const { isMobile, sectionId, INK, heroHeadline, heroSubtitle, heroCta, whatsapp, waLink, genericOrderMsg, goShop } = ctx
+  const { isMobile, sectionId, INK, heroHeadline, heroSubtitle, heroCta, goShop } = ctx
   return (
     <div
       id={sectionId('hero')}
@@ -62,11 +60,9 @@ function CatalogHero({ ctx }) {
         {heroSubtitle && <div className="text-white/60 text-xs mt-0.5 truncate">{heroSubtitle}</div>}
       </div>
       <div className="flex gap-2 flex-shrink-0">
-        {whatsapp && (
-          <a href={waLink(genericOrderMsg)} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold px-4 py-2 rounded-md transition hover:opacity-90" style={{ background: '#fff', color: INK }}>
-            {heroCta}
-          </a>
-        )}
+        <button onClick={() => goShop('all')} className="text-xs font-semibold px-4 py-2 rounded-md transition hover:opacity-90" style={{ background: '#fff', color: INK }}>
+          {heroCta}
+        </button>
         <button onClick={() => goShop('all')} className="text-xs font-semibold px-4 py-2 rounded-md border border-white/30 text-white hover:bg-white/10 transition">
           Shop Now
         </button>
@@ -79,7 +75,7 @@ function BoutiqueHero({ ctx }) {
   const {
     isMobile, sectionId, DISPLAY, INK,
     heroHeadline, heroSubtitle, heroCta, heroBg, heroBg2, heroLayout, heroBgImage,
-    whatsapp, waLink, genericOrderMsg, goShop,
+    goShop,
   } = ctx
 
   return (
@@ -114,13 +110,9 @@ function BoutiqueHero({ ctx }) {
           {heroHeadline}
         </div>
         <div className={`flex gap-3 flex-wrap ${heroLayout === 'left' ? '' : heroLayout === 'right' ? 'justify-end' : 'justify-center'}`}>
-          {whatsapp ? (
-            <a href={waLink(genericOrderMsg)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold px-6 py-3 rounded-full transition hover:opacity-90" style={{ background: '#fff', color: INK }}>
-              {heroCta} <ArrowRight size={15} />
-            </a>
-          ) : (
-            <button className="text-sm font-semibold px-6 py-3 rounded-full" style={{ background: '#fff', color: INK }}>{heroCta}</button>
-          )}
+          <button onClick={() => goShop('all')} className="inline-flex items-center gap-2 text-sm font-semibold px-6 py-3 rounded-full transition hover:opacity-90" style={{ background: '#fff', color: INK }}>
+            {heroCta} <ArrowRight size={15} />
+          </button>
           <button onClick={() => goShop('all')} className="inline-flex items-center gap-2 text-sm font-semibold px-6 py-3 rounded-full border border-white/40 text-white/90 hover:bg-white/10 transition">
             Browse Shop
           </button>

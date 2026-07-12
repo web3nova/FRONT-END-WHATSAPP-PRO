@@ -36,9 +36,11 @@ import PaymentSettings from './pages/dashboard/PaymentSettings';
 
 import LandingPage from './pages/LandingPage';
 import StorefrontPage from './pages/StorefrontPage';
+import CustomerAccount from './pages/storefront/CustomerAccount';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 
+import { CustomerAuthProvider } from './context/CustomerAuthContext';
 import SignUpPage from './pages/auth/SignUpPage';
 import LoginPage from './pages/auth/LoginPage';
 import ForgotPasswordPage from './pages/auth/ForgotPassword';
@@ -161,16 +163,41 @@ export default function App() {
               />
 
               {/* Public Storefront Preview */}
-
               <Route
                 path="/storefront/:tenantId/:view?"
-                element={<StorefrontPage />}
+                element={
+                  <CustomerAuthProvider>
+                    <StorefrontPage />
+                  </CustomerAuthProvider>
+                }
               />
 
               {/* Slug-based storefront URL */}
               <Route
                 path="/b/:slug/:view?"
-                element={<StorefrontPage />}
+                element={
+                  <CustomerAuthProvider>
+                    <StorefrontPage />
+                  </CustomerAuthProvider>
+                }
+              />
+
+              {/* Customer account pages */}
+              <Route
+                path="/b/:slug/account"
+                element={
+                  <CustomerAuthProvider>
+                    <CustomerAccount />
+                  </CustomerAuthProvider>
+                }
+              />
+              <Route
+                path="/storefront/:tenantId/account"
+                element={
+                  <CustomerAuthProvider>
+                    <CustomerAccount />
+                  </CustomerAuthProvider>
+                }
               />
 
               {/* Website Builder */}
