@@ -377,15 +377,17 @@ export default function WhatsAppPage() {
         setInputText('')
         setMessages(prev => prev.some(m => m.id === msg?.id) ? prev : [...prev, msg])
       } else {
-        const msg = await sendStaffMessage(selectedId, text)
+        const result = await sendStaffMessage(selectedId, text)
+        const saved = result?.message ?? result
         setInputText('')
-        // SSE will deliver the staff_message event but add optimistically too
-        setMessages(prev => prev.some(m => m.id === msg?.message?.id) ? prev : [...prev, {
-          id: msg?.message?.id || `tmp-${Date.now()}`,
+        // SSE will also deliver this staff_message event — dedupe by id
+        setMessages(prev => prev.some(m => m.id === saved?.id) ? prev : [...prev, {
+          id: saved?.id || `tmp-${Date.now()}`,
           conversationId: selectedId,
           role: 'staff',
           content: text,
-          createdAt: new Date().toISOString(),
+          createdAt: saved?.createdAt || new Date().toISOString(),
+          sender: saved?.sender || null,
         }])
       }
     } catch (err) {
@@ -681,7 +683,7 @@ export default function WhatsAppPage() {
                                   className="text-xs font-medium"
                                   style={{ color: isAi ? PRIMARY : '#6b7280' }}
                                 >
-                                  {isAi ? 'AI Agent' : 'Staff'}
+                                  {isAi ? 'AI Agent' : (msg.sender?.name || msg.sender?.email || 'Staff')}
                                 </span>
                               </div>
                             )}
