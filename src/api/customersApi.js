@@ -65,3 +65,20 @@ export async function deleteCustomer(id) {
   if (!res.ok) throw new Error(body?.message || `Failed to delete customer (${res.status})`)
   return true
 }
+
+/**
+ * POST /customers/:id/message
+ * Sends a WhatsApp message to this customer and persists it in their
+ * conversation thread (unlike a bare notification, this shows up in the
+ * WhatsApp inbox afterward).
+ */
+export async function sendCustomerMessage(id, text) {
+  const res = await fetch(`${API_BASE}/customers/${encodeURIComponent(id)}/message`, {
+    method: 'POST',
+    headers: { accept: 'application/json', 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ text }),
+  })
+  const body = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(body?.message || `Failed to send message (${res.status})`)
+  return body?.data ?? body
+}

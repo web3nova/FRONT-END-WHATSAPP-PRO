@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Search, Filter, Plus, MoreHorizontal, MessageCircle, ShoppingBag, X, Send } from 'lucide-react'
-import { listCustomers } from '../../api/customersApi'
+import { listCustomers, sendCustomerMessage } from '../../api/customersApi'
 import { listOrders, createOrder } from '../../api/ordersApi'
-import { sendNotification } from '../../api/notificationsApi'
 
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
@@ -87,7 +86,7 @@ export default function Customers() {
     setMsgSending(true)
     setMsgError('')
     try {
-      await sendNotification({ channel: 'whatsapp', to: sel.phone, text: msgText.trim() })
+      await sendCustomerMessage(sel.id, msgText.trim())
       setShowMsgModal(false)
       setMsgText('')
     } catch (err) {

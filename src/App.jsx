@@ -43,6 +43,7 @@ import LoginPage from './pages/auth/LoginPage';
 import ForgotPasswordPage from './pages/auth/ForgotPassword';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import SubscribePage from './pages/auth/SubscribePage';
+import BillingCallbackPage from './pages/auth/Billingcallbackpage';
 import OnboardingPage from './pages/auth/OnboardingPage';
 import BusinessProfilePage from './pages/auth/BusinessProfilePage';
 import AcceptInvitePage from './pages/auth/AcceptInvitePage';
@@ -134,6 +135,15 @@ export default function App() {
                 element={
                   <RequireAuth>
                     <SubscribePage />
+                  </RequireAuth>
+                }
+              />
+
+              <Route
+                path="/billing/callback"
+                element={
+                  <RequireAuth>
+                    <BillingCallbackPage />
                   </RequireAuth>
                 }
               />

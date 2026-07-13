@@ -1,186 +1,99 @@
-import { Check } from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../context/AuthContext'
+import { CheckCircle2, Loader2, AlertTriangle } from 'lucide-react'
+import { fetchSubscription } from '../../api/billingApi'
+import BizBackground from '../../components/BizBackground'
 import './Auth.css'
 
-export default function SubscribePage() {
+// Monnify redirects the browser here after checkout (see redirectUrl in
+// billing.service.js initializePayment). Subscription activation itself is
+// driven server-side by Monnify's webhook (reliable, async) — this page's
+// only job is to poll until that webhook has landed and show the result.
+// Some payments confirm in under a second; a slow one can take longer, so we
+// poll for up to ~20s before telling the user to check back shortly.
+
+const POLL_INTERVAL_MS = 2000
+const MAX_POLLS = 10
+
+export default function BillingCallbackPage() {
   const navigate = useNavigate()
-  const { selectPlan } = useAuth()
+  const [state, setState] = useState('checking') // 'checking' | 'success' | 'pending' | 'error'
+  const attemptsRef = useRef(0)
 
-  const plans = [
-    {
-      id: 'starter',
-      name: 'Starter',
-      price: '₦5,000',
-      period: '/month',
-      description: 'Perfect for getting started',
-      features: [
-        '5 Projects',
-        'Basic analytics',
-        'Email support'
-      ]
-    },
+  useEffect(() => {
+    let cancelled = false
 
-    {
-      id: 'pro',
-      name: 'Pro',
-      price: '₦15,000',
-      period: '/month',
-      description: 'Best for active users',
-      features: [
-        'Unlimited projects',
-        'Priority support',
-        'Advanced analytics'
-      ],
-      featured: true
-    },
+    async function poll() {
+      attemptsRef.current += 1
+      try {
+        const sub = await fetchSubscription()
+        if (cancelled) return
 
-    {
-      id: 'enterprise',
-      name: 'Enterprise',
-      price: '₦30,000',
-      period: '/month',
-      description: 'Built for teams and companies',
-      features: [
-        'Dedicated support',
-        'API access',
-        'Custom integrations'
-      ]
-    },
+        if (sub?.isActive && sub?.status === 'ACTIVE') {
+          setState('success')
+          sessionStorage.removeItem('pendingPaymentReference')
+          return
+        }
 
-    {
-      id: 'custom',
-      name: 'Custom',
-      price: 'Custom',
-      period: '',
-      description: 'Create a plan tailored to your needs',
-      features: [
-        'Choose your own features',
-        'Flexible pricing',
-        'Custom integrations',
-        'Dedicated support'
-      ]
-    }
-  ]
+        if (attemptsRef.current >= MAX_POLLS) {
+          setState('pending')
+          return
+        }
 
-  const handlePlanSelect = (plan) => {
-    if (plan.id === 'custom') {
-      navigate('/custom-plan')
-      return
+        setTimeout(poll, POLL_INTERVAL_MS)
+      } catch {
+        if (!cancelled) setState('error')
+      }
     }
 
-    sessionStorage.setItem(
-      'pendingPlanId',
-      plan.id
-    )
+    poll()
+    return () => { cancelled = true }
+  }, [])
 
-    selectPlan(plan.id)
-  }
+  const copy = {
+    checking: {
+      icon: <Loader2 className="auth-spinner" size={40} style={{ color: '#4166F5', margin: '0 auto 16px' }} />,
+      title: 'Confirming your payment…',
+      body: "This usually takes a few seconds. Please don't close this page.",
+      showButton: false,
+    },
+    success: {
+      icon: <CheckCircle2 size={44} style={{ color: '#16a34a', margin: '0 auto 16px' }} />,
+      title: 'Payment successful!',
+      body: 'Your subscription is now active. Welcome aboard.',
+      showButton: true,
+    },
+    pending: {
+      icon: <Loader2 size={40} style={{ color: '#d97706', margin: '0 auto 16px' }} />,
+      title: 'Still processing',
+      body: 'Your payment is being confirmed — this can occasionally take a few minutes. Check your dashboard shortly, or contact support if this persists.',
+      showButton: true,
+    },
+    error: {
+      icon: <AlertTriangle size={40} style={{ color: '#dc2626', margin: '0 auto 16px' }} />,
+      title: "Couldn't confirm payment status",
+      body: "We couldn't check your subscription status right now. If you completed payment, it will be applied shortly — check your dashboard or contact support.",
+      showButton: true,
+    },
+  }[state]
 
   return (
-    <div className="subscribe-page">
-
-      <nav className="subscribe-nav">
-        <div className="subscribe-logo">
-
-          <div className="subscribe-logo-mark">
-            S
-          </div>
-
-          SkillSync
-
-        </div>
-      </nav>
-
-      <header className="subscribe-header">
-
-        <div className="subscribe-badge">
-          Pricing Plans
-        </div>
-
-        <h1 className="auth-heading">
-          Choose your subscription
-        </h1>
-
-        <p className="auth-subheading">
-          Select the plan that works best for you.
-        </p>
-
-      </header>
-
-      <div className="plan-grid">
-
-        {plans.map((plan) => (
-
-          <div
-            key={plan.id}
-            className={`plan-card ${
-              plan.featured
-                ? 'plan-card--featured'
-                : ''
-            }`}
-          >
-
-            {plan.featured && (
-              <div className="plan-badge">
-                MOST POPULAR
-              </div>
+    <div className="app-bg">
+      <BizBackground variant="light" />
+      <div className="content-layer">
+        <div className="subscribe-page-wrapper">
+          <div className="subscribe-page" style={{ textAlign: 'center', maxWidth: 440, margin: '80px auto' }}>
+            {copy.icon}
+            <h1 className="auth-heading">{copy.title}</h1>
+            <p className="auth-subheading" style={{ marginBottom: 24 }}>{copy.body}</p>
+            {copy.showButton && (
+              <button type="button" onClick={() => navigate('/dashboard')} className="auth-btn-secondary">
+                Go to Dashboard
+              </button>
             )}
-
-            <h2 className="plan-name">
-              {plan.name}
-            </h2>
-
-            <div className="plan-price">
-
-              <span className="plan-amount">
-                {plan.price}
-              </span>
-
-              <span className="plan-period">
-                {plan.period}
-              </span>
-
-            </div>
-
-            <p className="plan-description">
-              {plan.description}
-            </p>
-
-            <ul className="plan-features">
-
-              {plan.features.map((feature,index)=>(
-                <li key={index}>
-
-                  <Check
-                    size={18}
-                    className="plan-check"
-                  />
-
-                  {feature}
-
-                </li>
-              ))}
-
-            </ul>
-
-            <button
-              className="auth-btn-primary"
-              onClick={() =>
-                handlePlanSelect(plan)
-              }
-            >
-              {plan.id === 'custom'
-                ? 'Customize Plan'
-                : 'Choose Plan'}
-            </button>
-
           </div>
-
-        ))}
-
+        </div>
       </div>
-
     </div>
   )
 }
