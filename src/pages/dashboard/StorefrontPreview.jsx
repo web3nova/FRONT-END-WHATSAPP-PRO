@@ -215,6 +215,9 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const paymentLabels = { bank: 'Bank Transfer', card: 'Credit/Debit Card', paystack: 'Paystack', flutterwave: 'Flutterwave', cash: 'Cash on Delivery', crypto: 'Crypto' }
 
   const deliveryOptions = settings?.theme?.builder?.delivery || []
+  // Minor-unit fees from builder JSON; backend recomputes authoritatively.
+  const deliveryFees = settings?.theme?.builder?.deliveryFees || {}
+  const feeFor = (method) => (Number.isInteger(deliveryFees[method]) && deliveryFees[method] > 0 ? deliveryFees[method] : 0)
 
   const computedPaymentOptions = useMemo(() => {
     const options = []
@@ -251,6 +254,8 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
 
   const cartCount = cart.reduce((s, i) => s + i.qty, 0)
   const cartTotal = cart.reduce((s, i) => s + (i.product.priceMinor || 0) * i.qty, 0)
+  const selectedDeliveryFee = feeFor(selectedDelivery)
+  const orderTotal = cartTotal + selectedDeliveryFee
 
 async function placeOrder() {
     if (!token) {
@@ -288,7 +293,7 @@ async function placeOrder() {
             quantity: i.qty,
             attributes: i.attrs,
           })),
-          totalMinor: cartTotal,
+          totalMinor: orderTotal,
           currency: 'NGN',
           deliveryMethod: selectedDelivery,
           paymentMethod: selectedPayment,
@@ -1440,6 +1445,9 @@ async function placeOrder() {
                             }`}
                           >
                             {deliveryLabels[key] || key}
+                            {feeFor(key) > 0 && (
+                              <span className="block text-xs font-normal opacity-75 mt-0.5">+ ₦ {(feeFor(key) / 100).toLocaleString()}</span>
+                            )}
                           </button>
                         ))}
                       </div>
@@ -1492,7 +1500,7 @@ async function placeOrder() {
                       <div className="bg-white rounded-xl p-4 space-y-2.5 border border-green-100">
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-gray-500">Amount to send</span>
-                          <span className="text-lg font-bold" style={{ color: INK }}>₦ {(cartTotal / 100).toLocaleString()}</span>
+                          <span className="text-lg font-bold" style={{ color: INK }}>₦ {(orderTotal / 100).toLocaleString()}</span>
                         </div>
                         <div className="border-t border-gray-100" />
                         <div className="flex justify-between">
@@ -1532,13 +1540,17 @@ async function placeOrder() {
                         <span className="font-semibold text-gray-800">₦ {(cartTotal / 100).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Delivery</span>
-                        <span className="text-gray-500">To be confirmed</span>
+                        <span className="text-gray-500">Delivery{selectedDelivery ? ` — ${deliveryLabels[selectedDelivery] || selectedDelivery}` : ''}</span>
+                        {selectedDeliveryFee > 0 ? (
+                          <span className="font-semibold text-gray-800">₦ {(selectedDeliveryFee / 100).toLocaleString()}</span>
+                        ) : (
+                          <span className="text-gray-500">{selectedDelivery ? 'Free' : 'To be confirmed'}</span>
+                        )}
                       </div>
                     </div>
                     <div className="flex justify-between text-base font-bold pt-3 mt-3 border-t border-gray-200" style={{ color: INK }}>
                       <span>Total</span>
-                      <span>₦ {(cartTotal / 100).toLocaleString()}</span>
+                      <span>₦ {(orderTotal / 100).toLocaleString()}</span>
                     </div>
                   </div>
 

@@ -478,6 +478,17 @@ function ProductsUpload({ data, setData }) {
     });
   };
 
+  // Fees kept as major-unit strings in builder state (like product prices);
+  // converted to minor units on publish.
+  const setDeliveryFee = (key, value) => {
+    setData(d => {
+      const fees = { ...(d.deliveryFees || {}) };
+      if (value === "" || Number(value) <= 0 || Number.isNaN(Number(value))) delete fees[key];
+      else fees[key] = value;
+      return { ...d, deliveryFees: fees };
+    });
+  };
+
   const toggleCheckout = (key) => {
     const updated = { ...checkoutFields, [key]: !checkoutFields[key] };
     setCheckoutFields(updated);
@@ -590,6 +601,21 @@ function ProductsUpload({ data, setData }) {
               onChange={() => toggleDelivery(opt.key)} />
           ))}
         </div>
+        {(data.delivery || []).length > 0 && (
+          <div style={{ marginTop: 14 }}>
+            <p style={{ fontSize: 13, color: COLORS.muted, margin: "0 0 8px" }}>Delivery fee per option (N) — leave blank for free</p>
+            {(data.delivery || []).map(key => (
+              <div key={key} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, width: 170 }}>
+                  {deliveryOptions.find(o => o.key === key)?.label || key}
+                </span>
+                <Input type="number" min="0" placeholder="0 (free)" style={{ maxWidth: 150 }}
+                  value={(data.deliveryFees || {})[key] ?? ""}
+                  onChange={e => setDeliveryFee(key, e.target.value)} />
+              </div>
+            ))}
+          </div>
+        )}
       </SectionCard>
     </div>
   );
@@ -616,6 +642,7 @@ function WebsitePreview({ data }) {
   };
 
   const cartTotal = cart.reduce((sum, i) => sum + Number(i.price) * i.qty, 0);
+  const deliveryFee = Number((data.deliveryFees || {})[checkoutForm.delivery] || 0);
   const paymentLabels = { bank: "Bank Transfer", card: "Credit/Debit Card", paystack: "Paystack", flutterwave: "Flutterwave", cash: "Cash on Delivery", crypto: "Crypto" };
   const deliveryLabels = { pickup: "Store Pickup", local: "Local Delivery", nationwide: "Nationwide Shipping", digital: "Digital / Instant" };
   const cf = data.checkoutFields || {};
@@ -812,7 +839,10 @@ function WebsitePreview({ data }) {
                 <Label>Delivery method</Label>
                 <Select value={checkoutForm.delivery || ""} onChange={e => setCheckoutForm(f => ({ ...f, delivery: e.target.value }))}>
                   <option value="">Select delivery method</option>
-                  {data.delivery.map(k => <option key={k} value={k}>{deliveryLabels[k]}</option>)}
+                  {data.delivery.map(k => {
+                    const fee = Number((data.deliveryFees || {})[k] || 0);
+                    return <option key={k} value={k}>{deliveryLabels[k]}{fee > 0 ? ` (+N${fee.toLocaleString()})` : ""}</option>;
+                  })}
                 </Select>
               </Field>
             )}
@@ -833,8 +863,14 @@ function WebsitePreview({ data }) {
                   <span style={{ fontWeight: 700 }}>N{(Number(i.price) * i.qty).toLocaleString()}</span>
                 </div>
               ))}
+              {deliveryFee > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
+                  <span>Delivery ({deliveryLabels[checkoutForm.delivery]})</span>
+                  <span style={{ fontWeight: 700 }}>N{deliveryFee.toLocaleString()}</span>
+                </div>
+              )}
               <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, fontSize: 15, marginTop: 8, paddingTop: 8, borderTop: `1.5px solid ${COLORS.border}` }}>
-                <span>Total</span><span style={{ color: COLORS.blue }}>N{cartTotal.toLocaleString()}</span>
+                <span>Total</span><span style={{ color: COLORS.blue }}>N{(cartTotal + deliveryFee).toLocaleString()}</span>
               </div>
             </div>
             <div style={{ display: "flex", gap: 12 }}>
@@ -864,7 +900,7 @@ export default function BusinessWebsiteBuilder() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const logoInputRef = useRef();
-  const [data, setData] = useState({ products: [], reviews: [], socialHandles: [], payments: [], delivery: [] });
+  const [data, setData] = useState({ products: [], reviews: [], socialHandles: [], payments: [], delivery: [], deliveryFees: {} });
 
   useEffect(() => {
     let ignore = false;
@@ -926,6 +962,11 @@ export default function BusinessWebsiteBuilder() {
               ...d,
               payments: b.payments || [],
               delivery: b.delivery || [],
+              deliveryFees: Object.fromEntries(
+                Object.entries(b.deliveryFees || {})
+                  .filter(([, v]) => Number.isInteger(v) && v > 0)
+                  .map(([k, v]) => [k, String(v / 100)]),
+              ),
               checkoutFields: b.checkoutFields || { name: true, phone: true, address: true, email: false },
               reviews: b.reviews || [],
               heroHeadline: b.hero?.headline || '',
@@ -1000,6 +1041,12 @@ export default function BusinessWebsiteBuilder() {
         socialHandles: data.socialHandles,
         payments: data.payments,
         delivery: data.delivery,
+        // Stored in minor units (kobo) — the backend resolves fees from this.
+        deliveryFees: Object.fromEntries(
+          Object.entries(data.deliveryFees || {})
+            .map(([k, v]) => [k, Math.round(Number(v) * 100)])
+            .filter(([, v]) => Number.isInteger(v) && v > 0),
+        ),
         checkoutFields: data.checkoutFields,
         reviews: data.reviews,
       };
