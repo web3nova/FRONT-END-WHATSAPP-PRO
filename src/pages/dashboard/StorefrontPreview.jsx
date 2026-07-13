@@ -191,7 +191,7 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const [cartOpen, setCartOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [checkoutStep, setCheckoutStep] = useState(0)
-  const [checkoutForm, setCheckoutForm] = useState({ name: '', phone: '', email: '', address: '' })
+  const [checkoutForm, setCheckoutForm] = useState({ name: '', phone: '', email: '', address: '', state: '', city: '', whatsapp: '', postBox: '', landmark: '' })
   const [placingOrder, setPlacingOrder] = useState(false)
   const [orderPlaced, setOrderPlaced] = useState(false)
   const [selectedDelivery, setSelectedDelivery] = useState('')
@@ -204,7 +204,23 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const paymentLabels = { bank: 'Bank Transfer', card: 'Credit/Debit Card', paystack: 'Paystack', flutterwave: 'Flutterwave', cash: 'Cash on Delivery', crypto: 'Crypto' }
 
   const deliveryOptions = settings?.theme?.builder?.delivery || []
-  const paymentOptions = settings?.theme?.builder?.payments || []
+
+  const computedPaymentOptions = useMemo(() => {
+    const options = []
+    if (paymentConfig?.paystack?.isActive) options.push({ key: 'paystack', label: 'Paystack (Card, USSD, Transfer)' })
+    if (paymentConfig?.monnify?.isActive) options.push({ key: 'monnify', label: 'Monnify' })
+    if (paymentConfig?.manual?.isActive) options.push({ key: 'bank', label: 'Bank Transfer' })
+    if (paymentConfig?.blockradar?.isActive) options.push({ key: 'crypto', label: 'Crypto (USDT, BTC, ETH)' })
+    options.push({ key: 'cash', label: 'Cash on Delivery' })
+    return options
+  }, [paymentConfig])
+
+  const businessDelivery = useMemo(() => ({
+    availableDays: business?.availableDays || [],
+    openingTime: business?.openingTime || '',
+    closingTime: business?.closingTime || '',
+    deliveryStructure: business?.deliveryStructure || '',
+  }), [business])
 
   function addToCart(product, attrs = {}) {
     const key = `${product.id}_${JSON.stringify(attrs)}`
@@ -247,8 +263,13 @@ async function placeOrder() {
         body: JSON.stringify({
           customerName: checkoutForm.name,
           customerPhone: checkoutForm.phone,
+          customerWhatsapp: checkoutForm.whatsapp || checkoutForm.phone,
           customerEmail: checkoutForm.email,
           customerAddress: checkoutForm.address,
+          customerState: checkoutForm.state,
+          customerCity: checkoutForm.city,
+          customerPostBox: checkoutForm.postBox || '',
+          customerLandmark: checkoutForm.landmark || '',
           tenantId,
           items: cart.map(i => ({
             productId: i.product.id,
@@ -270,7 +291,7 @@ async function placeOrder() {
       setCheckoutOpen(false)
       setCheckoutStep(1)
       setCart([])
-      setCheckoutForm({ name: '', phone: '', email: '', address: '' })
+      setCheckoutForm({ name: '', phone: '', email: '', address: '', state: '', city: '', whatsapp: '', postBox: '', landmark: '' })
       setSelectedDelivery('')
       setSelectedPayment('')
 
@@ -598,8 +619,8 @@ async function placeOrder() {
               setCheckoutForm(f => ({
                 ...f,
                 name: customer.name || f.name,
-                phone: customer.phone || f.phone,
-                email: customer.email || f.email,
+                phone: customer.phone || f.phone || '',
+                email: customer.email || f.email || '',
               }))
             }
           }}
@@ -1225,8 +1246,8 @@ async function placeOrder() {
                         setCheckoutForm(f => ({
                           ...f,
                           name: customer.name || f.name,
-                          phone: customer.phone || f.phone,
-                          email: customer.email || f.email,
+                          phone: customer.phone || f.phone || '',
+                          email: customer.email || f.email || '',
                         }))
                       }
                     }
@@ -1288,24 +1309,50 @@ async function placeOrder() {
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
               {checkoutStep === 1 && (
                 <>
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
+                    <div className="font-semibold mb-1">Delivery Information</div>
+                    {businessDelivery.availableDays.length > 0 && (
+                      <div>Available days: {businessDelivery.availableDays.join(', ')}</div>
+                    )}
+                    {businessDelivery.openingTime && businessDelivery.closingTime && (
+                      <div>Hours: {businessDelivery.openingTime} - {businessDelivery.closingTime}</div>
+                    )}
+                    {businessDelivery.deliveryStructure && (
+                      <div>Service: {businessDelivery.deliveryStructure}</div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Full Name *</label>
+                      <input
+                        className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition"
+                        placeholder="Your full name"
+                        value={checkoutForm.name}
+                        onChange={e => setCheckoutForm(f => ({ ...f, name: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Phone Number *</label>
+                      <input
+                        className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition"
+                        placeholder="08012345678"
+                        value={checkoutForm.phone}
+                        onChange={e => setCheckoutForm(f => ({ ...f, phone: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Full Name *</label>
+                    <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">WhatsApp Number</label>
                     <input
                       className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition"
-                      placeholder="Your full name"
-                      value={checkoutForm.name}
-                      onChange={e => setCheckoutForm(f => ({ ...f, name: e.target.value }))}
+                      placeholder="08012345678 (same or different from phone)"
+                      value={checkoutForm.whatsapp}
+                      onChange={e => setCheckoutForm(f => ({ ...f, whatsapp: e.target.value }))}
                     />
                   </div>
-                  <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Phone Number *</label>
-                    <input
-                      className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition"
-                      placeholder="08012345678"
-                      value={checkoutForm.phone}
-                      onChange={e => setCheckoutForm(f => ({ ...f, phone: e.target.value }))}
-                    />
-                  </div>
+
                   <div>
                     <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Email (for order confirmation)</label>
                     <input
@@ -1316,16 +1363,60 @@ async function placeOrder() {
                       onChange={e => setCheckoutForm(f => ({ ...f, email: e.target.value }))}
                     />
                   </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">State *</label>
+                      <input
+                        className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition"
+                        placeholder="Lagos"
+                        value={checkoutForm.state}
+                        onChange={e => setCheckoutForm(f => ({ ...f, state: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">City *</label>
+                      <input
+                        className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition"
+                        placeholder="Ikeja"
+                        value={checkoutForm.city}
+                        onChange={e => setCheckoutForm(f => ({ ...f, city: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Delivery Address *</label>
+                    <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Street / Delivery Address *</label>
                     <textarea
                       className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition resize-none"
                       rows={2}
-                      placeholder="Street, City, State"
+                      placeholder="Street number, building, avenue"
                       value={checkoutForm.address}
                       onChange={e => setCheckoutForm(f => ({ ...f, address: e.target.value }))}
                     />
                   </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Post Box / ZIP Code</label>
+                      <input
+                        className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition"
+                        placeholder="100001"
+                        value={checkoutForm.postBox}
+                        onChange={e => setCheckoutForm(f => ({ ...f, postBox: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Closest Landmark</label>
+                      <input
+                        className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition"
+                        placeholder="Near the market, opposite bank"
+                        value={checkoutForm.landmark}
+                        onChange={e => setCheckoutForm(f => ({ ...f, landmark: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+
                   {deliveryOptions.length > 0 && (
                     <div>
                       <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Delivery Method *</label>
@@ -1351,26 +1442,29 @@ async function placeOrder() {
 
               {checkoutStep === 2 && (
                 <>
-                  {paymentOptions.length > 0 && (
-                    <div>
-                      <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Payment Method *</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {paymentOptions.map(key => (
-                          <button
-                            key={key}
-                            onClick={() => setSelectedPayment(key)}
-                            className={`px-3 py-2.5 text-xs font-semibold rounded-xl border transition ${
-                              selectedPayment === key
-                                ? 'border-gray-800 bg-gray-800 text-white'
-                                : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                            }`}
-                          >
-                            {paymentLabels[key] || key}
-                          </button>
-                        ))}
-                      </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-700">
+                    <div className="font-semibold">Payment Method</div>
+                    <div className="mt-1">Select how you'd like to pay for your order.</div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Payment Method *</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {computedPaymentOptions.map(opt => (
+                        <button
+                          key={opt.key}
+                          onClick={() => setSelectedPayment(opt.key)}
+                          className={`px-3 py-2.5 text-xs font-semibold rounded-xl border transition ${
+                            selectedPayment === opt.key
+                              ? 'border-gray-800 bg-gray-800 text-white'
+                              : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
                     </div>
-                  )}
+                  </div>
 
                   {/* Order Summary */}
                   <div className="bg-gray-50 rounded-xl p-4">
@@ -1381,10 +1475,27 @@ async function placeOrder() {
                         <span className="font-semibold text-gray-800 flex-shrink-0">₦ {((item.product.priceMinor || 0) * item.qty / 100).toLocaleString()}</span>
                       </div>
                     ))}
+                    <div className="flex justify-between text-sm pt-3 mt-3 border-t border-gray-200">
+                      <span className="text-gray-500">Subtotal</span>
+                      <span className="font-semibold text-gray-800">₦ {(cartTotal / 100).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-500">Delivery</span>
+                      <span className="text-gray-600">Calculated at confirmation</span>
+                    </div>
                     <div className="flex justify-between text-sm font-bold pt-3 mt-3 border-t border-gray-200" style={{ color: INK }}>
                       <span>Total</span>
                       <span>₦ {(cartTotal / 100).toLocaleString()}</span>
                     </div>
+                  </div>
+
+                  {/* Delivery info summary */}
+                  <div className="bg-gray-50 rounded-xl p-3 text-xs text-gray-600 space-y-1">
+                    <div className="font-semibold text-gray-700 mb-1">Delivering to</div>
+                    <div>{checkoutForm.name} — {checkoutForm.phone}</div>
+                    <div>{checkoutForm.address}, {checkoutForm.city}, {checkoutForm.state}</div>
+                    {checkoutForm.landmark && <div>Landmark: {checkoutForm.landmark}</div>}
+                    {selectedDelivery && <div className="mt-1 font-medium" style={{ color: INK }}>{deliveryLabels[selectedDelivery] || selectedDelivery}</div>}
                   </div>
                 </>
               )}
@@ -1395,8 +1506,8 @@ async function placeOrder() {
               {checkoutStep === 1 && (
                 <button
                   onClick={() => {
-                    if (!checkoutForm.name?.trim() || !checkoutForm.phone?.trim() || !checkoutForm.address?.trim()) {
-                      alert('Please fill in all required fields.')
+                    if (!checkoutForm.name?.trim() || !checkoutForm.phone?.trim() || !checkoutForm.address?.trim() || !checkoutForm.state?.trim() || !checkoutForm.city?.trim()) {
+                      alert('Please fill in all required fields: name, phone, state, city, and delivery address.')
                       return
                     }
                     setCheckoutStep(2)
