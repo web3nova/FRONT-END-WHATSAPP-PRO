@@ -35,11 +35,11 @@ export function CustomerAuthProvider({ children }) {
     storeCustomer(null)
   }, [])
 
-  const login = useCallback(async (tenantId, phone, password) => {
+  const login = useCallback(async (tenantId, phone, email, password) => {
     const res = await fetch(`${API_BASE}/customer-auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tenantId, phone, password }),
+      body: JSON.stringify({ tenantId, phone, email: email || null, password }),
     })
     const body = await res.json()
     if (!res.ok) throw new Error(body?.message || 'Login failed')
@@ -51,11 +51,11 @@ export function CustomerAuthProvider({ children }) {
     return data
   }, [])
 
-  const signup = useCallback(async (tenantId, name, phone, password) => {
+  const signup = useCallback(async (tenantId, name, phone, email, password) => {
     const res = await fetch(`${API_BASE}/customer-auth/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tenantId, name, phone, password }),
+      body: JSON.stringify({ tenantId, name, phone, email: email || null, password }),
     })
     const body = await res.json()
     if (!res.ok) throw new Error(body?.message || 'Signup failed')

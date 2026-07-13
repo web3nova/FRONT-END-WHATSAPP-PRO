@@ -234,9 +234,9 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
     const key = `${product.id}_${JSON.stringify(attrs)}`
     setCart(c => {
       const idx = c.findIndex(i => i.key === key)
-      if (idx >= 0) return c.map((i, n) => n === idx ? { ...i, qty: i.qty + 1 } : i)
-      return [...c, { key, product, attrs, qty: 1 }]
+      return idx >= 0 ? c.map((i, n) => n === idx ? { ...i, qty: i.qty + 1 } : i) : [...c, { key, product, attrs, qty: 1 }]
     })
+    fetch(`${API_BASE}/products/${product.id}/view`, { method: 'POST' }).catch(() => {})
   }
 
   function removeFromCart(key) {
@@ -478,6 +478,7 @@ async function placeOrder() {
   function openProduct(product) {
     setSelectedProduct(product)
     setSelectedAttrs({})
+    fetch(`${API_BASE}/products/${product.id}/view`, { method: 'POST' }).catch(() => {})
   }
 
   function goShop(category) {

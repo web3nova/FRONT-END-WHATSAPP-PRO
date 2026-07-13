@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { X, Loader, LogIn, UserPlus, Globe, Fingerprint } from 'lucide-react'
 import { useCustomerAuth } from '../context/CustomerAuthContext'
+import { API_BASE } from '../lib/apiConfig'
 
 const VENDOR_COLORS = {
   primary: '#4166F5',
@@ -15,7 +16,6 @@ const VENDOR_COLORS = {
 }
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5173'
 
 export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = {} }) {
   const colors = { ...VENDOR_COLORS, ...theme }
@@ -254,9 +254,9 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
     setLoading(true)
     try {
       if (mode === 'signup') {
-        await signup(tenantId, name.trim(), phone.trim(), password)
+        await signup(tenantId, name.trim(), phone.trim(), email.trim(), password)
       } else {
-        await login(tenantId, phone.trim(), password)
+        await login(tenantId, phone.trim(), email.trim(), password)
       }
       onSuccess?.()
       onClose()
