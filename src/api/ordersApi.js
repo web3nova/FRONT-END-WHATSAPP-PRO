@@ -87,18 +87,3 @@ export async function updateOrder(id, data) {
   if (!res.ok) throw new Error(body?.message || `Failed to update order (${res.status})`)
   return body?.data ?? body
 }
-
-/**
- * POST /orders/public
- * Guest checkout — no auth required. Accepts the same shape as createOrder.
- */
-export async function publicCreateOrder(data) {
-  const res = await fetch(`${API_BASE}/orders/public`, {
-    method: 'POST',
-    headers: { accept: 'application/json', 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  })
-  const body = await res.json().catch(() => null)
-  if (!res.ok) throw new Error(body?.message || `Failed to place order (${res.status})`)
-  return body?.data ?? body
-}
