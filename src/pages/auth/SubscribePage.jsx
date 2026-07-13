@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { Check, Zap, Loader2 } from 'lucide-react'
+import { Check, Loader2 } from 'lucide-react'
 import { fetchPlans, initializePayment } from '../../api/billingApi'
 import BizBackground from '../../components/BizBackground'
 import './Auth.css'
@@ -163,10 +163,7 @@ export default function SubscribePage() {
 
             <nav className="subscribe-nav">
               <div className="subscribe-logo">
-                <div className="subscribe-logo-mark">
-                  <Zap size={16} />
-                </div>
-                <span>BizAI</span>
+                <img src="/BizIq.png" alt="BizIQ" className="subscribe-logo-img" />
               </div>
             </nav>
 

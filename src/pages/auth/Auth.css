@@ -160,6 +160,11 @@
   letter-spacing:-.01em;
 }
 
+.auth-logo__img{
+  height:32px;
+  width:auto;
+}
+
 /* Headline */
 
 .auth-panel__copy{
@@ -661,6 +666,11 @@
   align-items:center;
   justify-content:center;
   color:#fff;
+}
+
+.subscribe-logo-img{
+  height:30px;
+  width:auto;
 }
 
 .subscribe-header{

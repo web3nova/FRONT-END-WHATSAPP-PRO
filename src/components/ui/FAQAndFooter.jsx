@@ -42,10 +42,7 @@ export default function FAQAndFooter() {
                         {/* Branding Block */}
                         <div className="col-span-2">
                             <div className="flex items-center gap-2">
-                                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#F8F4E8] text-[#4166F5] font-bold text-lg leading-none">B</div>
-                                <span className="font-['Manrope'] font-bold text-[24px] text-[#1E293B] tracking-tight">
-                                    BizAI
-                                </span>
+                                <img src="/BizIq.png" alt="BizIQ" className="h-8 w-auto" />
                             </div>
                             <p className="text-[14px] text-[#64748B] leading-[1.6] mt-4 max-w-xs">
                                 The enterprise-grade Automation agent platform. Elevate your support arrays and order processing systems right through standard WhatsApp communication channels.

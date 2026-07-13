@@ -43,9 +43,8 @@ export default function HeroSection() {
         {/* Semi-transparent overlay to ensure text is readable over the Unsplash image */}
         <div className="w-full min-h-screen bg-white/80 backdrop-blur-sm pb-44">
           <nav className="flex items-center justify-between p-4 md:px-16 lg:px-24 xl:px-32 md:py-6 w-full relative z-10">
-            <Link to="/" aria-label="Biz AI home" className="flex items-center gap-2">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#F8F4E8] text-[#4166F5] font-bold text-lg leading-none">B</div>
-              <span className="text-xl font-bold text-[#050040] tracking-tight">BizAI</span>
+            <Link to="/" aria-label="BizIQ home" className="flex items-center gap-2">
+              <img src="/BizIq.png" alt="BizIQ" className="h-8 w-auto" />
             </Link>
 
             <div

@@ -213,8 +213,7 @@ export default function LoginPage() {
           <div className="auth-panel auth-panel--brand">
             <div className="auth-panel__inner">
               <div className="auth-logo">
-                <span className="auth-logo__mark">B</span>
-                <span className="auth-logo__wordmark">BizAI</span>
+                <img src="/BizIq.png" alt="BizIQ" className="auth-logo__img" />
               </div>
 
               <div className="auth-panel__copy">
