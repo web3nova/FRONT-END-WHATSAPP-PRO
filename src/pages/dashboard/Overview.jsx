@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import { Users, ShoppingBag, DollarSign, Globe, MessageCircle, TrendingUp, Package, ArrowRight, Bot, FileText, BarChart2 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
@@ -103,6 +104,7 @@ function EmptyPanel({ title, subtitle, height = 210 }) {
 }
 
 export default function BusinessOverview() {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const businessName = user?.businessName || user?.name || user?.email || 'your business'
 
@@ -222,6 +224,7 @@ export default function BusinessOverview() {
             Download Report
           </button>
           <button
+            onClick={() => navigate('/dashboard/products/new')}
             className="px-4 py-2 text-sm font-semibold text-white rounded-xl shadow-sm hover:opacity-90 transition"
             style={{ background: PRIMARY }}
           >
@@ -306,7 +309,7 @@ export default function BusinessOverview() {
               <h2 className="font-semibold text-gray-900">Recent Orders</h2>
               <p className="text-xs text-gray-400 mt-0.5">Latest customer orders</p>
             </div>
-            <button className="text-sm font-semibold flex items-center gap-1 hover:opacity-70 transition" style={{ color: PRIMARY }}>
+            <button onClick={() => navigate('/dashboard/orders')} className="text-sm font-semibold flex items-center gap-1 hover:opacity-70 transition" style={{ color: PRIMARY }}>
               View all <ArrowRight size={13} />
             </button>
           </div>
@@ -364,7 +367,7 @@ export default function BusinessOverview() {
               const name = conv.customer?.name || conv.customer?.phone || 'Unknown'
               const av = name.slice(0, 2).toUpperCase()
               return (
-                <div key={conv.id} className="flex items-start gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors cursor-pointer">
+                <div key={conv.id} onClick={() => navigate(`/dashboard/whatsapp?conversation=${conv.id}`)} className="flex items-start gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors cursor-pointer">
                   <div
                     className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
                     style={{ background: avatarColors[i % avatarColors.length] }}
@@ -396,7 +399,7 @@ export default function BusinessOverview() {
           <div className="px-5 py-3 border-t border-gray-50">
             <div className="flex items-center justify-between text-xs text-gray-400">
               <span>Total: <span className="font-semibold text-gray-700">{stats.conversations}</span> conversations</span>
-              <button className="font-semibold hover:opacity-70 transition" style={{ color: PRIMARY }}>Open inbox →</button>
+              <button onClick={() => navigate('/dashboard/whatsapp')} className="font-semibold hover:opacity-70 transition" style={{ color: PRIMARY }}>Open inbox →</button>
             </div>
           </div>
         </div>
