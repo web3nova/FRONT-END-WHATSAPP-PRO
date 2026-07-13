@@ -189,7 +189,7 @@ export default function SignUpPage() {
             <div className="auth-panel__inner">
 
               <div className="auth-logo">
-                <img src="/BizIq.png" alt="BizIQ" className="auth-logo__img" />
+                <img src="/BizIq6.png" alt="BizIQ" className="auth-logo__img" />
               </div>
 
               <div className="auth-panel__copy">
