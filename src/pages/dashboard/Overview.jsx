@@ -114,7 +114,7 @@ export default function BusinessOverview() {
   const [topProducts, setTopProducts] = useState([])
   const [topProductChart, setTopProductChart] = useState([])
   const [dailyRevenue, setDailyRevenue] = useState([])
-  const [trafficSources, setTrafficSources] = useState(null)
+  const [customerSources, setCustomerSources] = useState(null)
 
   useEffect(() => {
     let ignore = false
@@ -147,7 +147,7 @@ export default function BusinessOverview() {
         conversations: convRes.meta?.total ?? convRes.data.length,
         visits: a?.websiteVisits?.total || 0,
       })
-      setTrafficSources(a?.trafficSources ?? null)
+      setCustomerSources(a?.customerSources ?? null)
 
       // Build daily revenue for the trend chart from orders
       const now = new Date()
@@ -276,22 +276,21 @@ export default function BusinessOverview() {
           </div>
           {loading ? (
             <EmptyPanel title="Loading…" height={155} />
-          ) : !trafficSources ? (
-            <EmptyPanel title="No traffic data yet" subtitle="Sources appear once your storefront gets visits" height={155} />
+          ) : !customerSources || Object.values(customerSources).every(v => !v) ? (
+            <EmptyPanel title="No customers yet" subtitle="Sources appear once customers start reaching out" height={155} />
           ) : (
             <div className="space-y-2 mt-1">
               {[
                 { key: 'whatsapp', label: 'WhatsApp', color: '#25D366' },
                 { key: 'website', label: 'Website', color: '#4166F5' },
-                { key: 'referral', label: 'Referral', color: '#f59e0b' },
-                { key: 'direct', label: 'Direct', color: '#94a3b8' },
+                { key: 'google', label: 'Google', color: '#f59e0b' },
               ].map(s => (
                 <div key={s.key} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-2.5 h-2.5 rounded-sm" style={{ background: s.color }}></div>
                     <span className="text-sm text-gray-500">{s.label}</span>
                   </div>
-                  <span className="text-sm font-medium text-gray-700">{trafficSources[s.key] || 0}</span>
+                  <span className="text-sm font-medium text-gray-700">{customerSources[s.key] || 0}</span>
                 </div>
               ))}
             </div>

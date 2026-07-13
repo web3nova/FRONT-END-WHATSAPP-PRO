@@ -14,12 +14,8 @@ import {
 } from './components/ProtectedRoute';
 import OnboardingGate from './components/OnboardingGate';
 
-import AdminLayout from './layouts/AdminLayout';
 import BusinessLayout from './layouts/BusinessLayout';
 import BusinessWebsiteBuilder from './layouts/BusinessWebsite';
-
-import AdminOverview from './pages/admin/Overview';
-import AdminTenants from './pages/admin/Tenants';
 
 import BusinessOverview from './pages/dashboard/Overview';
 import BusinessOrders from './pages/dashboard/Orders';
@@ -288,28 +284,6 @@ export default function App() {
                 <Route
                   path="settings"
                   element={<Settings />}
-                />
-
-              </Route>
-
-              {/* Admin */}
-
-              <Route
-                path="/admin"
-                element={
-                  <RequireAuth>
-                    <AdminLayout />
-                  </RequireAuth>
-                }
-              >
-                <Route
-                  index
-                  element={<AdminOverview />}
-                />
-
-                <Route
-                  path="tenants"
-                  element={<AdminTenants />}
                 />
 
               </Route>
