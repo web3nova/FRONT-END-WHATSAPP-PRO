@@ -13,8 +13,8 @@ import {
 import HeroSection from './storefronts/sections/HeroSection'
 import { ProductCard } from './storefronts/sections/ProductsSection'
 import { sectionByLegacyId, sectionByType, DEFAULT_REORDERABLE_ORDER } from './storefronts/sectionRegistry'
+import { API_BASE } from '../../lib/apiConfig'
 import { resolveImageUrl } from '../../lib/utils'
-import { publicCreateOrder } from '../../api/ordersApi'
 import AuthModal from '../../components/AuthModal'
 import { useCustomerAuth } from '../../context/CustomerAuthContext'
 
@@ -190,6 +190,7 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const [cart, setCart] = useState([])
   const [cartOpen, setCartOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
+  const [checkoutStep, setCheckoutStep] = useState(0)
   const [checkoutForm, setCheckoutForm] = useState({ name: '', phone: '', email: '', address: '' })
   const [placingOrder, setPlacingOrder] = useState(false)
   const [orderPlaced, setOrderPlaced] = useState(false)
@@ -226,21 +227,21 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const cartTotal = cart.reduce((s, i) => s + (i.product.priceMinor || 0) * i.qty, 0)
 
 async function placeOrder() {
-    // Require user authentication before checkout
     if (!token) {
       setCheckoutOpen(false)
       setShowAuthModal(true)
       return
     }
 
-    if (!checkoutForm.name?.trim() || !checkoutForm.phone?.trim() || !checkoutForm.address?.trim()) return
     if (!selectedPayment) { alert('Please select a payment method.'); return }
     setPlacingOrder(true)
     try {
       const headers = { 'Content-Type': 'application/json' }
-      if (token) headers.Authorization = `Bearer ${token}`
-      
-      const result = await fetch(`${API_BASE}/orders/public`, {
+      headers.Authorization = `Bearer ${token}`
+
+      const tenantId = tenantIdProp || business?.tenantId || ''
+
+      const result = await fetch(`${API_BASE}/checkout/place-order`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -248,7 +249,7 @@ async function placeOrder() {
           customerPhone: checkoutForm.phone,
           customerEmail: checkoutForm.email,
           customerAddress: checkoutForm.address,
-          tenantId: tenantIdProp || business?.tenantId || '',
+          tenantId,
           items: cart.map(i => ({
             productId: i.product.id,
             name: i.product.name,
@@ -264,26 +265,26 @@ async function placeOrder() {
       })
       const body = await result.json().catch(() => null)
       if (!result.ok) throw new Error(body?.message || `Failed to place order (${result.status})`)
-      const publicOrderResult = body?.data ?? body
-      
+      const orderResult = body?.data ?? body
+
       setCheckoutOpen(false)
+      setCheckoutStep(1)
       setCart([])
       setCheckoutForm({ name: '', phone: '', email: '', address: '' })
       setSelectedDelivery('')
       setSelectedPayment('')
-      
-      if (publicOrderResult?.payment?.checkoutUrl) {
-        setPaymentRedirect(publicOrderResult.payment.checkoutUrl)
-      } else if (selectedPayment === 'bank' && publicOrderResult?.bankDetails) {
+
+      if (orderResult?.payment?.checkoutUrl) {
+        setPaymentRedirect(orderResult.payment.checkoutUrl)
+      } else if (selectedPayment === 'bank' && orderResult?.bankDetails) {
         setBankTransferInfo({
-          orderRef: publicOrderResult?.order?.reference || '',
-          total: publicOrderResult?.order?.totalMinor || cartTotal,
-          currency: publicOrderResult?.order?.currency || 'NGN',
-          ...publicOrderResult.bankDetails,
+          orderRef: orderResult?.order?.reference || '',
+          total: orderResult?.order?.totalMinor || cartTotal,
+          currency: orderResult?.order?.currency || 'NGN',
+          ...orderResult.bankDetails,
         })
       } else {
-        // Redirect to account page for order tracking
-        const base = slug ? `/b/${slug}` : `/storefront/${tenantIdProp || business?.tenantId || ''}`
+        const base = slug ? `/b/${slug}` : `/storefront/${tenantId}`
         window.location.href = `${base}/account`
       }
     } catch (err) {
@@ -591,7 +592,8 @@ async function placeOrder() {
           onClose={() => setShowAuthModal(false)}
           onSuccess={() => {
             setShowAuthModal(false)
-            // Pre-fill checkout form with customer data if available
+            setCheckoutStep(1)
+            setCheckoutOpen(true)
             if (customer) {
               setCheckoutForm(f => ({
                 ...f,
@@ -600,7 +602,6 @@ async function placeOrder() {
                 email: customer.email || f.email,
               }))
             }
-            setCheckoutOpen(true)
           }}
         />
       )}
@@ -1213,7 +1214,23 @@ async function placeOrder() {
                   <span className="text-lg font-bold" style={{ color: INK }}>₦ {(cartTotal / 100).toLocaleString()}</span>
                 </div>
                 <button
-                  onClick={() => { setCartOpen(false); setCheckoutOpen(true) }}
+                  onClick={() => {
+                    setCartOpen(false)
+                    if (!token) {
+                      setShowAuthModal(true)
+                    } else {
+                      setCheckoutStep(1)
+                      setCheckoutOpen(true)
+                      if (customer) {
+                        setCheckoutForm(f => ({
+                          ...f,
+                          name: customer.name || f.name,
+                          phone: customer.phone || f.phone,
+                          email: customer.email || f.email,
+                        }))
+                      }
+                    }
+                  }}
                   className="w-full py-3.5 rounded-full text-sm font-bold text-white transition hover:opacity-90"
                   style={{ background: INK }}
                 >
@@ -1225,7 +1242,7 @@ async function placeOrder() {
         </div>
       )}
 
-      {/* ── Checkout Modal ── */}
+      {/* ── Multi-step Checkout Modal ── */}
       {checkoutOpen && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => { if (!placingOrder) setCheckoutOpen(false) }}>
           <div
@@ -1235,133 +1252,171 @@ async function placeOrder() {
           >
             {/* Header */}
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
-              <h2 className="text-lg font-bold" style={{ color: INK }}>Checkout</h2>
-              <button onClick={() => { if (!placingOrder) setCheckoutOpen(false) }} className="p-1 text-gray-400 hover:text-gray-600 transition">
+              <div className="flex items-center gap-3">
+                {checkoutStep > 1 && (
+                  <button onClick={() => setCheckoutStep(s => s - 1)} className="p-1 text-gray-400 hover:text-gray-600 transition">
+                    <ChevronLeft size={18} />
+                  </button>
+                )}
+                <h2 className="text-lg font-bold" style={{ color: INK }}>
+                  {checkoutStep === 1 ? 'Delivery Information' : checkoutStep === 2 ? 'Payment' : 'Checkout'}
+                </h2>
+              </div>
+              <button onClick={() => { if (!placingOrder) { setCheckoutOpen(false); setCheckoutStep(1) } }} className="p-1 text-gray-400 hover:text-gray-600 transition">
                 <X size={18} />
               </button>
             </div>
 
-            {/* Scrollable form area */}
-            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Full Name *</label>
-                <input
-                  className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition"
-                  placeholder="Your full name"
-                  value={checkoutForm.name}
-                  onChange={e => setCheckoutForm(f => ({ ...f, name: e.target.value }))}
-                  onBlur={e => setCheckoutForm(f => (f.name === e.target.value ? f : { ...f, name: e.target.value }))}
-                  disabled={placingOrder}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Phone Number *</label>
-                <input
-                  className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition"
-                  placeholder="08012345678"
-                  value={checkoutForm.phone}
-                  onChange={e => setCheckoutForm(f => ({ ...f, phone: e.target.value }))}
-                  onBlur={e => setCheckoutForm(f => (f.phone === e.target.value ? f : { ...f, phone: e.target.value }))}
-                  disabled={placingOrder}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Email (for order confirmation)</label>
-                <input
-                  type="email"
-                  className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition"
-                  placeholder="you@example.com"
-                  value={checkoutForm.email}
-                  onChange={e => setCheckoutForm(f => ({ ...f, email: e.target.value }))}
-                  onBlur={e => setCheckoutForm(f => (f.email === e.target.value ? f : { ...f, email: e.target.value }))}
-                  disabled={placingOrder}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Delivery Address *</label>
-                <textarea
-                  className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition resize-none"
-                  rows={2}
-                  placeholder="Street, City, State"
-                  value={checkoutForm.address}
-                  onChange={e => setCheckoutForm(f => ({ ...f, address: e.target.value }))}
-                  onBlur={e => setCheckoutForm(f => (f.address === e.target.value ? f : { ...f, address: e.target.value }))}
-                  disabled={placingOrder}
-                />
-              </div>
-
-              {/* Delivery Method */}
-              {deliveryOptions.length > 0 && (
-                <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Delivery Method *</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {deliveryOptions.map(key => (
-                      <button
-                        key={key}
-                        onClick={() => setSelectedDelivery(key)}
-                        disabled={placingOrder}
-                        className={`px-3 py-2.5 text-xs font-semibold rounded-xl border transition ${
-                          selectedDelivery === key
-                            ? 'border-gray-800 bg-gray-800 text-white'
-                            : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                        }`}
-                      >
-                        {deliveryLabels[key] || key}
-                      </button>
-                    ))}
+            {/* Steps indicator */}
+            <div className="flex items-center gap-1 px-5 pt-3 pb-1 flex-shrink-0">
+              {[1, 2].map(step => (
+                <div key={step} className="flex items-center gap-1 flex-1">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition ${
+                    checkoutStep >= step ? 'text-white' : 'text-gray-400 bg-gray-100'
+                  }`} style={checkoutStep >= step ? { background: INK } : {}}>
+                    {step}
                   </div>
+                  <span className={`text-[10px] font-medium ${checkoutStep >= step ? 'text-gray-700' : 'text-gray-400'}`}>
+                    {step === 1 ? 'Delivery' : 'Payment'}
+                  </span>
+                  {step < 2 && <div className="flex-1 h-px bg-gray-200 mx-1" />}
                 </div>
-              )}
-
-              {/* Payment Method */}
-              {paymentOptions.length > 0 && (
-                <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Payment Method *</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {paymentOptions.map(key => (
-                      <button
-                        key={key}
-                        onClick={() => setSelectedPayment(key)}
-                        disabled={placingOrder}
-                        className={`px-3 py-2.5 text-xs font-semibold rounded-xl border transition ${
-                          selectedPayment === key
-                            ? 'border-gray-800 bg-gray-800 text-white'
-                            : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                        }`}
-                      >
-                        {paymentLabels[key] || key}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Order Summary */}
-              <div className="bg-gray-50 rounded-xl p-4">
-                <div className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Order Summary</div>
-                {cart.map(item => (
-                  <div key={item.key} className="flex justify-between text-sm mb-1.5">
-                    <span className="text-gray-600 truncate mr-2">{item.product.name} x{item.qty}</span>
-                    <span className="font-semibold text-gray-800 flex-shrink-0">₦ {((item.product.priceMinor || 0) * item.qty / 100).toLocaleString()}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between text-sm font-bold pt-3 mt-3 border-t border-gray-200" style={{ color: INK }}>
-                  <span>Total</span>
-                  <span>₦ {(cartTotal / 100).toLocaleString()}</span>
-                </div>
-              </div>
+              ))}
             </div>
 
-            {/* Sticky Place Order button */}
+            {/* Scrollable form area */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+              {checkoutStep === 1 && (
+                <>
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Full Name *</label>
+                    <input
+                      className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition"
+                      placeholder="Your full name"
+                      value={checkoutForm.name}
+                      onChange={e => setCheckoutForm(f => ({ ...f, name: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Phone Number *</label>
+                    <input
+                      className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition"
+                      placeholder="08012345678"
+                      value={checkoutForm.phone}
+                      onChange={e => setCheckoutForm(f => ({ ...f, phone: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Email (for order confirmation)</label>
+                    <input
+                      type="email"
+                      className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition"
+                      placeholder="you@example.com"
+                      value={checkoutForm.email}
+                      onChange={e => setCheckoutForm(f => ({ ...f, email: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Delivery Address *</label>
+                    <textarea
+                      className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition resize-none"
+                      rows={2}
+                      placeholder="Street, City, State"
+                      value={checkoutForm.address}
+                      onChange={e => setCheckoutForm(f => ({ ...f, address: e.target.value }))}
+                    />
+                  </div>
+                  {deliveryOptions.length > 0 && (
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Delivery Method *</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {deliveryOptions.map(key => (
+                          <button
+                            key={key}
+                            onClick={() => setSelectedDelivery(key)}
+                            className={`px-3 py-2.5 text-xs font-semibold rounded-xl border transition ${
+                              selectedDelivery === key
+                                ? 'border-gray-800 bg-gray-800 text-white'
+                                : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                            }`}
+                          >
+                            {deliveryLabels[key] || key}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {checkoutStep === 2 && (
+                <>
+                  {paymentOptions.length > 0 && (
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Payment Method *</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {paymentOptions.map(key => (
+                          <button
+                            key={key}
+                            onClick={() => setSelectedPayment(key)}
+                            className={`px-3 py-2.5 text-xs font-semibold rounded-xl border transition ${
+                              selectedPayment === key
+                                ? 'border-gray-800 bg-gray-800 text-white'
+                                : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                            }`}
+                          >
+                            {paymentLabels[key] || key}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Order Summary */}
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <div className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Order Summary</div>
+                    {cart.map(item => (
+                      <div key={item.key} className="flex justify-between text-sm mb-1.5">
+                        <span className="text-gray-600 truncate mr-2">{item.product.name} x{item.qty}</span>
+                        <span className="font-semibold text-gray-800 flex-shrink-0">₦ {((item.product.priceMinor || 0) * item.qty / 100).toLocaleString()}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between text-sm font-bold pt-3 mt-3 border-t border-gray-200" style={{ color: INK }}>
+                      <span>Total</span>
+                      <span>₦ {(cartTotal / 100).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Sticky action button */}
             <div className="px-5 py-4 border-t border-gray-100 flex-shrink-0 bg-white">
-              <button
-                onClick={placeOrder}
-                disabled={placingOrder || !checkoutForm.name?.trim() || !checkoutForm.phone?.trim() || !checkoutForm.address?.trim() || (deliveryOptions.length > 0 && !selectedDelivery) || (paymentOptions.length > 0 && !selectedPayment)}
-                className="w-full py-3.5 rounded-full text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ background: INK }}
-              >
-                {placingOrder ? 'Placing Order…' : 'Place Order'}
-              </button>
+              {checkoutStep === 1 && (
+                <button
+                  onClick={() => {
+                    if (!checkoutForm.name?.trim() || !checkoutForm.phone?.trim() || !checkoutForm.address?.trim()) {
+                      alert('Please fill in all required fields.')
+                      return
+                    }
+                    setCheckoutStep(2)
+                  }}
+                  className="w-full py-3.5 rounded-full text-sm font-bold text-white transition hover:opacity-90"
+                  style={{ background: INK }}
+                >
+                  Continue to Payment
+                </button>
+              )}
+              {checkoutStep === 2 && (
+                <button
+                  onClick={placeOrder}
+                  disabled={placingOrder || !selectedPayment}
+                  className="w-full py-3.5 rounded-full text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ background: INK }}
+                >
+                  {placingOrder ? 'Placing Order…' : 'Place Order'}
+                </button>
+              )}
             </div>
           </div>
         </div>
