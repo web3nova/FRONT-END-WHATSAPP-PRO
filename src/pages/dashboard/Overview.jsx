@@ -8,6 +8,7 @@ import { listOrders } from '../../api/ordersApi'
 import { listConversations } from '../../api/conversationsApi'
 import { listQuotes } from '../../api/quotesApi'
 import { API_BASE } from '../../lib/apiConfig'
+import { generateBusinessReport } from '../../lib/generateBusinessReport'
 
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
@@ -220,7 +221,11 @@ export default function BusinessOverview() {
           <p className="text-sm text-gray-400 mt-0.5">Here's what's happening with your business today · {today}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="hidden sm:block px-4 py-2 text-sm font-medium border border-gray-200 bg-white text-gray-600 rounded-xl hover:bg-gray-50 transition">
+          <button
+            onClick={() => generateBusinessReport({ businessName, stats, dailyRevenue, topProducts, recentOrders, customerSources })}
+            disabled={loading}
+            className="hidden sm:block px-4 py-2 text-sm font-medium border border-gray-200 bg-white text-gray-600 rounded-xl hover:bg-gray-50 transition disabled:opacity-50"
+          >
             Download Report
           </button>
           <button
