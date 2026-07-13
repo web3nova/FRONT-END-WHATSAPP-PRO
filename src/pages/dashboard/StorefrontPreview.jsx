@@ -187,7 +187,16 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const [userMenuOpen, setUserMenuOpen] = useState(false)
 
   // ── Cart / Checkout ────────────────────────────────────────────────────────
-  const [cart, setCart] = useState([])
+  const [cart, setCart] = useState(() => {
+    try {
+      const saved = localStorage.getItem('storefront_cart')
+      return saved ? JSON.parse(saved) : []
+    } catch { return [] }
+  })
+  // Persist cart to localStorage on every change
+  useEffect(() => {
+    localStorage.setItem('storefront_cart', JSON.stringify(cart))
+  }, [cart])
   const [cartOpen, setCartOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [checkoutStep, setCheckoutStep] = useState(0)
@@ -290,19 +299,26 @@ async function placeOrder() {
       setCheckoutOpen(false)
       setCheckoutStep(1)
       setCart([])
+      localStorage.removeItem('storefront_cart')
       setCheckoutForm({ name: '', phone: '', email: '', address: '', state: '', city: '', whatsapp: '', postBox: '', landmark: '' })
       setSelectedDelivery('')
       setSelectedPayment('')
 
       if (orderResult?.payment?.checkoutUrl) {
         setPaymentRedirect(orderResult.payment.checkoutUrl)
-      } else if (selectedPayment === 'bank' && orderResult?.bankDetails) {
-        setBankTransferInfo({
-          orderRef: orderResult?.order?.reference || '',
-          total: orderResult?.order?.totalMinor || cartTotal,
-          currency: orderResult?.order?.currency || 'NGN',
-          ...orderResult.bankDetails,
-        })
+      } else if (selectedPayment === 'bank') {
+        const bankAcct = orderResult?.bankDetails || paymentConfig?.manual?.bankAccount
+        if (bankAcct) {
+          setBankTransferInfo({
+            orderRef: orderResult?.order?.reference || '',
+            total: orderResult?.order?.totalMinor || cartTotal,
+            currency: orderResult?.order?.currency || 'NGN',
+            ...bankAcct,
+          })
+        } else {
+          setOrderPlaced(true)
+          setTimeout(() => setOrderPlaced(false), 5000)
+        }
       } else {
         const base = slug ? `/b/${slug}` : `/storefront/${tenantId}`
         window.location.href = `${base}/account`
@@ -1458,6 +1474,44 @@ async function placeOrder() {
                     )}
                   </div>
 
+                  {/* Bank transfer details — show account info before order */}
+                  {selectedPayment === 'bank' && paymentConfig?.manual?.bankAccount && (
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                        </div>
+                        <div>
+                          <div className="font-bold text-green-800 text-sm">Bank Transfer Details</div>
+                          <div className="text-xs text-green-600">Transfer the exact amount to this account</div>
+                        </div>
+                      </div>
+                      <div className="bg-white rounded-xl p-4 space-y-2.5 border border-green-100">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">Amount to send</span>
+                          <span className="text-lg font-bold" style={{ color: INK }}>₦ {(cartTotal / 100).toLocaleString()}</span>
+                        </div>
+                        <div className="border-t border-gray-100" />
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-500">Bank</span>
+                          <span className="text-sm font-semibold text-gray-800">{paymentConfig.manual.bankAccount.bankName}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-500">Account Name</span>
+                          <span className="text-sm font-semibold text-gray-800">{paymentConfig.manual.bankAccount.accountName}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">Account Number</span>
+                          <span className="text-lg font-bold tracking-widest" style={{ color: INK }}>{paymentConfig.manual.bankAccount.accountNumber}</span>
+                        </div>
+                      </div>
+                      <div className="text-xs text-green-700 flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        After transferring, tap <strong>Place Order</strong> below to notify the store.
+                      </div>
+                    </div>
+                  )}
+
                   {/* Order Summary */}
                   <div className="bg-gray-50 rounded-xl px-4 py-4">
                     <h3 className="text-sm font-bold text-gray-700 mb-3">Order Summary</h3>
@@ -1526,8 +1580,8 @@ async function placeOrder() {
               )}
               {checkoutStep === 2 && (
                 <button
-                  onClick={placeOrder}
-                  disabled={placingOrder || computedPaymentOptions.length === 0 || !selectedPayment}
+                  onClick={selectedPayment && !placingOrder ? placeOrder : null}
+                  disabled={placingOrder || computedPaymentOptions.length === 0}
                   className="w-full py-4 rounded-2xl text-sm font-bold text-white transition hover:opacity-90 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 shadow-lg"
                   style={{ background: INK }}
                 >
@@ -1536,6 +1590,8 @@ async function placeOrder() {
                       <Loader size={16} className="animate-spin" />
                       Placing Order…
                     </span>
+                  ) : !selectedPayment || computedPaymentOptions.length === 0 ? (
+                    <span>Choose a payment method</span>
                   ) : 'Place Order'}
                 </button>
               )}
@@ -1546,45 +1602,66 @@ async function placeOrder() {
 
       {/* ── Bank Transfer Info Modal ── */}
       {bankTransferInfo && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => setBankTransferInfo(null)}>
-          <div className="bg-white w-full max-w-md mx-auto rounded-2xl shadow-xl" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-5 border-b border-gray-100">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.5)' }}>
+          <div className="bg-white w-full max-w-md mx-auto rounded-2xl shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-lg font-bold" style={{ color: INK }}>Bank Transfer Details</h2>
+              <button onClick={() => { setBankTransferInfo(null); setOrderPlaced(true); setTimeout(() => setOrderPlaced(false), 3000) }} className="p-1 text-gray-400 hover:text-gray-600 transition">
+                <X size={18} />
+              </button>
             </div>
-            <div className="px-6 py-4 space-y-4">
-              <div className="bg-blue-50 text-blue-700 text-sm p-3 rounded-xl">
-                Please transfer the exact amount to the account below. Your order will be confirmed once payment is received.
+            <div className="px-6 py-5 space-y-4">
+              <div className="bg-blue-50 text-blue-700 text-sm p-4 rounded-xl leading-relaxed">
+                <div className="font-semibold mb-1">Order #{bankTransferInfo.orderRef}</div>
+                Please transfer the <strong>exact amount</strong> to the account below. Your order will be processed once payment is confirmed.
               </div>
-              <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Order Reference</span>
-                  <span className="font-bold" style={{ color: INK }}>#{bankTransferInfo.orderRef}</span>
+              <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-500">Amount to send</span>
+                  <span className="text-lg font-bold" style={{ color: INK }}>₦ {(bankTransferInfo.total / 100).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Amount</span>
-                  <span className="font-bold" style={{ color: INK }}>₦ {(bankTransferInfo.total / 100).toLocaleString()}</span>
-                </div>
-                <div className="border-t border-gray-200 my-2" />
+                <div className="border-t border-gray-200" />
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Bank</span>
-                  <span className="font-semibold">{bankTransferInfo.bankName}</span>
+                  <span className="font-semibold text-gray-800">{bankTransferInfo.bankName}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Account Name</span>
-                  <span className="font-semibold">{bankTransferInfo.accountName}</span>
+                  <span className="font-semibold text-gray-800">{bankTransferInfo.accountName}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Account Number</span>
-                  <span className="font-bold text-lg tracking-wider" style={{ color: INK }}>{bankTransferInfo.accountNumber}</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-500">Account Number</span>
+                  <span className="text-xl font-bold tracking-widest select-all" style={{ color: INK }}>{bankTransferInfo.accountNumber}</span>
                 </div>
               </div>
-              <button
-                onClick={() => { setBankTransferInfo(null); setOrderPlaced(true); setTimeout(() => setOrderPlaced(false), 5000) }}
-                className="w-full py-3 rounded-full text-sm font-bold text-white transition hover:opacity-90"
-                style={{ background: INK }}
-              >
-                I'll transfer later
-              </button>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
+                After making the transfer, the store will be notified and will confirm your payment. You will receive an update once your order is being processed.
+              </div>
+
+              <div className="flex flex-col gap-2.5">
+                <button
+                  onClick={() => {
+                    setBankTransferInfo(null)
+                    setOrderPlaced(true)
+                    setTimeout(() => setOrderPlaced(false), 4000)
+                  }}
+                  className="w-full py-3.5 rounded-xl text-sm font-bold text-white transition hover:opacity-90 active:scale-[0.98]"
+                  style={{ background: INK }}
+                >
+                  I've Completed the Transfer
+                </button>
+                <button
+                  onClick={() => {
+                    setBankTransferInfo(null)
+                    setOrderPlaced(true)
+                    setTimeout(() => setOrderPlaced(false), 3000)
+                  }}
+                  className="w-full py-3 rounded-xl text-sm font-medium text-gray-500 border border-gray-200 hover:bg-gray-50 transition active:scale-[0.98]"
+                >
+                  I'll transfer later
+                </button>
+              </div>
             </div>
           </div>
         </div>

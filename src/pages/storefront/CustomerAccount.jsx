@@ -6,12 +6,24 @@ import { useCustomerAuth } from '../../context/CustomerAuthContext'
 import AuthModal from '../../components/AuthModal'
 
 const INK = '#1a1a2e'
+const STATUS_LABELS = {
+  pending: 'Pending',
+  confirmed: 'Confirmed',
+  paid: 'Paid',
+  fulfilled: 'Delivered',
+  cancelled: 'Cancelled',
+}
 const STATUS_COLORS = {
   pending: '#f59e0b',
   confirmed: '#3b82f6',
   paid: '#10b981',
   fulfilled: '#059669',
   cancelled: '#ef4444',
+}
+const PAYMENT_LABELS = {
+  bank: 'Bank Transfer', cash: 'Cash on Delivery', paystack: 'Paystack',
+  card: 'Card', monnify: 'Monnify', flutterwave: 'Flutterwave',
+  crypto: 'Crypto',
 }
 
 export default function CustomerAccount() {
@@ -110,19 +122,25 @@ export default function CustomerAccount() {
         ) : (
           <div className="space-y-3">
             {orders.map(order => (
-              <div key={order.id} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-gray-400">#{order.reference}</span>
+              <div key={order.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-gray-50">
+                  <div>
+                    <span className="text-xs font-bold text-gray-400">#{order.reference}</span>
+                    <span className="mx-2 text-gray-200">|</span>
+                    <span className="text-[10px] text-gray-400">{new Date(order.createdAt).toLocaleDateString()}</span>
+                  </div>
                   <span
-                    className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
+                    className="text-[10px] font-bold px-2.5 py-1 rounded-full text-white"
                     style={{ background: STATUS_COLORS[order.status] || '#6b7280' }}
                   >
-                    {order.status.toUpperCase()}
+                    {STATUS_LABELS[order.status] || order.status.toUpperCase()}
                   </span>
                 </div>
 
-                <div className="space-y-1 mb-3">
-                  {(order.items || []).slice(0, 3).map((item, idx) => (
+                {/* Items */}
+                <div className="px-4 py-3 space-y-1.5">
+                  {(order.items || []).slice(0, 4).map((item, idx) => (
                     <div key={idx} className="flex justify-between text-xs">
                       <span className="text-gray-600 truncate mr-2">{item.name} x{item.quantity || 1}</span>
                       <span className="font-semibold text-gray-800 flex-shrink-0">
@@ -130,19 +148,37 @@ export default function CustomerAccount() {
                       </span>
                     </div>
                   ))}
-                  {(order.items || []).length > 3 && (
-                    <div className="text-[10px] text-gray-400">+{order.items.length - 3} more items</div>
+                  {(order.items || []).length > 4 && (
+                    <div className="text-[10px] text-gray-400">+{order.items.length - 4} more items</div>
                   )}
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-gray-50">
-                  <div>
-                    <span className="text-xs text-gray-500">Total: </span>
-                    <span className="text-sm font-bold" style={{ color: INK }}>₦{(order.totalMinor / 100).toLocaleString()}</span>
+                {/* Details */}
+                <div className="px-4 py-2.5 bg-gray-50 border-t border-gray-100 text-[11px] space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Payment</span>
+                    <span className="font-medium text-gray-700">{PAYMENT_LABELS[order.paymentMethod] || order.paymentMethod || '—'}</span>
                   </div>
-                  <div className="text-[10px] text-gray-400">
-                    {new Date(order.createdAt).toLocaleDateString()}
-                  </div>
+                  {order.deliveryMethod && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Delivery</span>
+                      <span className="font-medium text-gray-700 capitalize">{order.deliveryMethod}</span>
+                    </div>
+                  )}
+                  {order.deliveryCity && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Delivering to</span>
+                      <span className="font-medium text-gray-700 text-right max-w-[60%] truncate">
+                        {[order.deliveryCity, order.deliveryState].filter(Boolean).join(', ')}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Total */}
+                <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+                  <span className="text-xs text-gray-500">Total</span>
+                  <span className="text-base font-bold" style={{ color: INK }}>₦{(order.totalMinor / 100).toLocaleString()}</span>
                 </div>
               </div>
             ))}
