@@ -64,6 +64,27 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
     }
   }, [open])
 
+  // Result listener for the fallback Google popup (backend posts from its own origin).
+  useEffect(() => {
+    if (!open) return
+    const apiOrigin = new URL(API_BASE, window.location.origin).origin
+    function onMessage(event) {
+      if (event.origin !== apiOrigin) return
+      const data = event.data
+      if (data?.type === 'GOOGLE_LOGIN_SUCCESS' && data.token && data.customer) {
+        localStorage.setItem('customer_token', data.token)
+        localStorage.setItem('customer_data', JSON.stringify(data.customer))
+        onSuccess?.()
+        onClose()
+        window.location.reload()
+      } else if (data?.type === 'GOOGLE_LOGIN_ERROR') {
+        setError(data.error || 'Google authentication failed')
+      }
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [open])
+
   const handleGoogleResponse = async (response) => {
     setGoogleLoading(true)
     setError('')
@@ -149,7 +170,15 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
 
     setError('')
     try {
-      window.open(`https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(window.location.origin)}/customer-auth/google/callback&response_type=code&scope=openid profile email&prompt=consent&access_type=offline`, '_blank')
+      const redirectUri = `${API_BASE}/customer-auth/google/callback`
+      const state = encodeURIComponent(JSON.stringify({ tenantId, origin: window.location.origin }))
+      window.open(
+        `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}` +
+        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+        `&response_type=code&scope=${encodeURIComponent('openid profile email')}` +
+        `&prompt=consent&state=${state}`,
+        '_blank',
+      )
       setError('Redirected to Google for authentication. Check your browser for the login window.')
     } catch (err) {
       console.error('Fallback Google sign-in error:', err)
