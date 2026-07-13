@@ -16,7 +16,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-semibold text-gray-900 mb-2">1. Who We Are</h2>
             <p>BizIQ is a product of Web3 Lab Concept, a technology company registered in Nigeria. We provide a WhatsApp business automation platform that helps small and medium businesses manage customer conversations, orders, and their online presence.</p>
-            <p className="mt-2">For questions about this policy, contact us at: <a href="mailto:support@biziq.online" className="text-blue-600 hover:underline">support@biziq.online</a></p>
+            <p className="mt-2">For questions about this policy, contact us at: <a href="mailto:theweb3nova@gmail.com" className="text-blue-600 hover:underline">theweb3nova@gmail.com</a></p>
           </section>
 
           <section>
@@ -72,7 +72,7 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="text-lg font-semibold text-gray-900 mb-2">8. Your Rights</h2>
-            <p>You have the right to access, correct, or delete your personal data at any time. To exercise these rights, contact us at <a href="mailto:support@biziq.online" className="text-blue-600 hover:underline">support@biziq.online</a>.</p>
+            <p>You have the right to access, correct, or delete your personal data at any time. To exercise these rights, contact us at <a href="mailto:theweb3nova@gmail.com" className="text-blue-600 hover:underline">theweb3nova@gmail.com</a>.</p>
           </section>
 
           <section>
