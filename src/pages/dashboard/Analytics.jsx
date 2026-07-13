@@ -175,7 +175,7 @@ export default function Analytics() {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {[
-          { label: `Revenue (${days}d)`, value: loading ? '…' : kpis.revenue !== null ? formatRevenue(kpis.revenue * 100) : '—', icon: TrendingUp },
+          { label: `Revenue (${days}d)`, value: loading ? '…' : kpis.revenue !== null ? formatRevenue(kpis.revenue) : '—', icon: TrendingUp },
           { label: `Orders (${days}d)`,  value: loading ? '…' : kpis.orders ?? '—',     icon: ShoppingBag },
           { label: 'Customers',   value: loading ? '…' : kpis.customers ?? '—',   icon: Users },
           { label: 'Conversations', value: loading ? '…' : kpis.messages ?? '—',  icon: MessageCircle },
