@@ -89,7 +89,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-lg font-semibold text-gray-900 mb-2">13. Contact</h2>
-            <p>For questions about these terms, contact us at <a href="mailto:theweb3nova@gmail.com" className="text-blue-600 hover:underline">theweb3nova@gmail.com</a>.</p>
+            <p>For questions about these terms, contact us at <a href="mailto:biziqonline@gmail.com" className="text-blue-600 hover:underline">biziqonline@gmail.com</a>.</p>
           </section>
 
         </div>

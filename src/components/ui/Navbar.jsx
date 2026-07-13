@@ -46,7 +46,7 @@ export default function Navbar() {
                 el.scrollIntoView({ behavior: 'smooth' });
               }
             }}>Pricing</a>
-            <a href="mailto:theweb3nova@gmail.com" className="bp-nav-item">Contact Us</a>
+            <a href="mailto:biziqonline@gmail.com" className="bp-nav-item">Contact Us</a>
           </div>
         </div>
 
