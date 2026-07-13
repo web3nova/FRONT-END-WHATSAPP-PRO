@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { X, Loader, LogIn, UserPlus, Globe, Fingerprint } from 'lucide-react'
+import { startAuthentication } from '@simplewebauthn/browser'
 import { useCustomerAuth } from '../context/CustomerAuthContext'
 import { API_BASE } from '../lib/apiConfig'
 
@@ -170,41 +171,15 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
       })
       const startBody = await startRes.json()
       if (!startRes.ok) throw new Error(startBody?.message || 'Passkey auth failed')
-      const startData = startBody?.data ?? startBody
+      const optionsJSON = startBody?.data ?? startBody
 
-      // Use WebAuthn API
-      const credential = await navigator.credentials.get({
-        publicKey: {
-          challenge: Uint8Array.from(atob(startData.challenge), c => c.charCodeAt(0)),
-          rpId: startData.rpId || window.location.hostname,
-          allowCredentials: [],
-          userVerification: 'preferred',
-        },
-        signal: new AbortController().signal,
-      })
-
-      if (!credential) throw new Error('Passkey authentication cancelled')
+      const credential = await startAuthentication({ optionsJSON })
 
       // Complete passkey auth
       const completeRes = await fetch(`${API_BASE}/customer-auth/passkey/login/complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tenantId,
-          credential: {
-            id: credential.id,
-            type: credential.type,
-            rawId: credential.id,
-            response: credential.response ? {
-              clientDataJSON: arrayBufferToBase64(credential.response.clientDataJSON),
-              authenticatorData: arrayBufferToBase64(credential.response.authenticatorData),
-              signature: arrayBufferToBase64(credential.response.signature),
-              userHandle: credential.response.userHandle
-                ? arrayBufferToBase64(credential.response.userHandle)
-                : null,
-            } : null,
-          },
-        }),
+        body: JSON.stringify({ tenantId, credential }),
       })
       const completeBody = await completeRes.json()
       if (!completeRes.ok) throw new Error(completeBody?.message || 'Passkey verification failed')
@@ -224,13 +199,6 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
     } finally {
       setPasskeyLoading(false)
     }
-  }
-
-  function arrayBufferToBase64(buffer) {
-    const bytes = new Uint8Array(buffer)
-    let binary = ''
-    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
-    return btoa(binary)
   }
 
   const handleSubmit = async (e) => {

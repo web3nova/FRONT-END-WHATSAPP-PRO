@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Loader, Package, ArrowLeft, LogOut, ChevronRight, ShoppingBag, User, LogIn, Fingerprint, ShieldCheck } from 'lucide-react'
+import { startRegistration } from '@simplewebauthn/browser'
 import { API_BASE } from '../../lib/apiConfig'
 import { useCustomerAuth } from '../../context/CustomerAuthContext'
 import AuthModal from '../../components/AuthModal'
@@ -47,38 +48,13 @@ export default function CustomerAccount() {
       })
       const startBody = await startRes.json()
       if (!startRes.ok) throw new Error(startBody?.message || 'Failed to start passkey registration')
-      const startData = startBody?.data ?? startBody
+      const optionsJSON = startBody?.data ?? startBody
 
-      const credential = await navigator.credentials.create({
-        publicKey: {
-          challenge: Uint8Array.from(atob(startData.challenge), c => c.charCodeAt(0)),
-          rp: { name: startData.rp?.name || 'Store', id: startData.rpId || window.location.hostname },
-          user: {
-            id: Uint8Array.from(atob(startData.user?.id || btoa(customer?.id || '')), c => c.charCodeAt(0)),
-            name: customer?.phone || customer?.email || 'user',
-            displayName: customer?.name || 'User',
-          },
-          pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
-          authenticatorSelection: { userVerification: 'preferred' },
-          timeout: 60000,
-        },
-      })
-      if (!credential) throw new Error('Passkey registration cancelled')
+      const credential = await startRegistration({ optionsJSON })
 
       const completeRes = await fetch(`${API_BASE}/customer-auth/passkey/register/complete`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          customerId: customer?.id,
-          credential: {
-            id: credential.id,
-            type: credential.type,
-            rawId: arrayBufferToBase64(credential.rawId),
-            response: {
-              clientDataJSON: arrayBufferToBase64(credential.response.clientDataJSON),
-              attestationObject: arrayBufferToBase64(credential.response.attestationObject),
-            },
-          },
-        }),
+        body: JSON.stringify({ customerId: customer?.id, credential }),
       })
       const completeBody = await completeRes.json()
       if (!completeRes.ok) throw new Error(completeBody?.message || 'Failed to save passkey')
@@ -88,13 +64,6 @@ export default function CustomerAccount() {
     } finally {
       setPasskeyBusy(false)
     }
-  }
-
-  function arrayBufferToBase64(buffer) {
-    const bytes = new Uint8Array(buffer)
-    let binary = ''
-    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
-    return btoa(binary)
   }
 
   useEffect(() => {
