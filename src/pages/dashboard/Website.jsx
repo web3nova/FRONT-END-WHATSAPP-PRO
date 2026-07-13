@@ -385,6 +385,61 @@ export default function Website() {
   const [revisionsError, setRevisionsError] = useState('')
   const [restoringId, setRestoringId] = useState('')
   const [navDraft, setNavDraft] = useState(null)
+  const [brandNameDraft, setBrandNameDraft] = useState('')
+  const [savingBrandName, setSavingBrandName] = useState(false)
+  const [logoUploading, setLogoUploading] = useState(false)
+  const [brandError, setBrandError] = useState('')
+
+  useEffect(() => {
+    if (business?.displayName && !brandNameDraft) setBrandNameDraft(business.displayName)
+  }, [business, brandNameDraft])
+
+  async function saveBrandName() {
+    const name = brandNameDraft.trim()
+    if (!name || name === business?.displayName) return
+    setSavingBrandName(true)
+    setBrandError('')
+    try {
+      const token = getStoredAccessToken()
+      const res = await fetch(`${API_BASE}/business`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ displayName: name }),
+      })
+      const body = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(body?.message || 'Failed to update site name')
+      setBusiness(body?.data || body)
+    } catch (err) {
+      setBrandError(err.message)
+    } finally {
+      setSavingBrandName(false)
+    }
+  }
+
+  async function handleLogoUpload(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setLogoUploading(true)
+    setBrandError('')
+    try {
+      const token = getStoredAccessToken()
+      const formData = new FormData()
+      formData.append('image', file)
+      const res = await fetch(`${API_BASE}/business/logo`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+      const body = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(body?.message || 'Failed to upload logo')
+      setBusiness(body?.data || body)
+    } catch (err) {
+      setBrandError(err.message)
+    } finally {
+      setLogoUploading(false)
+    }
+  }
 
   useEffect(() => {
     let ignore = false
@@ -2348,6 +2403,56 @@ export default function Website() {
 
           {tab === 'design' && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50 overflow-hidden">
+              <DesignAccordionSection
+                title="Branding"
+                subtitle="Your storefront's name and logo — shown in the header, browser tab, and shared links."
+                isOpen={openDesignCategory === 'branding'}
+                onToggle={() => toggleDesignCategory('branding')}
+              >
+                {brandError && (
+                  <div className="px-3 py-2 rounded-lg text-xs font-medium text-red-600 bg-red-50">
+                    {brandError}
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Site name</label>
+                  <div className="flex gap-2">
+                    <input
+                      className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                      value={brandNameDraft}
+                      onChange={e => setBrandNameDraft(e.target.value)}
+                      placeholder="Your business name"
+                    />
+                    <button
+                      onClick={saveBrandName}
+                      disabled={savingBrandName || !brandNameDraft.trim() || brandNameDraft.trim() === business?.displayName}
+                      className="px-3 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
+                      style={{ background: PRIMARY }}
+                    >
+                      {savingBrandName ? <Loader size={14} className="animate-spin" /> : 'Save'}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Logo</label>
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center border border-gray-200 bg-gray-50 flex-shrink-0">
+                      {business?.logoUrl
+                        ? <img src={resolveImageUrl(business.logoUrl)} alt="Logo" className="w-full h-full object-cover" />
+                        : <Image size={18} className="text-gray-300" />}
+                    </div>
+                    <label className="px-3 py-2 rounded-lg text-xs font-semibold border border-gray-200 text-gray-700 cursor-pointer hover:bg-gray-50 flex items-center gap-1.5">
+                      {logoUploading ? <Loader size={14} className="animate-spin" /> : <Upload size={14} />}
+                      {business?.logoUrl ? 'Change logo' : 'Upload logo'}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={logoUploading} />
+                    </label>
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-1.5">Recommended: square, at least 200×200px.</p>
+                </div>
+              </DesignAccordionSection>
+
               <DesignAccordionSection
                 title="Starter Templates"
                 subtitle="One-click setup for your kind of business — color theme, section styles, and layout together. Always overwrites current choices, never applied automatically."
