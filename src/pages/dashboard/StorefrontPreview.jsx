@@ -1,7 +1,7 @@
 import {
   Menu, X, Star, ShieldCheck, MessageCircle,
   Search, User, ShoppingBag, ChevronLeft, ChevronRight, ArrowLeft,
-  Plus, Trash2, LogOut, Package, Clock, ChevronDown,
+  Plus, Trash2, LogOut, Package, Clock, ChevronDown, Loader,
 } from 'lucide-react'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
@@ -211,7 +211,6 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
     if (paymentConfig?.monnify?.isActive) options.push({ key: 'monnify', label: 'Monnify' })
     if (paymentConfig?.manual?.isActive) options.push({ key: 'bank', label: 'Bank Transfer' })
     if (paymentConfig?.blockradar?.isActive) options.push({ key: 'crypto', label: 'Crypto (USDT, BTC, ETH)' })
-    options.push({ key: 'cash', label: 'Cash on Delivery' })
     return options
   }, [paymentConfig])
 
@@ -1263,172 +1262,162 @@ async function placeOrder() {
         </div>
       )}
 
-      {/* ── Multi-step Checkout Modal ── */}
+      {/* ── Multi-step Checkout Modal (mobile-friendly) ── */}
       {checkoutOpen && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => { if (!placingOrder) setCheckoutOpen(false) }}>
+        <div className="fixed inset-0 z-[100]" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => { if (!placingOrder) setCheckoutOpen(false) }}>
           <div
-            className="bg-white w-full sm:max-w-lg sm:mx-auto sm:max-h-[85vh] flex flex-col"
-            style={{ borderRadius: isMobile ? 'var(--sf-radius) var(--sf-radius) 0 0' : 'var(--sf-radius)', maxHeight: isMobile ? '92%' : '85vh' }}
+            className="bg-white w-full sm:max-w-lg sm:mx-auto sm:max-h-[90vh] flex flex-col"
+            style={{
+              height: isMobile ? '100%' : 'auto',
+              maxHeight: isMobile ? '100%' : '90vh',
+              borderRadius: isMobile ? '0' : 'var(--sf-radius)',
+              marginTop: isMobile ? '0' : '5vh',
+            }}
             onClick={e => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+            {/* Header with safe area spacing */}
+            <div className="px-5 pt-5 pb-3 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-3">
                 {checkoutStep > 1 && (
-                  <button onClick={() => setCheckoutStep(s => s - 1)} className="p-1 text-gray-400 hover:text-gray-600 transition">
-                    <ChevronLeft size={18} />
+                  <button onClick={() => setCheckoutStep(s => s - 1)} className="p-2 -ml-1 text-gray-500 hover:text-gray-800 transition rounded-lg hover:bg-gray-100 active:bg-gray-200">
+                    <ChevronLeft size={20} />
                   </button>
                 )}
                 <h2 className="text-lg font-bold" style={{ color: INK }}>
-                  {checkoutStep === 1 ? 'Delivery Information' : checkoutStep === 2 ? 'Payment' : 'Checkout'}
+                  {checkoutStep === 1 ? 'Delivery Details' : checkoutStep === 2 ? 'Review & Pay' : 'Checkout'}
                 </h2>
               </div>
-              <button onClick={() => { if (!placingOrder) { setCheckoutOpen(false); setCheckoutStep(1) } }} className="p-1 text-gray-400 hover:text-gray-600 transition">
-                <X size={18} />
+              <button onClick={() => { if (!placingOrder) { setCheckoutOpen(false); setCheckoutStep(1) } }} className="p-2 text-gray-400 hover:text-gray-600 transition rounded-lg hover:bg-gray-100 active:bg-gray-200">
+                <X size={20} />
               </button>
             </div>
 
-            {/* Steps indicator */}
-            <div className="flex items-center gap-1 px-5 pt-3 pb-1 flex-shrink-0">
-              {[1, 2].map(step => (
-                <div key={step} className="flex items-center gap-1 flex-1">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition ${
-                    checkoutStep >= step ? 'text-white' : 'text-gray-400 bg-gray-100'
-                  }`} style={checkoutStep >= step ? { background: INK } : {}}>
-                    {step}
-                  </div>
-                  <span className={`text-[10px] font-medium ${checkoutStep >= step ? 'text-gray-700' : 'text-gray-400'}`}>
-                    {step === 1 ? 'Delivery' : 'Payment'}
-                  </span>
-                  {step < 2 && <div className="flex-1 h-px bg-gray-200 mx-1" />}
+            {/* Steps indicator — more prominent */}
+            <div className="flex items-center gap-1.5 px-5 pt-3 pb-2 flex-shrink-0">
+              <div className="flex items-center gap-1.5 flex-1">
+                <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ background: INK }}>
+                  1
                 </div>
-              ))}
+                <span className="text-xs font-semibold text-gray-700">Delivery</span>
+                <div className="flex-1 h-0.5 mx-1.5 rounded-full" style={{ background: checkoutStep >= 2 ? INK : '#e5e7eb' }} />
+              </div>
+              <div className="flex items-center gap-1.5 flex-1">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition ${
+                  checkoutStep >= 2 ? 'text-white' : 'text-gray-400'
+                }`} style={{ background: checkoutStep >= 2 ? INK : '#f3f4f6' }}>
+                  2
+                </div>
+                <span className={`text-xs font-semibold ${checkoutStep >= 2 ? 'text-gray-700' : 'text-gray-400'}`}>Payment</span>
+              </div>
             </div>
 
-            {/* Scrollable form area */}
-            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+            {/* Scrollable form area — larger tap targets, more spacing */}
+            <div className="flex-1 overflow-y-auto px-5 py-3 space-y-5">
               {checkoutStep === 1 && (
                 <>
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
-                    <div className="font-semibold mb-1">Delivery Information</div>
+                  {/* Delivery info banner */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800 leading-relaxed">
+                    <div className="font-semibold text-sm mb-1">Delivery Schedule</div>
                     {businessDelivery.availableDays.length > 0 && (
-                      <div>Available days: {businessDelivery.availableDays.join(', ')}</div>
+                      <div className="flex justify-between"><span className="text-amber-600">Days:</span><span className="font-medium text-right">{businessDelivery.availableDays.join(', ')}</span></div>
                     )}
                     {businessDelivery.openingTime && businessDelivery.closingTime && (
-                      <div>Hours: {businessDelivery.openingTime} - {businessDelivery.closingTime}</div>
+                      <div className="flex justify-between mt-0.5"><span className="text-amber-600">Hours:</span><span className="font-medium">{businessDelivery.openingTime} — {businessDelivery.closingTime}</span></div>
                     )}
                     {businessDelivery.deliveryStructure && (
-                      <div>Service: {businessDelivery.deliveryStructure}</div>
+                      <div className="flex justify-between mt-0.5"><span className="text-amber-600">Service:</span><span className="font-medium">{businessDelivery.deliveryStructure}</span></div>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Full Name *</label>
+                  {/* Contact Info */}
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-700 mb-3">Contact Information</h3>
+                    <div className="space-y-3">
                       <input
-                        className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition"
-                        placeholder="Your full name"
+                        className="w-full px-4 py-3.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition bg-gray-50 focus:bg-white"
+                        placeholder="Full Name *"
                         value={checkoutForm.name}
                         onChange={e => setCheckoutForm(f => ({ ...f, name: e.target.value }))}
                       />
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Phone Number *</label>
                       <input
-                        className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition"
-                        placeholder="08012345678"
+                        className="w-full px-4 py-3.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition bg-gray-50 focus:bg-white"
+                        placeholder="Phone Number *"
+                        type="tel"
                         value={checkoutForm.phone}
                         onChange={e => setCheckoutForm(f => ({ ...f, phone: e.target.value }))}
                       />
+                      <input
+                        className="w-full px-4 py-3.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition bg-gray-50 focus:bg-white"
+                        placeholder="WhatsApp Number (optional)"
+                        type="tel"
+                        value={checkoutForm.whatsapp}
+                        onChange={e => setCheckoutForm(f => ({ ...f, whatsapp: e.target.value }))}
+                      />
+                      <input
+                        className="w-full px-4 py-3.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition bg-gray-50 focus:bg-white"
+                        placeholder="Email (for confirmation)"
+                        type="email"
+                        value={checkoutForm.email}
+                        onChange={e => setCheckoutForm(f => ({ ...f, email: e.target.value }))}
+                      />
                     </div>
                   </div>
 
+                  {/* Address */}
                   <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">WhatsApp Number</label>
-                    <input
-                      className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition"
-                      placeholder="08012345678 (same or different from phone)"
-                      value={checkoutForm.whatsapp}
-                      onChange={e => setCheckoutForm(f => ({ ...f, whatsapp: e.target.value }))}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Email (for order confirmation)</label>
-                    <input
-                      type="email"
-                      className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition"
-                      placeholder="you@example.com"
-                      value={checkoutForm.email}
-                      onChange={e => setCheckoutForm(f => ({ ...f, email: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">State *</label>
-                      <input
-                        className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition"
-                        placeholder="Lagos"
-                        value={checkoutForm.state}
-                        onChange={e => setCheckoutForm(f => ({ ...f, state: e.target.value }))}
+                    <h3 className="text-sm font-bold text-gray-700 mb-3">Delivery Address</h3>
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <input
+                          className="w-full px-4 py-3.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition bg-gray-50 focus:bg-white"
+                          placeholder="State *"
+                          value={checkoutForm.state}
+                          onChange={e => setCheckoutForm(f => ({ ...f, state: e.target.value }))}
+                        />
+                        <input
+                          className="w-full px-4 py-3.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition bg-gray-50 focus:bg-white"
+                          placeholder="City *"
+                          value={checkoutForm.city}
+                          onChange={e => setCheckoutForm(f => ({ ...f, city: e.target.value }))}
+                        />
+                      </div>
+                      <textarea
+                        className="w-full px-4 py-3.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition bg-gray-50 focus:bg-white resize-none"
+                        rows={2}
+                        placeholder="Street, building, apartment *"
+                        value={checkoutForm.address}
+                        onChange={e => setCheckoutForm(f => ({ ...f, address: e.target.value }))}
                       />
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">City *</label>
-                      <input
-                        className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition"
-                        placeholder="Ikeja"
-                        value={checkoutForm.city}
-                        onChange={e => setCheckoutForm(f => ({ ...f, city: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Street / Delivery Address *</label>
-                    <textarea
-                      className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition resize-none"
-                      rows={2}
-                      placeholder="Street number, building, avenue"
-                      value={checkoutForm.address}
-                      onChange={e => setCheckoutForm(f => ({ ...f, address: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Post Box / ZIP Code</label>
-                      <input
-                        className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition"
-                        placeholder="100001"
-                        value={checkoutForm.postBox}
-                        onChange={e => setCheckoutForm(f => ({ ...f, postBox: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Closest Landmark</label>
-                      <input
-                        className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition"
-                        placeholder="Near the market, opposite bank"
-                        value={checkoutForm.landmark}
-                        onChange={e => setCheckoutForm(f => ({ ...f, landmark: e.target.value }))}
-                      />
+                      <div className="grid grid-cols-2 gap-3">
+                        <input
+                          className="w-full px-4 py-3.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition bg-gray-50 focus:bg-white"
+                          placeholder="Post Box / ZIP"
+                          value={checkoutForm.postBox}
+                          onChange={e => setCheckoutForm(f => ({ ...f, postBox: e.target.value }))}
+                        />
+                        <input
+                          className="w-full px-4 py-3.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition bg-gray-50 focus:bg-white"
+                          placeholder="Closest landmark"
+                          value={checkoutForm.landmark}
+                          onChange={e => setCheckoutForm(f => ({ ...f, landmark: e.target.value }))}
+                        />
+                      </div>
                     </div>
                   </div>
 
+                  {/* Delivery Method */}
                   {deliveryOptions.length > 0 && (
                     <div>
-                      <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Delivery Method *</label>
-                      <div className="grid grid-cols-2 gap-2">
+                      <h3 className="text-sm font-bold text-gray-700 mb-3">Delivery Method *</h3>
+                      <div className="grid grid-cols-2 gap-2.5">
                         {deliveryOptions.map(key => (
                           <button
                             key={key}
                             onClick={() => setSelectedDelivery(key)}
-                            className={`px-3 py-2.5 text-xs font-semibold rounded-xl border transition ${
+                            className={`px-4 py-3.5 text-sm font-semibold rounded-xl border-2 transition active:scale-[0.97] ${
                               selectedDelivery === key
-                                ? 'border-gray-800 bg-gray-800 text-white'
-                                : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                                ? 'border-gray-800 bg-gray-800 text-white shadow-md'
+                                : 'border-gray-200 text-gray-600 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
                             }`}
                           >
                             {deliveryLabels[key] || key}
@@ -1442,77 +1431,94 @@ async function placeOrder() {
 
               {checkoutStep === 2 && (
                 <>
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-700">
-                    <div className="font-semibold">Payment Method</div>
-                    <div className="mt-1">Select how you'd like to pay for your order.</div>
-                  </div>
-
+                  {/* Payment Method Selection */}
                   <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Payment Method *</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {computedPaymentOptions.map(opt => (
-                        <button
-                          key={opt.key}
-                          onClick={() => setSelectedPayment(opt.key)}
-                          className={`px-3 py-2.5 text-xs font-semibold rounded-xl border transition ${
-                            selectedPayment === opt.key
-                              ? 'border-gray-800 bg-gray-800 text-white'
-                              : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
+                    <h3 className="text-sm font-bold text-gray-700 mb-3">Payment Method *</h3>
+                    {computedPaymentOptions.length === 0 ? (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-5 text-center">
+                        <div className="text-sm font-medium text-yellow-800">No payment methods configured yet</div>
+                        <div className="text-xs text-yellow-600 mt-1">Please contact the store for payment options.</div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {computedPaymentOptions.map(opt => (
+                          <button
+                            key={opt.key}
+                            onClick={() => setSelectedPayment(opt.key)}
+                            className={`px-4 py-3.5 text-sm font-semibold rounded-xl border-2 transition active:scale-[0.97] ${
+                              selectedPayment === opt.key
+                                ? 'border-gray-800 bg-gray-800 text-white shadow-md'
+                                : 'border-gray-200 text-gray-600 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Order Summary */}
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <div className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Order Summary</div>
-                    {cart.map(item => (
-                      <div key={item.key} className="flex justify-between text-sm mb-1.5">
-                        <span className="text-gray-600 truncate mr-2">{item.product.name} x{item.qty}</span>
-                        <span className="font-semibold text-gray-800 flex-shrink-0">₦ {((item.product.priceMinor || 0) * item.qty / 100).toLocaleString()}</span>
+                  <div className="bg-gray-50 rounded-xl px-4 py-4">
+                    <h3 className="text-sm font-bold text-gray-700 mb-3">Order Summary</h3>
+                    <div className="space-y-2.5">
+                      {cart.map(item => (
+                        <div key={item.key} className="flex justify-between text-sm">
+                          <span className="text-gray-600 truncate mr-3">{item.product.name} x{item.qty}</span>
+                          <span className="font-semibold text-gray-800 flex-shrink-0">₦ {((item.product.priceMinor || 0) * item.qty / 100).toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="border-t border-gray-200 mt-3 pt-3 space-y-1.5">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Subtotal</span>
+                        <span className="font-semibold text-gray-800">₦ {(cartTotal / 100).toLocaleString()}</span>
                       </div>
-                    ))}
-                    <div className="flex justify-between text-sm pt-3 mt-3 border-t border-gray-200">
-                      <span className="text-gray-500">Subtotal</span>
-                      <span className="font-semibold text-gray-800">₦ {(cartTotal / 100).toLocaleString()}</span>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Delivery</span>
+                        <span className="text-gray-500">To be confirmed</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-500">Delivery</span>
-                      <span className="text-gray-600">Calculated at confirmation</span>
-                    </div>
-                    <div className="flex justify-between text-sm font-bold pt-3 mt-3 border-t border-gray-200" style={{ color: INK }}>
+                    <div className="flex justify-between text-base font-bold pt-3 mt-3 border-t border-gray-200" style={{ color: INK }}>
                       <span>Total</span>
                       <span>₦ {(cartTotal / 100).toLocaleString()}</span>
                     </div>
                   </div>
 
-                  {/* Delivery info summary */}
-                  <div className="bg-gray-50 rounded-xl p-3 text-xs text-gray-600 space-y-1">
-                    <div className="font-semibold text-gray-700 mb-1">Delivering to</div>
-                    <div>{checkoutForm.name} — {checkoutForm.phone}</div>
-                    <div>{checkoutForm.address}, {checkoutForm.city}, {checkoutForm.state}</div>
-                    {checkoutForm.landmark && <div>Landmark: {checkoutForm.landmark}</div>}
-                    {selectedDelivery && <div className="mt-1 font-medium" style={{ color: INK }}>{deliveryLabels[selectedDelivery] || selectedDelivery}</div>}
+                  {/* Delivery Summary Card */}
+                  <div className="bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm space-y-2">
+                    <div className="font-bold text-gray-700 flex items-center gap-1.5">
+                      <Package size={15} /> Delivering to
+                    </div>
+                    <div className="text-gray-600 leading-relaxed">
+                      <div className="font-medium text-gray-800">{checkoutForm.name}</div>
+                      <div>{checkoutForm.phone}{checkoutForm.whatsapp && checkoutForm.whatsapp !== checkoutForm.phone ? ` · WA: ${checkoutForm.whatsapp}` : ''}</div>
+                      <div className="mt-1">{checkoutForm.address}</div>
+                      <div>{checkoutForm.city}, {checkoutForm.state}{checkoutForm.postBox ? ` · ${checkoutForm.postBox}` : ''}</div>
+                      {checkoutForm.landmark && <div className="mt-0.5 text-amber-700">📍 {checkoutForm.landmark}</div>}
+                      {selectedDelivery && (
+                        <div className="mt-2 pt-2 border-t border-gray-100 font-medium" style={{ color: INK }}>
+                          {deliveryLabels[selectedDelivery] || selectedDelivery}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </>
               )}
             </div>
 
-            {/* Sticky action button */}
-            <div className="px-5 py-4 border-t border-gray-100 flex-shrink-0 bg-white">
+            {/* Sticky action button with safe area */}
+            <div className="px-5 py-4 border-t border-gray-100 flex-shrink-0 bg-white pb-6">
               {checkoutStep === 1 && (
                 <button
                   onClick={() => {
                     if (!checkoutForm.name?.trim() || !checkoutForm.phone?.trim() || !checkoutForm.address?.trim() || !checkoutForm.state?.trim() || !checkoutForm.city?.trim()) {
-                      alert('Please fill in all required fields: name, phone, state, city, and delivery address.')
+                      alert('Please fill in: name, phone, state, city, and street address.')
                       return
                     }
                     setCheckoutStep(2)
                   }}
-                  className="w-full py-3.5 rounded-full text-sm font-bold text-white transition hover:opacity-90"
+                  className="w-full py-4 rounded-2xl text-sm font-bold text-white transition hover:opacity-90 active:scale-[0.98] shadow-lg"
                   style={{ background: INK }}
                 >
                   Continue to Payment
@@ -1521,11 +1527,16 @@ async function placeOrder() {
               {checkoutStep === 2 && (
                 <button
                   onClick={placeOrder}
-                  disabled={placingOrder || !selectedPayment}
-                  className="w-full py-3.5 rounded-full text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                  disabled={placingOrder || computedPaymentOptions.length === 0 || !selectedPayment}
+                  className="w-full py-4 rounded-2xl text-sm font-bold text-white transition hover:opacity-90 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 shadow-lg"
                   style={{ background: INK }}
                 >
-                  {placingOrder ? 'Placing Order…' : 'Place Order'}
+                  {placingOrder ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader size={16} className="animate-spin" />
+                      Placing Order…
+                    </span>
+                  ) : 'Place Order'}
                 </button>
               )}
             </div>
