@@ -387,8 +387,9 @@ export default function Website() {
   const [navDraft, setNavDraft] = useState(null)
   const [brandNameDraft, setBrandNameDraft] = useState('')
   const [savingBrandName, setSavingBrandName] = useState(false)
-  const [logoUploading, setLogoUploading] = useState(false)
+  const [savingLogo, setSavingLogo] = useState(false)
   const [brandError, setBrandError] = useState('')
+  const [brandingOpen, setBrandingOpen] = useState(false)
 
   useEffect(() => {
     if (business?.displayName && !brandNameDraft) setBrandNameDraft(business.displayName)
@@ -416,28 +417,25 @@ export default function Website() {
     }
   }
 
-  async function handleLogoUpload(e) {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
-    setLogoUploading(true)
+  async function handleLogoChange(val) {
+    const url = typeof val === 'string' ? val : val.url
+    if (!url) return
+    setSavingLogo(true)
     setBrandError('')
     try {
       const token = getStoredAccessToken()
-      const formData = new FormData()
-      formData.append('image', file)
-      const res = await fetch(`${API_BASE}/business/logo`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
+      const res = await fetch(`${API_BASE}/business`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ logoUrl: url }),
       })
       const body = await res.json().catch(() => null)
-      if (!res.ok) throw new Error(body?.message || 'Failed to upload logo')
+      if (!res.ok) throw new Error(body?.message || 'Failed to update logo')
       setBusiness(body?.data || body)
     } catch (err) {
       setBrandError(err.message)
     } finally {
-      setLogoUploading(false)
+      setSavingLogo(false)
     }
   }
 
@@ -1724,6 +1722,68 @@ export default function Website() {
           )}
 
           {tab === 'sections' && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-4">
+              <div
+                className="flex items-center gap-3 px-4 py-3.5 cursor-pointer hover:bg-gray-50 transition select-none"
+                onClick={() => setBrandingOpen(o => !o)}
+              >
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: CREAM }}>
+                  <Image size={14} style={{ color: PRIMARY }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-gray-900 truncate">Branding</div>
+                  <div className="text-xs text-gray-400 truncate">Your storefront's name and logo</div>
+                </div>
+                <div className="flex-shrink-0 text-gray-300">
+                  {brandingOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </div>
+              </div>
+
+              {brandingOpen && (
+                <div className="px-4 pb-4 pt-1 border-t border-gray-50 bg-gray-50/50 space-y-3">
+                  {brandError && (
+                    <div className="px-3 py-2 rounded-lg text-xs font-medium text-red-600 bg-red-50">
+                      {brandError}
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1">Site name</label>
+                    <div className="flex gap-2">
+                      <input
+                        className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                        value={brandNameDraft}
+                        onChange={e => setBrandNameDraft(e.target.value)}
+                        placeholder="Your business name"
+                      />
+                      <button
+                        onClick={saveBrandName}
+                        disabled={savingBrandName || !brandNameDraft.trim() || brandNameDraft.trim() === business?.displayName}
+                        className="px-3 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
+                        style={{ background: PRIMARY }}
+                      >
+                        {savingBrandName ? <Loader size={14} className="animate-spin" /> : 'Save'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <ImageUploadField
+                    label="Logo"
+                    value={business?.logoUrl || ''}
+                    onChange={handleLogoChange}
+                    hint="Recommended: square, at least 200×200px. Browse your media library or upload a new file."
+                  />
+                  {savingLogo && (
+                    <div className="flex items-center gap-1.5 text-xs" style={{ color: PRIMARY }}>
+                      <Loader size={12} className="animate-spin" /> Saving logo...
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {tab === 'sections' && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                 <span className="text-sm font-semibold text-gray-900">Home Page Sections</span>
@@ -2403,56 +2463,6 @@ export default function Website() {
 
           {tab === 'design' && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50 overflow-hidden">
-              <DesignAccordionSection
-                title="Branding"
-                subtitle="Your storefront's name and logo — shown in the header, browser tab, and shared links."
-                isOpen={openDesignCategory === 'branding'}
-                onToggle={() => toggleDesignCategory('branding')}
-              >
-                {brandError && (
-                  <div className="px-3 py-2 rounded-lg text-xs font-medium text-red-600 bg-red-50">
-                    {brandError}
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1">Site name</label>
-                  <div className="flex gap-2">
-                    <input
-                      className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
-                      value={brandNameDraft}
-                      onChange={e => setBrandNameDraft(e.target.value)}
-                      placeholder="Your business name"
-                    />
-                    <button
-                      onClick={saveBrandName}
-                      disabled={savingBrandName || !brandNameDraft.trim() || brandNameDraft.trim() === business?.displayName}
-                      className="px-3 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
-                      style={{ background: PRIMARY }}
-                    >
-                      {savingBrandName ? <Loader size={14} className="animate-spin" /> : 'Save'}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1">Logo</label>
-                  <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center border border-gray-200 bg-gray-50 flex-shrink-0">
-                      {business?.logoUrl
-                        ? <img src={resolveImageUrl(business.logoUrl)} alt="Logo" className="w-full h-full object-cover" />
-                        : <Image size={18} className="text-gray-300" />}
-                    </div>
-                    <label className="px-3 py-2 rounded-lg text-xs font-semibold border border-gray-200 text-gray-700 cursor-pointer hover:bg-gray-50 flex items-center gap-1.5">
-                      {logoUploading ? <Loader size={14} className="animate-spin" /> : <Upload size={14} />}
-                      {business?.logoUrl ? 'Change logo' : 'Upload logo'}
-                      <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={logoUploading} />
-                    </label>
-                  </div>
-                  <p className="text-[11px] text-gray-400 mt-1.5">Recommended: square, at least 200×200px.</p>
-                </div>
-              </DesignAccordionSection>
-
               <DesignAccordionSection
                 title="Starter Templates"
                 subtitle="One-click setup for your kind of business — color theme, section styles, and layout together. Always overwrites current choices, never applied automatically."
