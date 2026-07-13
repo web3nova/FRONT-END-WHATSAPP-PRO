@@ -48,7 +48,7 @@ export default function PaymentSettings() {
     manual: { isActive: false, bankAccount: null },
     paystack: { isActive: false, publicKey: '', secretKey: '' },
     monnify: { isActive: false, apiKey: '', secretKey: '', contractCode: '' },
-    blockradar: { isActive: false, apiKey: '', webhookUrl: '' },
+    blockradar: { isActive: false, apiKey: '', walletId: '', webhookUrl: '' },
     otherProviders: [],
     preferredProvider: 'manual',
   }
@@ -357,6 +357,11 @@ export default function PaymentSettings() {
             <div>
               <label className={labelClass}>API Key</label>
               <input value={config.blockradar?.apiKey || ''} onChange={e => update('blockradar.apiKey', e.target.value)} placeholder="br_live_xxxxxxxxxxxx" className={`${inputClass} font-mono text-xs`} />
+            </div>
+            <div>
+              <label className={labelClass}>Wallet ID</label>
+              <input value={config.blockradar?.walletId || ''} onChange={e => update('blockradar.walletId', e.target.value)} placeholder="Master wallet ID from your Blockradar dashboard" className={`${inputClass} font-mono text-xs`} />
+              <p className="text-xs text-gray-400 mt-1">Create a master wallet on Blockradar first — customer deposit addresses are generated from it.</p>
             </div>
             <div>
               <label className={labelClass}>Webhook URL <span className="text-gray-400 font-normal">(optional)</span></label>
