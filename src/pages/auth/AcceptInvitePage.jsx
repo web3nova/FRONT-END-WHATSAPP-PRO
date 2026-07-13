@@ -46,7 +46,7 @@ export default function AcceptInvitePage() {
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#F8F4E8' }}>
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <img src="/BizIq3.png" alt="BizIQ" className="h-9 w-auto mx-auto mb-1" />
+          <img src="/BizIq8.png" alt="BizIQ" className="h-9 w-auto mx-auto mb-1" />
           <h1 className="text-xl font-bold text-gray-900">You've been invited!</h1>
           <p className="text-sm text-gray-500 mt-1">Set up your account to join the team.</p>
         </div>

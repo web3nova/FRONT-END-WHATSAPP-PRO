@@ -6,7 +6,7 @@ export default function DocsPage() {
     <div className="min-h-screen bg-[#4166F5] flex flex-col">
       <nav className="p-6 bg-white border-b border-gray-100 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-            <img src="/BizIq3.png" alt="BizIQ" className="h-8 w-auto" />
+            <img src="/BizIq8.png" alt="BizIQ" className="h-8 w-auto" />
         </Link>
         <Link to="/" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
           Back to Home

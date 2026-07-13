@@ -20,7 +20,7 @@ export default function Navbar() {
         
         <div className="bp-nav-left">
           <Link to="/" className="bp-logo" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <img src="/BizIq3.png" alt="BizIQ" style={{ height: '32px', width: 'auto' }} />
+            <img src="/BizIq8.png" alt="BizIQ" style={{ height: '32px', width: 'auto' }} />
           </Link>
           
           <div className="bp-nav-links">

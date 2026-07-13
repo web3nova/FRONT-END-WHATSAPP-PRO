@@ -163,7 +163,7 @@ export default function SubscribePage() {
 
             <nav className="subscribe-nav">
               <div className="subscribe-logo">
-                <img src="/BizIq3.png" alt="BizIQ" className="subscribe-logo-img" />
+                <img src="/BizIq8.png" alt="BizIQ" className="subscribe-logo-img" />
               </div>
             </nav>
 

@@ -42,7 +42,7 @@ export default function FAQAndFooter() {
                         {/* Branding Block */}
                         <div className="col-span-2">
                             <div className="flex items-center gap-2">
-                                <img src="/BizIq3.png" alt="BizIQ" className="h-8 w-auto" />
+                                <img src="/BizIq8.png" alt="BizIQ" className="h-8 w-auto" />
                             </div>
                             <p className="text-[14px] text-[#64748B] leading-[1.6] mt-4 max-w-xs">
                                 The enterprise-grade Automation agent platform. Elevate your support arrays and order processing systems right through standard WhatsApp communication channels.

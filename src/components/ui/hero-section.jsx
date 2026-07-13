@@ -44,7 +44,7 @@ export default function HeroSection() {
         <div className="w-full min-h-screen bg-white/80 backdrop-blur-sm pb-44">
           <nav className="flex items-center justify-between p-4 md:px-16 lg:px-24 xl:px-32 md:py-6 w-full relative z-10">
             <Link to="/" aria-label="BizIQ home" className="flex items-center gap-2">
-              <img src="/BizIq3.png" alt="BizIQ" className="h-8 w-auto" />
+              <img src="/BizIq8.png" alt="BizIQ" className="h-8 w-auto" />
             </Link>
 
             <div
