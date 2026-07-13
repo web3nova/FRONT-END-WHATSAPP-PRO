@@ -46,7 +46,7 @@ export default function Navbar() {
                 el.scrollIntoView({ behavior: 'smooth' });
               }
             }}>Pricing</a>
-            <Link to="/contact" className="bp-nav-item">Contact Us</Link>
+            <a href="mailto:support@biziq.online" className="bp-nav-item">Contact Us</a>
           </div>
         </div>
 
