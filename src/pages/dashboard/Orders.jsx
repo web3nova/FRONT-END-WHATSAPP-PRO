@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Search, Filter, Plus, MoreHorizontal, X } from 'lucide-react'
 import { listOrders, updateOrderStatus, createOrder } from '../../api/ordersApi'
 import { listCustomers } from '../../api/customersApi'
+import { useNotify } from '../../context/NotificationContext'
 
 const PRIMARY = '#4166F5'
 
@@ -45,6 +46,7 @@ function extractSize(items, measurements) {
 }
 
 export default function BusinessOrders() {
+  const { toast } = useNotify()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -84,7 +86,7 @@ export default function BusinessOrders() {
       const updated = await updateOrderStatus(orderId, newStatus)
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updated } : o))
     } catch (err) {
-      alert(err.message)
+      toast.error(err.message)
     } finally {
       setUpdatingId(null)
     }

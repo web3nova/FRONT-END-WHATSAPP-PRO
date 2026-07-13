@@ -4,6 +4,7 @@ import { ChevronUp, ChevronDown } from "lucide-react";
 import { API_BASE } from "../lib/apiConfig";
 import { getStoredAccessToken } from "../lib/auth";
 import { resolveImageUrl } from "../lib/utils";
+import { useNotify } from "../context/NotificationContext";
 
 const COLORS = {
   offWhite: "#F8F4E8",
@@ -151,6 +152,7 @@ const paymentOptions = [
 ];
 
 function BusinessProfile({ data, setData }) {
+  const { toast } = useNotify();
   const logoRef = useRef();
   const heroBgRef = useRef();
   const [handleInput, setHandleInput] = useState("");
@@ -182,7 +184,7 @@ function BusinessProfile({ data, setData }) {
       const result = json?.data || json;
       setData(d => ({ ...d, heroBgImage: result.url }));
     } catch (err) {
-      alert('Hero background upload failed: ' + err.message);
+      toast.error('Hero background upload failed: ' + err.message);
     } finally {
       setHeroBgUploading(false);
     }
@@ -856,6 +858,7 @@ function WebsitePreview({ data }) {
 // Main App
 
 export default function BusinessWebsiteBuilder() {
+  const { toast } = useNotify();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -1022,7 +1025,7 @@ export default function BusinessWebsiteBuilder() {
 
       navigate('/dashboard/website');
     } catch (err) {
-      alert('Publish failed: ' + err.message);
+      toast.error('Publish failed: ' + err.message);
     } finally {
       setSaving(false);
     }

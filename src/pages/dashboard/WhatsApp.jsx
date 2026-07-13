@@ -358,7 +358,7 @@ export default function WhatsAppPage() {
         setConversations(prev => prev.map(c => c.id === selectedId ? { ...c, status: 'human' } : c))
       }
     } catch (err) {
-      alert(err.message)
+      showToast(err.message, 'error')
     } finally {
       setTogglingMode(false)
     }

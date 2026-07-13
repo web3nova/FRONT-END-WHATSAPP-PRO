@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
+import { useNotify } from '../../context/NotificationContext'
 import {
   DEFAULT_INK, DEFAULT_CREAM, DEFAULT_GOLD, DEFAULT_FONT, DEFAULT_RADIUS, BODY,
   isSectionActive, mixHexWithWhite, socialHref, isSoldOut, useThemeFont,
@@ -152,6 +153,7 @@ function UnroutedStorefrontPreview(props) {
 }
 
 function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 'desktop', settings, theme, pages = [], nav, paymentConfig, tenantId: tenantIdProp }) {
+   const { toast } = useNotify()
    const { customer, token, logout } = useCustomerAuth()
    const INK = theme?.ink || DEFAULT_INK
    const GOLD = theme?.accent || DEFAULT_GOLD
@@ -257,7 +259,7 @@ async function placeOrder() {
       return
     }
 
-    if (!selectedPayment) { alert('Please select a payment method.'); return }
+    if (!selectedPayment) { toast.error('Please select a payment method.'); return }
     setPlacingOrder(true)
     try {
       const headers = { 'Content-Type': 'application/json' }
@@ -325,7 +327,7 @@ async function placeOrder() {
       }
     } catch (err) {
       console.error('Failed to place order:', err)
-      alert('Failed to place order. Please try again.')
+      toast.error('Failed to place order. Please try again.')
     } finally {
       setPlacingOrder(false)
     }
@@ -1568,7 +1570,7 @@ async function placeOrder() {
                 <button
                   onClick={() => {
                     if (!checkoutForm.name?.trim() || !checkoutForm.phone?.trim() || !checkoutForm.address?.trim() || !checkoutForm.state?.trim() || !checkoutForm.city?.trim()) {
-                      alert('Please fill in: name, phone, state, city, and street address.')
+                      toast.error('Please fill in: name, phone, state, city, and street address.')
                       return
                     }
                     setCheckoutStep(2)

@@ -6,6 +6,7 @@ import {
 } from 'react-router-dom';
 
 import { AuthProvider } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 
 import {
   RequireAuth,
@@ -69,13 +70,15 @@ export default function App() {
     // rather than the app-wide one below (which also mounts auth/dashboard
     // routes that make no sense on a tenant's custom domain).
     return (
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<StorefrontPage domain={hostname} />} />
-          <Route path="/shop" element={<StorefrontPage domain={hostname} />} />
-          <Route path="/:view" element={<StorefrontPage domain={hostname} />} />
-        </Routes>
-      </BrowserRouter>
+      <NotificationProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<StorefrontPage domain={hostname} />} />
+            <Route path="/shop" element={<StorefrontPage domain={hostname} />} />
+            <Route path="/:view" element={<StorefrontPage domain={hostname} />} />
+          </Routes>
+        </BrowserRouter>
+      </NotificationProvider>
     )
   }
 
@@ -89,6 +92,7 @@ export default function App() {
 
       <div className="content-layer">
 
+        <NotificationProvider>
         <AuthProvider>
 
           <BrowserRouter>
@@ -327,6 +331,7 @@ export default function App() {
           </BrowserRouter>
 
         </AuthProvider>
+        </NotificationProvider>
 
       </div>
 

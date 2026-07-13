@@ -9,6 +9,7 @@ import { STARTER_TEMPLATES, recommendedStarterTemplateId } from '../../lib/start
 import ImageUploadField from '../../components/ImageUploadField'
 import StorefrontPreview from './StorefrontPreview'
 import { SECTION_TYPES, sectionByType } from './storefronts/sectionRegistry'
+import { useNotify } from '../../context/NotificationContext'
 
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
@@ -355,6 +356,7 @@ function PageForm({ pageForm, setPageForm, isNew }) {
 
 export default function Website() {
   const navigate = useNavigate()
+  const { toast, confirmAction } = useNotify()
   const [loading, setLoading] = useState(true)
   const [business, setBusiness] = useState(null)
   const [products, setProducts] = useState([])
@@ -706,7 +708,8 @@ export default function Website() {
   // it and clear every draft-local form, same shapes as the initial load.
   const discardChanges = async () => {
     if (savingSettings) return
-    if (!window.confirm('Discard all unpublished changes? Your live site stays as it is.')) return
+    const confirmed = await confirmAction({ title: 'Discard changes?', message: 'Discard all unpublished changes? Your live site stays as it is.', confirmLabel: 'Discard', danger: true })
+    if (!confirmed) return
     const token = getStoredAccessToken()
     if (!token) return
     setSavingSettings(true)
@@ -746,7 +749,8 @@ export default function Website() {
   // immediately; publishChanges already handles turning it back on.
   const unpublishSite = async () => {
     if (savingSettings) return
-    if (!window.confirm('Take your site offline? Visitors will see "storefront not found" until you publish again.')) return
+    const confirmed = await confirmAction({ title: 'Take site offline?', message: 'Visitors will see "storefront not found" until you publish again.', confirmLabel: 'Take Offline', danger: true })
+    if (!confirmed) return
     const token = getStoredAccessToken()
     if (!token) return
     setSavingSettings(true)
@@ -927,7 +931,8 @@ export default function Website() {
   // never auto-applied — since it overwrites current design choices.
   const applyStarterTemplate = async (tpl) => {
     if (savingSettings) return
-    if (!window.confirm(`Apply the "${tpl.name}" starter template? This overwrites your current color theme, section styles, and section order/visibility.`)) return
+    const confirmed = await confirmAction({ title: `Apply "${tpl.name}" template?`, message: 'This overwrites your current color theme, section styles, and section order/visibility.', confirmLabel: 'Apply Template', danger: true })
+    if (!confirmed) return
     const previousTheme = settings?.theme || {}
     const previousHasUnpublishedChanges = settings?.hasUnpublishedChanges
     const previousSections = sections
@@ -1057,7 +1062,8 @@ export default function Website() {
 
   const deleteCustomPage = async (slug) => {
     if (savingPage) return
-    if (!window.confirm('Delete this page? This cannot be undone.')) return
+    const confirmed = await confirmAction({ title: 'Delete this page?', message: 'This cannot be undone.', confirmLabel: 'Delete', danger: true })
+    if (!confirmed) return
     const token = getStoredAccessToken()
     if (!token) return
     setSavingPage(true)
@@ -1123,7 +1129,8 @@ export default function Website() {
   // captured as a new revision before the old one is applied — restoring is
   // always undoable too.
   const restoreRevisionAction = async (id) => {
-    if (!window.confirm('Restore this version? Your current settings will be saved to history first, so this can be undone.')) return
+    const confirmed = await confirmAction({ title: 'Restore this version?', message: 'Your current settings will be saved to history first, so this can be undone.', confirmLabel: 'Restore' })
+    if (!confirmed) return
     setRestoringId(id)
     setRevisionsError('')
     try {
@@ -1993,7 +2000,7 @@ export default function Website() {
                                          }))
                                        } catch (err) {
                                          console.error('Upload failed:', err)
-                                         alert('Failed to upload image. Please try again.')
+                                         toast.error('Failed to upload image. Please try again.')
                                        }
                                      }}
                                      disabled={!sectionForm.newImage?.url}
