@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import { Users, ShoppingBag, DollarSign, Globe, MessageCircle, TrendingUp, Package, ArrowRight, Bot, FileText, BarChart2 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { listCustomers } from '../../api/customersApi'
@@ -107,12 +107,14 @@ export default function BusinessOverview() {
   const businessName = user?.businessName || user?.name || user?.email || 'your business'
 
   const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState({ customers: 0, orders: 0, revenue: 0, conversations: 0 })
+  const [stats, setStats] = useState({ customers: 0, orders: 0, revenue: 0, conversations: 0, visits: 0 })
   const [recentOrders, setRecentOrders] = useState([])
   const [recentChats, setRecentChats] = useState([])
   const [recentQuotes, setRecentQuotes] = useState([])
   const [topProducts, setTopProducts] = useState([])
   const [topProductChart, setTopProductChart] = useState([])
+  const [dailyRevenue, setDailyRevenue] = useState([])
+  const [trafficSources, setTrafficSources] = useState(null)
 
   useEffect(() => {
     let ignore = false
@@ -122,25 +124,48 @@ export default function BusinessOverview() {
     monthStart.setDate(1)
     monthStart.setHours(0, 0, 0, 0)
 
+    const days30 = 30
     Promise.all([
       listCustomers({ limit: 1 }),
       listOrders({ limit: 200 }),
       listConversations({ limit: 4 }),
       listQuotes({ limit: 3 }),
       fetch(`${API_BASE}/products?limit=100&sort=sortOrder`, { headers }).then(r => r.json()).catch(() => ({ data: [] })),
-    ]).then(([custRes, ordRes, convRes, quoteRes, prodRes]) => {
+      fetch(`${API_BASE}/analytics/overview?days=${days30}`, { headers }).then(r => r.json()).catch(() => ({ data: null })),
+    ]).then(([custRes, ordRes, convRes, quoteRes, prodRes, analyticsRes]) => {
       if (ignore) return
 
       const allOrders = ordRes.data
       const monthOrders = allOrders.filter(o => new Date(o.createdAt) >= monthStart)
       const monthRevenue = monthOrders.reduce((sum, o) => sum + (o.totalMinor || 0), 0)
 
+      const a = analyticsRes?.data
       setStats({
         customers: custRes.meta?.total ?? 0,
         orders: monthOrders.length,
         revenue: monthRevenue,
         conversations: convRes.meta?.total ?? convRes.data.length,
+        visits: a?.websiteVisits?.total || 0,
       })
+      setTrafficSources(a?.trafficSources ?? null)
+
+      // Build daily revenue for the trend chart from orders
+      const now = new Date()
+      const dayList = Array.from({ length: days30 }, (_, i) => {
+        const d = new Date(now)
+        d.setDate(now.getDate() - (days30 - 1 - i))
+        return d
+      })
+      setDailyRevenue(dayList.map(d => {
+        const label = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+        const dayOrders = allOrders.filter(o => new Date(o.createdAt).toDateString() === d.toDateString())
+        return {
+          day: label,
+          revenue: Math.round(dayOrders.reduce((s, o) => s + (o.totalMinor || 0), 0) / 100),
+          orders: dayOrders.length,
+        }
+      }))
+
       setRecentOrders(allOrders.slice(0, 5))
       setRecentChats(convRes.data)
       setRecentQuotes(quoteRes.data.slice(0, 3))
@@ -210,7 +235,7 @@ export default function BusinessOverview() {
         <StatCard label="Total Customers"   value={loading ? '…' : stats.customers.toLocaleString()} sub="all time"   positive icon={Users} />
         <StatCard label="Orders This Month" value={loading ? '…' : stats.orders}                     sub="this month" positive icon={ShoppingBag} />
         <StatCard label="Monthly Revenue"   value={loading ? '…' : formatAmount(stats.revenue)}      sub="this month" positive icon={DollarSign} />
-        <StatCard label="Website Visits"    value="—"                                                 sub="no data"    positive={false} icon={Globe} />
+        <StatCard label="Website Visits"    value={loading ? '…' : stats.visits.toLocaleString()}    sub="30 days"    positive icon={Globe} />
         <StatCard label="Conversations"     value={loading ? '…' : stats.conversations.toLocaleString()} sub="total"  positive icon={MessageCircle} className="col-span-2 md:col-span-1 lg:col-span-1" />
       </div>
 
@@ -218,10 +243,30 @@ export default function BusinessOverview() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100 min-w-0 overflow-hidden">
           <div className="mb-5">
-            <h2 className="font-semibold text-gray-900">Revenue & Orders Trend</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Monthly time-series data coming soon</p>
+            <h2 className="font-semibold text-gray-900">Revenue Trend (30 days)</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Daily revenue in ₦</p>
           </div>
-          <EmptyPanel title="Revenue trend will appear here" subtitle="Requires time-series analytics endpoint" height={210} />
+          {loading ? (
+            <EmptyPanel title="Loading…" height={210} />
+          ) : dailyRevenue.every(d => d.revenue === 0) ? (
+            <EmptyPanel title="No revenue yet" subtitle="Revenue appears as orders come in" height={210} />
+          ) : (
+            <ResponsiveContainer width="100%" height={210}>
+              <AreaChart data={dailyRevenue} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                <defs>
+                  <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#4166F5" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#4166F5" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="day" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `₦${v.toLocaleString()}`} />
+                <Tooltip formatter={(v) => [`₦${v.toLocaleString()}`, 'Revenue']} />
+                <Area type="monotone" dataKey="revenue" stroke="#4166F5" strokeWidth={2.5} fill="url(#revGrad)" dot={false} activeDot={{ r: 4, fill: '#4166F5', strokeWidth: 0 }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 min-w-0 overflow-hidden">
@@ -229,18 +274,28 @@ export default function BusinessOverview() {
             <h2 className="font-semibold text-gray-900">Customer Sources</h2>
             <p className="text-xs text-gray-400 mt-0.5">Where your customers come from</p>
           </div>
-          <EmptyPanel title="Source analytics coming soon" height={155} />
-          <div className="space-y-2 mt-3">
-            {['WhatsApp', 'Website', 'Referral', 'Direct'].map(s => (
-              <div key={s} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-sm bg-gray-200"></div>
-                  <span className="text-sm text-gray-400">{s}</span>
+          {loading ? (
+            <EmptyPanel title="Loading…" height={155} />
+          ) : !trafficSources ? (
+            <EmptyPanel title="No traffic data yet" subtitle="Sources appear once your storefront gets visits" height={155} />
+          ) : (
+            <div className="space-y-2 mt-1">
+              {[
+                { key: 'whatsapp', label: 'WhatsApp', color: '#25D366' },
+                { key: 'website', label: 'Website', color: '#4166F5' },
+                { key: 'referral', label: 'Referral', color: '#f59e0b' },
+                { key: 'direct', label: 'Direct', color: '#94a3b8' },
+              ].map(s => (
+                <div key={s.key} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-sm" style={{ background: s.color }}></div>
+                    <span className="text-sm text-gray-500">{s.label}</span>
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">{trafficSources[s.key] || 0}</span>
                 </div>
-                <span className="text-sm text-gray-300">—</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
