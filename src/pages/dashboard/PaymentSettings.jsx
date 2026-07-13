@@ -6,6 +6,9 @@ import { getStoredAccessToken, getAuthHeaders } from '../../lib/auth'
 
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
+// Must match backend's SECRET_PLACEHOLDER in payment-config.service.js — sending
+// this back for a secret field means "keep whatever's already stored server-side."
+const SECRET_PLACEHOLDER = '__UNCHANGED__'
 
 const inputClass = "w-full px-3.5 py-3 md:py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
 const labelClass = "text-sm font-medium text-gray-700 block mb-1.5"
@@ -58,6 +61,14 @@ export default function PaymentSettings() {
   const [banks, setBanks] = useState([])
   const [resolving, setResolving] = useState(false)
   const [resolvedName, setResolvedName] = useState('')
+  // Secret fields load pre-masked (e.g. "••••1234") from the server. We only
+  // want to send a real replacement value when the user actually retypes one —
+  // otherwise we'd overwrite the stored secret with its own masked display text.
+  const [editedSecrets, setEditedSecrets] = useState(() => new Set())
+  const updateSecret = (path, value) => {
+    setEditedSecrets(prev => new Set(prev).add(path))
+    update(path, value)
+  }
 
   useEffect(() => {
     let ignore = false
@@ -143,10 +154,17 @@ export default function PaymentSettings() {
     try {
       const payload = {
         manual: config.manual,
-        paystack: config.paystack,
-        monnify: config.monnify,
-        blockradar: config.blockradar,
-        otherProviders: config.otherProviders,
+        paystack: { ...config.paystack, secretKey: editedSecrets.has('paystack.secretKey') ? config.paystack?.secretKey : SECRET_PLACEHOLDER },
+        monnify: {
+          ...config.monnify,
+          apiKey: editedSecrets.has('monnify.apiKey') ? config.monnify?.apiKey : SECRET_PLACEHOLDER,
+          secretKey: editedSecrets.has('monnify.secretKey') ? config.monnify?.secretKey : SECRET_PLACEHOLDER,
+        },
+        blockradar: { ...config.blockradar, apiKey: editedSecrets.has('blockradar.apiKey') ? config.blockradar?.apiKey : SECRET_PLACEHOLDER },
+        otherProviders: config.otherProviders.map((p, i) => ({
+          ...p,
+          secretKey: editedSecrets.has(`otherProviders.${i}.secretKey`) ? p.secretKey : SECRET_PLACEHOLDER,
+        })),
         preferredProvider: config.preferredProvider,
       }
 
@@ -185,6 +203,17 @@ export default function PaymentSettings() {
 
   const removeOtherProvider = (i) => {
     update('otherProviders', config.otherProviders.filter((_, j) => j !== i))
+    setEditedSecrets(prev => {
+      const next = new Set()
+      for (const key of prev) {
+        const match = key.match(/^otherProviders\.(\d+)\.secretKey$/)
+        if (!match) { next.add(key); continue }
+        const idx = Number(match[1])
+        if (idx === i) continue
+        next.add(idx > i ? `otherProviders.${idx - 1}.secretKey` : key)
+      }
+      return next
+    })
   }
 
   if (loading) {
@@ -322,7 +351,7 @@ export default function PaymentSettings() {
             </div>
             <div>
               <label className={labelClass}>Secret Key</label>
-              <input value={config.paystack?.secretKey || ''} onChange={e => update('paystack.secretKey', e.target.value)} placeholder="sk_live_xxxxxxxxxxxx" type="password" className={`${inputClass} font-mono text-xs`} />
+              <input value={config.paystack?.secretKey || ''} onChange={e => updateSecret('paystack.secretKey', e.target.value)} placeholder="sk_live_xxxxxxxxxxxx" type="password" className={`${inputClass} font-mono text-xs`} />
             </div>
           </div>
         )}
@@ -335,11 +364,11 @@ export default function PaymentSettings() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
             <div>
               <label className={labelClass}>API Key</label>
-              <input value={config.monnify?.apiKey || ''} onChange={e => update('monnify.apiKey', e.target.value)} placeholder="MK_PROD_XXXXXXXX" className={`${inputClass} font-mono text-xs`} />
+              <input value={config.monnify?.apiKey || ''} onChange={e => updateSecret('monnify.apiKey', e.target.value)} placeholder="MK_PROD_XXXXXXXX" type="password" className={`${inputClass} font-mono text-xs`} />
             </div>
             <div>
               <label className={labelClass}>Secret Key</label>
-              <input value={config.monnify?.secretKey || ''} onChange={e => update('monnify.secretKey', e.target.value)} placeholder="xxxxxxxxxxxx" type="password" className={`${inputClass} font-mono text-xs`} />
+              <input value={config.monnify?.secretKey || ''} onChange={e => updateSecret('monnify.secretKey', e.target.value)} placeholder="xxxxxxxxxxxx" type="password" className={`${inputClass} font-mono text-xs`} />
             </div>
             <div>
               <label className={labelClass}>Contract Code</label>
@@ -356,7 +385,7 @@ export default function PaymentSettings() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
             <div>
               <label className={labelClass}>API Key</label>
-              <input value={config.blockradar?.apiKey || ''} onChange={e => update('blockradar.apiKey', e.target.value)} placeholder="br_live_xxxxxxxxxxxx" className={`${inputClass} font-mono text-xs`} />
+              <input value={config.blockradar?.apiKey || ''} onChange={e => updateSecret('blockradar.apiKey', e.target.value)} placeholder="br_live_xxxxxxxxxxxx" type="password" className={`${inputClass} font-mono text-xs`} />
             </div>
             <div>
               <label className={labelClass}>Wallet ID</label>
@@ -382,7 +411,7 @@ export default function PaymentSettings() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <input value={p.name} onChange={e => updateOtherProvider(i, 'name', e.target.value)} placeholder="Provider name (e.g. Flutterwave)" className={inputClass} />
               <input value={p.publicKey || ''} onChange={e => updateOtherProvider(i, 'publicKey', e.target.value)} placeholder="Public / API Key" className={`${inputClass} font-mono text-xs`} />
-              <input value={p.secretKey || ''} onChange={e => updateOtherProvider(i, 'secretKey', e.target.value)} placeholder="Secret Key" type="password" className={`${inputClass} font-mono text-xs`} />
+              <input value={p.secretKey || ''} onChange={e => { setEditedSecrets(prev => new Set(prev).add(`otherProviders.${i}.secretKey`)); updateOtherProvider(i, 'secretKey', e.target.value) }} placeholder="Secret Key" type="password" className={`${inputClass} font-mono text-xs`} />
               <input value={p.webhookUrl || ''} onChange={e => updateOtherProvider(i, 'webhookUrl', e.target.value)} placeholder="Webhook URL (optional)" className={`${inputClass} font-mono text-xs`} />
             </div>
             <label className="flex items-center gap-2.5 cursor-pointer py-1">
