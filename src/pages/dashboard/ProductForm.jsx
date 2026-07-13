@@ -40,6 +40,7 @@ export default function ProductForm({ initialData, onSubmit, loading, error }) {
   const [price, setPrice] = useState('')
   const [category, setCategory] = useState('regular')
   const [stock, setStock] = useState(0)
+  const [trackStock, setTrackStock] = useState(false)
   const [description, setDescription] = useState('')
   const [selectedFile, setSelectedFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState('')
@@ -64,6 +65,7 @@ export default function ProductForm({ initialData, onSubmit, loading, error }) {
       setPrice(initialData.priceMinor != null ? String(initialData.priceMinor / 100) : '')
       setCategory(initialData.category || 'regular')
       setStock(initialData.stock ?? 0)
+      setTrackStock(initialData.trackStock ?? false)
       setDescription(initialData.description || '')
       setBrand(initialData.brand || '')
       setSku(initialData.sku || '')
@@ -82,6 +84,7 @@ export default function ProductForm({ initialData, onSubmit, loading, error }) {
     setPrice('')
     setCategory('regular')
     setStock(0)
+    setTrackStock(false)
     setDescription('')
     setBrand('')
     setSku('')
@@ -108,6 +111,7 @@ export default function ProductForm({ initialData, onSubmit, loading, error }) {
       price: Number(price) || 0,
       category,
       stock: Number(stock) || 0,
+      trackStock,
       description: description.trim() || undefined,
       brand: brand.trim() || undefined,
       sku: sku.trim() || undefined,
@@ -232,6 +236,15 @@ export default function ProductForm({ initialData, onSubmit, loading, error }) {
               min="0"
               className={inputClass}
             />
+            <label className="flex items-center gap-2 mt-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={trackStock}
+                onChange={e => setTrackStock(e.target.checked)}
+                className="w-4 h-4 rounded flex-shrink-0"
+              />
+              <span className="text-xs text-gray-500">Track stock (block checkout when sold out)</span>
+            </label>
           </div>
           <div>
             <label className={labelClass}>Old Price (₦)</label>
