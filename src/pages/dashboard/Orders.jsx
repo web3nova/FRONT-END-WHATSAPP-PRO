@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Search, Filter, Plus, MoreHorizontal, X } from 'lucide-react'
 import { listOrders, updateOrderStatus, createOrder } from '../../api/ordersApi'
 import { listCustomers } from '../../api/customersApi'
@@ -53,6 +54,13 @@ export default function BusinessOrders() {
   const [activeTab, setActiveTab] = useState('all')
   const [search, setSearch] = useState('')
   const [updatingId, setUpdatingId] = useState(null)
+  // Which row's status menu is open + its screen position. Rendered via a
+  // portal (below) instead of a CSS group-hover dropdown, since the table's
+  // `overflow-x-auto` wrapper clips any absolutely-positioned child that
+  // extends past its scroll bounds — the menu was rendering with no visible
+  // background/border because that box got clipped away.
+  const [statusMenuOrderId, setStatusMenuOrderId] = useState(null)
+  const [statusMenuPos, setStatusMenuPos] = useState(null)
   const [showModal, setShowModal] = useState(false)
   const [modalCustomers, setModalCustomers] = useState([])
   const [modalCustLoading, setModalCustLoading] = useState(false)
@@ -81,6 +89,7 @@ export default function BusinessOrders() {
   })
 
   const handleStatusChange = async (orderId, newStatus) => {
+    setStatusMenuOrderId(null)
     setUpdatingId(orderId)
     try {
       const updated = await updateOrderStatus(orderId, newStatus)
@@ -91,6 +100,29 @@ export default function BusinessOrders() {
       setUpdatingId(null)
     }
   }
+
+  const toggleStatusMenu = (orderId, e) => {
+    if (statusMenuOrderId === orderId) {
+      setStatusMenuOrderId(null)
+      return
+    }
+    const rect = e.currentTarget.getBoundingClientRect()
+    setStatusMenuPos({ top: rect.bottom + 4, left: rect.right - 144 })
+    setStatusMenuOrderId(orderId)
+  }
+
+  useEffect(() => {
+    if (!statusMenuOrderId) return
+    const close = () => setStatusMenuOrderId(null)
+    window.addEventListener('scroll', close, true)
+    window.addEventListener('resize', close)
+    document.addEventListener('click', close)
+    return () => {
+      window.removeEventListener('scroll', close, true)
+      window.removeEventListener('resize', close)
+      document.removeEventListener('click', close)
+    }
+  }, [statusMenuOrderId])
 
   const openModal = () => {
     setForm({ customerId: '', product: '', size: '', amountNaira: '', status: 'pending' })
@@ -273,29 +305,13 @@ export default function BusinessOrders() {
                         {formatDate(order.createdAt)}
                       </td>
                       <td className="px-5 py-3.5">
-                        <div className="relative group">
-                          <button
-                            className="p-1 text-gray-300 hover:text-gray-500 rounded-lg transition"
-                            disabled={updatingId === order.id}
-                          >
-                            <MoreHorizontal size={15} />
-                          </button>
-                          {/* Inline status update dropdown */}
-                          <div className="absolute right-0 top-7 z-10 hidden group-focus-within:block bg-white border border-gray-100 rounded-xl shadow-lg py-1 w-36">
-                            {Object.entries(STATUS_CONFIG).map(([val, cfg]) => (
-                              order.status !== val && (
-                                <button
-                                  key={val}
-                                  onClick={() => handleStatusChange(order.id, val)}
-                                  className="w-full text-left px-3 py-2 text-xs hover:bg-gray-50 transition"
-                                  style={{ color: cfg.color }}
-                                >
-                                  Mark {cfg.label}
-                                </button>
-                              )
-                            ))}
-                          </div>
-                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleStatusMenu(order.id, e) }}
+                          className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                          disabled={updatingId === order.id}
+                        >
+                          <MoreHorizontal size={16} />
+                        </button>
                       </td>
                     </tr>
                   )
@@ -312,6 +328,35 @@ export default function BusinessOrders() {
           </span>
         </div>
       </div>
+
+      {/* Status update menu — portaled to <body> so it's never clipped by the
+          table's overflow-x-auto/overflow-hidden ancestors, and positioned
+          from the trigger button's screen coordinates. */}
+      {statusMenuOrderId && statusMenuPos && (() => {
+        const order = orders.find(o => o.id === statusMenuOrderId)
+        if (!order) return null
+        return createPortal(
+          <div
+            className="fixed z-50 bg-white border border-gray-200 rounded-xl shadow-lg py-1 w-36"
+            style={{ top: statusMenuPos.top, left: statusMenuPos.left }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {Object.entries(STATUS_CONFIG).map(([val, cfg]) => (
+              order.status !== val && (
+                <button
+                  key={val}
+                  onClick={() => handleStatusChange(order.id, val)}
+                  className="w-full text-left px-3 py-2 text-xs font-medium hover:bg-gray-50 transition"
+                  style={{ color: cfg.color }}
+                >
+                  Mark {cfg.label}
+                </button>
+              )
+            ))}
+          </div>,
+          document.body
+        )
+      })()}
 
       {/* New Order Modal */}
       {showModal && (
