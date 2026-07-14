@@ -15,7 +15,10 @@ export async function listReviews(status = 'pending') {
   })
   const body = await res.json().catch(() => null)
   if (!res.ok) throw new Error(body?.message || `Failed to load reviews (${res.status})`)
-  return body?.data ?? { items: [], total: 0 }
+  // Backend responds ok(res, result.items, result.meta) — body.data IS the
+  // array itself, pagination info lives in body.meta, not nested under data.
+  const items = Array.isArray(body?.data) ? body.data : []
+  return { items, total: body?.meta?.total ?? items.length }
 }
 
 /**

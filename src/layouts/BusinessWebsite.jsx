@@ -1215,7 +1215,13 @@ export default function BusinessWebsiteBuilder() {
                     .map(([s, sv]) => [s, Math.round(Number(sv) * 100)])
                     .filter(([, sv]) => Number.isInteger(sv) && sv > 0),
                 );
-                return [k, { default: Math.round(Number(v.default) * 100) || 0, states }];
+                const defaultMinor = Math.round(Number(v.default) * 100) || 0;
+                // Collapse back to the plain-integer (legacy) shape once the
+                // last zone override is removed — keeps stored data matching
+                // the "object only when overrides exist" contract, not just
+                // relying on the backend's tolerance for {default, states:{}}.
+                if (Object.keys(states).length === 0) return [k, defaultMinor];
+                return [k, { default: defaultMinor, states }];
               }
               return [k, Math.round(Number(v) * 100)];
             })
