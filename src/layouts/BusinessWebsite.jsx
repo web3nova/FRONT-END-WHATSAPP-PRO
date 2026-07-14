@@ -1340,7 +1340,7 @@ export default function BusinessWebsiteBuilder() {
         {step === 0 && <BusinessProfile data={data} setData={setData} />}
         {step === 1 && <ProductsUpload data={data} setData={setData} />}
         {step === 2 && (
-          <div data-tour="builder-preview" style={{ position: "relative" }}>
+          <div style={{ position: "relative" }}>
             <WebsitePreview data={data} />
           </div>
         )}

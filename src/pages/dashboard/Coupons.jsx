@@ -179,8 +179,8 @@ export default function Coupons() {
   }
 
   return (
-    <div data-tour="coupons-root" className="space-y-4 sm:space-y-5 pb-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="space-y-4 sm:space-y-5 pb-6">
+      <div data-tour="coupons-root" className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Coupons</h1>
           <p className="text-sm text-gray-400 mt-0.5">{coupons.length} coupon{coupons.length === 1 ? '' : 's'} for your storefront</p>

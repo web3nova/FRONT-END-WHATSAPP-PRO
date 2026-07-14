@@ -23,6 +23,7 @@ export function runTour({ steps, startIndex = 0, navigate, currentPath, onChapte
   let i = startIndex;
   let d = null;
   let transitioning = false; // guards against a blur + Next firing two advances
+  let lastDir = 1;           // direction of travel, so skipped steps continue the same way
   let stepCleanup = null;    // tears down the current step's action listeners
 
   const clearStepListeners = () => { if (stepCleanup) { stepCleanup(); stepCleanup = null; } };
@@ -60,39 +61,73 @@ export function runTour({ steps, startIndex = 0, navigate, currentPath, onChapte
     }
   };
 
+  // Resolve the DOM node a step should highlight. Handles two failure modes:
+  // 1. The onEnter bridge event fired before the destination page mounted its
+  //    listener (cross-surface navigation) — re-fire it once after the first
+  //    wait, by which time the page has mounted.
+  // 2. The element legitimately doesn't exist in this account's state (e.g. the
+  //    first-order status pill on a store with no orders yet, the WhatsApp
+  //    connect button once already connected, owner-only Settings tabs for a
+  //    non-owner) — fall back to `step.fallback` if given, else return null so
+  //    the caller SKIPS the step instead of showing a detached popover.
+  const resolveTarget = async (step) => {
+    let el = await waitForElement(step.element);
+    if (!el && step.onEnter) {
+      step.onEnter();
+      el = await waitForElement(step.element);
+    }
+    if (!el && step.fallback) el = document.querySelector(step.fallback);
+    return el;
+  };
+
   const showStep = async () => {
     clearStepListeners();
-    const step = steps[i];
-    if (!step) { finish(); return; }
-    if (step.route && step.route !== currentPath()) {
-      navigate(step.route);
-      await waitForElement(step.element);
+    // Loop so that steps whose target can't render for this account are skipped
+    // in the direction of travel — never highlight "nothing".
+    let guard = steps.length + 1;
+    while (guard-- > 0) {
+      const step = steps[i];
+      if (!step) { finish(); return; }
+      if (step.route && step.route !== currentPath()) navigate(step.route);
+      if (step.onEnter) step.onEnter();
+      const target = await resolveTarget(step);
+      if (!target) {
+        // Skip: keep chapter bookkeeping consistent so resume doesn't loop
+        // forever into a chapter that can never display for this account.
+        if (lastDir > 0 && step.chapterEnd != null) onChapterComplete?.(step.chapterEnd);
+        i += lastDir;
+        if (i < 0) { i = 0; lastDir = 1; }
+        if (i >= steps.length) { finish(); return; }
+        continue;
+      }
+      const isFirst = i === 0;
+      const isLast = i === steps.length - 1;
+      // highlight() defaults popover.showButtons to [] (no next/prev/close at all)
+      // unless each call sets it — unlike drive(), which shows them by default. We
+      // use highlight() per-step (not drive()) because our steps change route/tab
+      // between them, so the footer has to be set on every call or the tour renders
+      // with no way to advance, go back, or skip. Back is hidden on the first step,
+      // Next becomes Done on the last, and we supply an accurate "N of total".
+      d.highlight({
+        element: target,
+        popover: {
+          ...step.popover,
+          showButtons: isFirst ? ['next', 'close'] : ['next', 'previous', 'close'],
+          nextBtnText: isLast ? 'Done' : 'Next',
+          prevBtnText: 'Back',
+          progressText: `${i + 1} of ${steps.length}`,
+        },
+      });
+      setupAdvanceOn(step);
+      return;
     }
-    if (step.onEnter) { step.onEnter(); await waitForElement(step.element); }
-    const isFirst = i === 0;
-    const isLast = i === steps.length - 1;
-    // highlight() defaults popover.showButtons to [] (no next/prev/close at all)
-    // unless each call sets it — unlike drive(), which shows them by default. We
-    // use highlight() per-step (not drive()) because our steps change route/tab
-    // between them, so the footer has to be set on every call or the tour renders
-    // with no way to advance, go back, or skip. Back is hidden on the first step,
-    // Next becomes Done on the last, and we supply an accurate "N of total".
-    d.highlight({
-      element: step.element,
-      popover: {
-        ...step.popover,
-        showButtons: isFirst ? ['next', 'close'] : ['next', 'previous', 'close'],
-        nextBtnText: isLast ? 'Done' : 'Next',
-        prevBtnText: 'Back',
-        progressText: `${i + 1} of ${steps.length}`,
-      },
-    });
-    setupAdvanceOn(step);
+    finish();
   };
 
   const advance = async (dir) => {
     if (transitioning) return; // an auto-advance already fired for this step
     transitioning = true;
+    lastDir = dir;
     clearStepListeners();
     const prev = steps[i];
     i += dir;

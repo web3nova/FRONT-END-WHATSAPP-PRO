@@ -15,7 +15,7 @@ export const websiteBuilderTour = {
           advanceOn: { type: 'input' },
           popover: { title: 'Start with your store name', description: 'Type your business name here — it\'s the first thing customers see. Add a logo just below if you have one.' } },
         { route: '/dashboard/builder', onEnter: setWizardStep(0), element: '[data-tour="builder-payments"]',
-          popover: { title: 'Choose how you get paid', description: 'Turn on at least one payment method (Paystack, bank transfer, or cash on delivery) so customers can actually check out.' } },
+          popover: { title: 'Choose how you get paid', description: 'Tick at least one payment method — bank transfer, card, Paystack, Flutterwave, cash on delivery, or crypto — so customers can actually check out.' } },
       ],
     },
     {
@@ -31,17 +31,18 @@ export const websiteBuilderTour = {
           advanceOn: { type: 'click' },
           popover: { title: 'Save it to your catalogue', description: 'Click Save Product to add it. Repeat for as many products as you like — you need at least one to publish.' } },
         { route: '/dashboard/builder', onEnter: setWizardStep(1), element: '[data-tour="builder-delivery"]',
-          popover: { title: 'How do orders reach customers?', description: 'Pick your delivery options and set a fee per option (leave blank for free). This is what customers choose at checkout.' } },
+          popover: { title: 'How do orders reach customers?', description: 'Tick what you offer — store pickup, local delivery, nationwide shipping, or digital — and set a fee per option (leave blank for free). Customers pick one at checkout.' } },
       ],
     },
     {
       title: 'Preview & publish',
       steps: [
-        { route: '/dashboard/builder', onEnter: setWizardStep(2), element: '[data-tour="builder-preview"]',
-          popover: { title: 'This is your live site', description: 'Here\'s your storefront exactly as customers will see it. Scroll through and check it looks right.' } },
+        // One step here on purpose: the preview itself is a full storefront render
+        // (several screens tall), so spotlighting it would cut out the whole
+        // viewport. The Publish button is the compact, actionable anchor.
         { route: '/dashboard/builder', onEnter: setWizardStep(2), element: '[data-tour="builder-publish"]',
           advanceOn: { type: 'click' },
-          popover: { title: 'Go live 🎉', description: 'Happy with it? Click Publish Website and your store is live on the internet — you\'ve built your site!' } },
+          popover: { title: 'Preview, then go live 🎉', description: 'Above is your storefront exactly as customers will see it — scroll through and check it. Happy? Click Publish Website and your store is live on the internet.' } },
       ],
     },
     {

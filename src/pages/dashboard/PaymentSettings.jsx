@@ -250,7 +250,7 @@ export default function PaymentSettings() {
       )}
 
       {/* Manual Bank Transfer */}
-      <Section title="Bank Transfer (Manual)" desc="Customers pay via bank transfer and you verify manually.">
+      <Section dataTour="payments-providers" title="Bank Transfer (Manual)" desc="Customers pay via bank transfer and you verify manually.">
         <Toggle label="Accept bank transfers" checked={config.manual?.isActive || false} onChange={e => update('manual.isActive', e.target.checked)} />
         {config.manual?.isActive && (
           <div className="space-y-4 pt-2">
@@ -341,7 +341,7 @@ export default function PaymentSettings() {
       </Section>
 
       {/* Paystack */}
-      <Section dataTour="payments-providers" title="Paystack" desc="Accept card payments, USSD, and bank transfers via Paystack.">
+      <Section title="Paystack" desc="Accept card payments, USSD, and bank transfers via Paystack.">
         <Toggle label="Enable Paystack" checked={config.paystack?.isActive || false} onChange={e => update('paystack.isActive', e.target.checked)} />
         {config.paystack?.isActive && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
