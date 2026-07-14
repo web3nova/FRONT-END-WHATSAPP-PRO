@@ -56,6 +56,16 @@ export default function StorefrontPreview(props) {
     : <UnroutedStorefrontPreview {...props} />
 }
 
+// Checkout contact-field format checks. Phone/WhatsApp accept an optional
+// leading + and 7-15 digits (loose enough for Nigerian and international
+// formats without a full libphonenumber dependency); email uses a standard
+// practical regex. Empty is never "invalid" here — required-ness is checked
+// separately so a field only shows a format error once something's typed.
+const PHONE_RE = /^\+?[0-9]{7,15}$/
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const isValidPhone = (v) => PHONE_RE.test(String(v || '').replace(/[\s-]/g, ''))
+const isValidEmail = (v) => EMAIL_RE.test(String(v || '').trim())
+
 // Store Policies is builder JSON (theme.builder.policies: { refund?, delivery?,
 // contact? }), not a real CMS page row — there's no backend page to fetch. When
 // at least one field is filled in, synthesize a page in the same shape a real
@@ -1794,27 +1804,42 @@ async function placeOrder() {
                         value={checkoutForm.name}
                         onChange={e => setCheckoutForm(f => ({ ...f, name: e.target.value }))}
                       />
-                      <input
-                        className="w-full px-4 py-3.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition bg-gray-50 focus:bg-white"
-                        placeholder="Phone Number *"
-                        type="tel"
-                        value={checkoutForm.phone}
-                        onChange={e => setCheckoutForm(f => ({ ...f, phone: e.target.value }))}
-                      />
-                      <input
-                        className="w-full px-4 py-3.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition bg-gray-50 focus:bg-white"
-                        placeholder="WhatsApp Number (optional)"
-                        type="tel"
-                        value={checkoutForm.whatsapp}
-                        onChange={e => setCheckoutForm(f => ({ ...f, whatsapp: e.target.value }))}
-                      />
-                      <input
-                        className="w-full px-4 py-3.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition bg-gray-50 focus:bg-white"
-                        placeholder="Email (for confirmation)"
-                        type="email"
-                        value={checkoutForm.email}
-                        onChange={e => setCheckoutForm(f => ({ ...f, email: e.target.value }))}
-                      />
+                      <div>
+                        <input
+                          className="w-full px-4 py-3.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition bg-gray-50 focus:bg-white"
+                          placeholder="Phone Number *"
+                          type="tel"
+                          value={checkoutForm.phone}
+                          onChange={e => setCheckoutForm(f => ({ ...f, phone: e.target.value }))}
+                        />
+                        {checkoutForm.phone && !isValidPhone(checkoutForm.phone) && (
+                          <div className="text-xs text-red-500 mt-1 px-1">Enter a valid phone number (digits only, 7–15 digits).</div>
+                        )}
+                      </div>
+                      <div>
+                        <input
+                          className="w-full px-4 py-3.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition bg-gray-50 focus:bg-white"
+                          placeholder="WhatsApp Number (optional)"
+                          type="tel"
+                          value={checkoutForm.whatsapp}
+                          onChange={e => setCheckoutForm(f => ({ ...f, whatsapp: e.target.value }))}
+                        />
+                        {checkoutForm.whatsapp && !isValidPhone(checkoutForm.whatsapp) && (
+                          <div className="text-xs text-red-500 mt-1 px-1">Enter a valid WhatsApp number (digits only, 7–15 digits) — not an email or username.</div>
+                        )}
+                      </div>
+                      <div>
+                        <input
+                          className="w-full px-4 py-3.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition bg-gray-50 focus:bg-white"
+                          placeholder="Email (for confirmation)"
+                          type="email"
+                          value={checkoutForm.email}
+                          onChange={e => setCheckoutForm(f => ({ ...f, email: e.target.value }))}
+                        />
+                        {checkoutForm.email && !isValidEmail(checkoutForm.email) && (
+                          <div className="text-xs text-red-500 mt-1 px-1">Enter a valid email address (e.g. name@example.com).</div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -2055,6 +2080,18 @@ async function placeOrder() {
                   onClick={() => {
                     if (!checkoutForm.name?.trim() || !checkoutForm.phone?.trim() || !checkoutForm.address?.trim() || !checkoutForm.state?.trim() || !checkoutForm.city?.trim()) {
                       toast.error('Please fill in: name, phone, state, city, and street address.')
+                      return
+                    }
+                    if (!isValidPhone(checkoutForm.phone)) {
+                      toast.error('Phone number looks invalid — please enter digits only (7–15 digits).')
+                      return
+                    }
+                    if (checkoutForm.whatsapp && !isValidPhone(checkoutForm.whatsapp)) {
+                      toast.error('WhatsApp number looks invalid — please enter digits only (7–15 digits).')
+                      return
+                    }
+                    if (checkoutForm.email && !isValidEmail(checkoutForm.email)) {
+                      toast.error('Email address looks invalid.')
                       return
                     }
                     setCheckoutStep(2)
