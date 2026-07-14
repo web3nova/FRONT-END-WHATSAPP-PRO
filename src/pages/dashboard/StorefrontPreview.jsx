@@ -390,7 +390,16 @@ async function placeOrder() {
     try {
       orderId = new URLSearchParams(window.location.search).get('order')
     } catch { /* ignore */ }
-    if (orderId) fetchOrderStatus(orderId)
+    if (orderId) {
+      fetchOrderStatus(orderId)
+      // Strip the param so a refresh (or shared link) doesn't re-open the
+      // panel; replaceState keeps us router-agnostic in this dual-context body.
+      try {
+        const url = new URL(window.location.href)
+        url.searchParams.delete('order')
+        window.history.replaceState({}, '', url.pathname + url.search + url.hash)
+      } catch { /* ignore */ }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token])
 
