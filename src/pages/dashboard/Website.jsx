@@ -364,6 +364,12 @@ export default function Website() {
   const [sections, setSections] = useState(defaultSections)
   const [activeSectionFlags, setActiveSectionFlags] = useState(defaultSections.map(s => s.active))
   const [tab, setTab] = useState('pages')
+  const [domainStatus, setDomainStatus] = useState(null)
+  const [domainLoading, setDomainLoading] = useState(false)
+  const [domainInput, setDomainInput] = useState('')
+  const [domainSaving, setDomainSaving] = useState(false)
+  const [domainVerifying, setDomainVerifying] = useState(false)
+  const [domainVerifyError, setDomainVerifyError] = useState('')
   const [previewDevice, setPreviewDevice] = useState('desktop')
   const [editingSectionId, setEditingSectionId] = useState(null)
   const [savingSettings, setSavingSettings] = useState(false)
@@ -859,6 +865,97 @@ export default function Website() {
       setSaveError('Could not save SEO/social settings. Please try again.')
     } finally {
       setSavingSettings(false)
+    }
+  }
+
+  const fetchDomainStatus = async () => {
+    const token = getStoredAccessToken()
+    if (!token) return
+    setDomainLoading(true)
+    try {
+      const res = await fetch(`${API_BASE}/website/domain`, { headers: { Authorization: `Bearer ${token}` } })
+      if (!res.ok) throw new Error('Failed to load domain status')
+      const body = await res.json()
+      setDomainStatus(body?.data ?? body)
+    } catch (err) {
+      console.error('Failed to load domain status:', err)
+    } finally {
+      setDomainLoading(false)
+    }
+  }
+
+  const startDomain = async () => {
+    const token = getStoredAccessToken()
+    if (!token || !domainInput.trim() || domainSaving) return
+    setDomainSaving(true)
+    setDomainVerifyError('')
+    try {
+      const res = await fetch(`${API_BASE}/website/domain`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ domain: domainInput.trim() }),
+      })
+      const body = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(body?.message || 'Could not start domain verification')
+      setDomainStatus(body?.data ?? body)
+      setDomainInput('')
+      toast.success('Domain added — add the TXT record below, then verify.')
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setDomainSaving(false)
+    }
+  }
+
+  const verifyDomain = async () => {
+    const token = getStoredAccessToken()
+    if (!token || domainVerifying) return
+    setDomainVerifying(true)
+    setDomainVerifyError('')
+    try {
+      const res = await fetch(`${API_BASE}/website/domain/verify`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const body = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(body?.message || 'Verification failed')
+      const result = body?.data ?? body
+      if (result?.verified) {
+        toast.success('Domain verified and live!')
+        await fetchDomainStatus()
+      } else {
+        setDomainVerifyError('DNS record not found yet — this can take a few minutes after adding it. Try again shortly.')
+      }
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setDomainVerifying(false)
+    }
+  }
+
+  const removeDomain = async () => {
+    const token = getStoredAccessToken()
+    if (!token) return
+    const confirmed = await confirmAction({
+      title: 'Remove custom domain?',
+      message: 'Your storefront will only be reachable at its default address.',
+      confirmLabel: 'Remove',
+      danger: true,
+    })
+    if (!confirmed) return
+    setDomainSaving(true)
+    try {
+      const res = await fetch(`${API_BASE}/website/domain`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Could not remove domain')
+      setDomainStatus({ domain: null, domainPending: null, verifyRecord: null, domainVerifiedAt: null })
+      toast.success('Domain removed.')
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setDomainSaving(false)
     }
   }
 
@@ -1558,13 +1655,16 @@ export default function Website() {
         <div className="col-span-1 lg:col-span-1 space-y-4">
           {/* Tabs */}
           <div className="flex bg-white rounded-xl border border-gray-100 p-1 gap-1">
-            {['pages', 'sections', 'navigation', 'design'].map(t => (
+            {['pages', 'sections', 'navigation', 'design', 'domain'].map(t => (
               <button
                 key={t}
                 onClick={() => {
                   setTab(t)
                   if (t === 'navigation' && navDraft === null && settings?.navigation?.length > 0) {
                     setNavDraft(settings.navigation)
+                  }
+                  if (t === 'domain' && domainStatus === null) {
+                    fetchDomainStatus()
                   }
                 }}
                 className="flex-1 py-2 sm:py-1.5 text-xs font-semibold rounded-lg capitalize transition"
@@ -2767,6 +2867,86 @@ export default function Website() {
                   <Save size={13} /> Save SEO & Social
                 </button>
               </DesignAccordionSection>
+            </div>
+          )}
+
+          {tab === 'domain' && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
+              <div>
+                <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                  <Globe size={16} /> Custom Domain
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Point your own domain (e.g. mystore.com) at your storefront.</p>
+              </div>
+
+              {domainLoading ? (
+                <div className="text-xs text-gray-400">Loading…</div>
+              ) : domainStatus?.domain ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 px-3 py-2.5 bg-green-50 border border-green-100 rounded-xl">
+                    <CheckCircle size={15} className="text-green-600 flex-shrink-0" />
+                    <span className="text-sm font-medium text-green-800">{domainStatus.domain}</span>
+                    <span className="text-xs text-green-600 ml-auto">Live</span>
+                  </div>
+                  <button
+                    onClick={removeDomain}
+                    disabled={domainSaving}
+                    className="text-xs font-semibold text-red-500 hover:text-red-600 transition disabled:opacity-60"
+                  >
+                    Remove domain
+                  </button>
+                </div>
+              ) : domainStatus?.domainPending ? (
+                <div className="space-y-3">
+                  <p className="text-xs text-gray-500">
+                    Add this TXT record at your DNS provider for <strong>{domainStatus.domainPending}</strong>, then verify:
+                  </p>
+                  <div className="bg-gray-50 border border-gray-100 rounded-xl p-3 space-y-1.5 text-xs font-mono">
+                    <div><span className="text-gray-400">Name: </span>{domainStatus.verifyRecord?.name}</div>
+                    <div><span className="text-gray-400">Type: </span>{domainStatus.verifyRecord?.type}</div>
+                    <div className="break-all"><span className="text-gray-400">Value: </span>{domainStatus.verifyRecord?.value}</div>
+                  </div>
+                  {domainVerifyError && (
+                    <div className="text-xs text-amber-600">{domainVerifyError}</div>
+                  )}
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={verifyDomain}
+                      disabled={domainVerifying}
+                      className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-lg hover:opacity-90 transition disabled:opacity-60"
+                      style={{ background: PRIMARY }}
+                    >
+                      {domainVerifying ? <Loader size={13} className="animate-spin" /> : <CheckCircle size={13} />}
+                      I've added the record — Verify
+                    </button>
+                    <button
+                      onClick={removeDomain}
+                      disabled={domainSaving}
+                      className="text-xs font-semibold text-gray-400 hover:text-red-500 transition disabled:opacity-60"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <input
+                    value={domainInput}
+                    onChange={e => setDomainInput(e.target.value)}
+                    placeholder="mystore.com"
+                    className="flex-1 px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-300"
+                  />
+                  <button
+                    onClick={startDomain}
+                    disabled={domainSaving || !domainInput.trim()}
+                    className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-white rounded-lg hover:opacity-90 transition disabled:opacity-60 flex-shrink-0"
+                    style={{ background: PRIMARY }}
+                  >
+                    {domainSaving ? <Loader size={13} className="animate-spin" /> : <Plus size={13} />}
+                    Add Domain
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
