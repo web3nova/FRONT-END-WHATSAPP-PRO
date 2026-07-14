@@ -230,7 +230,7 @@ export default function BusinessOrders() {
           </button>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" data-tour="orders-list">
           <table className="w-full">
             <thead>
               <tr style={{ background: '#FAFAFA' }}>
@@ -255,7 +255,7 @@ export default function BusinessOrders() {
                   </td>
                 </tr>
               ) : (
-                filtered.map(order => {
+                filtered.map((order, orderIdx) => {
                   const s = STATUS_CONFIG[order.status] || { label: order.status, bg: '#f3f4f6', color: '#6b7280' }
                   const customerName = order.customer?.name || 'Unknown'
                   const customerPhone = order.customer?.phone || '—'
@@ -293,7 +293,7 @@ export default function BusinessOrders() {
                       <td className="px-5 py-3.5 text-sm font-semibold text-gray-900">
                         {formatAmount(order.totalMinor, order.currency)}
                       </td>
-                      <td className="px-5 py-3.5">
+                      <td className="px-5 py-3.5" data-tour={orderIdx === 0 ? 'orders-row-status' : undefined}>
                         <span
                           className="px-2.5 py-1 text-xs font-semibold rounded-lg"
                           style={{ background: s.bg, color: s.color }}

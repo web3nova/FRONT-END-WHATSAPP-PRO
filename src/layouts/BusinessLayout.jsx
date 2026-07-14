@@ -8,11 +8,28 @@ import { resolveImageUrl } from '../lib/utils'
 import {
   LayoutDashboard, ShoppingBag, Package, Users, MessageCircle,
   Globe, BarChart3, BookOpen, Settings, Bell, Search, ExternalLink, Menu, X, CreditCard,
-  MessageSquare, ShoppingCart, CheckCircle, Wifi, CreditCard as CardIcon, AlertCircle, LogOut, Tag, Star, FileText
+  MessageSquare, ShoppingCart, CheckCircle, Wifi, CreditCard as CardIcon, AlertCircle, LogOut, Tag, Star, FileText, HelpCircle
 } from 'lucide-react'
+import { getTours, updateTours } from '../api/toursApi'
+import { useTour } from '../lib/tour/useTour'
+import { dashboardTour } from '../lib/tour/dashboardTour'
+import TourNudge from '../components/TourNudge'
 
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
+
+// Maps a nav item's path to its data-tour anchor (used by the dashboard tour).
+const NAV_TOUR_ANCHORS = {
+  '/dashboard/orders': 'nav-orders',
+  '/dashboard/products': 'nav-products',
+  '/dashboard/reviews': 'nav-reviews',
+  '/dashboard/coupons': 'nav-coupons',
+  '/dashboard/customers': 'nav-customers',
+  '/dashboard/whatsapp': 'nav-whatsapp',
+  '/dashboard/website': 'nav-website',
+  '/dashboard/payments': 'nav-payments',
+  '/dashboard/settings': 'nav-settings',
+}
 
 // minRole: minimum role required to see this nav item (default: member = everyone)
 const navItems = [
@@ -167,6 +184,17 @@ export default function BusinessLayout() {
   const [notifOpen, setNotifOpen] = useState(false)
   const notifRef = useRef(null)
 
+  // --- Onboarding tour ---
+  const [tours, setTours] = useState(null)
+  const [nudgeDismissed, setNudgeDismissed] = useState(false)
+  const dash = useTour(dashboardTour, tours?.dashboard)
+  useEffect(() => { getTours().then(setTours).catch(() => setTours({})) }, [])
+  useEffect(() => {
+    if (!tours) return
+    // First-ever visit (no dashboard progress stored): auto-run chapter 1 only.
+    if (!tours.dashboard) dash.startAtChapter(0)
+  }, [tours]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Poll unread count every 30s
   useEffect(() => {
     const fetchUnread = () =>
@@ -275,6 +303,7 @@ export default function BusinessLayout() {
               to={item.path}
               end={item.end}
               onClick={() => setSidebarOpen(false)}
+              data-tour={NAV_TOUR_ANCHORS[item.path]}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
                   isActive ? 'text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-white'
@@ -326,6 +355,13 @@ export default function BusinessLayout() {
             />
           </div>
           <div className="flex items-center gap-3 ml-auto">
+            <button
+              onClick={dash.startFromBeginning}
+              title="Take a tour"
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-xl transition"
+            >
+              <HelpCircle size={18} />
+            </button>
             <div className="relative" ref={notifRef}>
               <button
                 onClick={() => setNotifOpen(v => !v)}
@@ -353,6 +389,15 @@ export default function BusinessLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Resume-tour nudge — only after the first chapter has run, never nagging. */}
+      {tours && tours.dashboard && !dash.isComplete && !nudgeDismissed && dash.nextIncompleteChapter != null && (
+        <TourNudge
+          label={`Next: ${dashboardTour.chapters[dash.nextIncompleteChapter].title} →`}
+          onStart={dash.resume}
+          onDismiss={() => { setNudgeDismissed(true); updateTours({ tourId: 'dashboard', done: true }).catch(() => {}) }}
+        />
+      )}
     </div>
   )
 }

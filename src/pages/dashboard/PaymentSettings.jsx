@@ -13,9 +13,9 @@ const SECRET_PLACEHOLDER = '__UNCHANGED__'
 const inputClass = "w-full px-3.5 py-3 md:py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
 const labelClass = "text-sm font-medium text-gray-700 block mb-1.5"
 
-function Section({ title, desc, children }) {
+function Section({ title, desc, children, dataTour }) {
   return (
-    <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100 space-y-5">
+    <div data-tour={dataTour} className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100 space-y-5">
       <div>
         <h3 className="text-base sm:text-lg font-semibold text-gray-900">{title}</h3>
         {desc && <p className="text-sm text-gray-400 mt-0.5">{desc}</p>}
@@ -341,7 +341,7 @@ export default function PaymentSettings() {
       </Section>
 
       {/* Paystack */}
-      <Section title="Paystack" desc="Accept card payments, USSD, and bank transfers via Paystack.">
+      <Section dataTour="payments-providers" title="Paystack" desc="Accept card payments, USSD, and bank transfers via Paystack.">
         <Toggle label="Enable Paystack" checked={config.paystack?.isActive || false} onChange={e => update('paystack.isActive', e.target.checked)} />
         {config.paystack?.isActive && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">

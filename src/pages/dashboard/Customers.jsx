@@ -127,7 +127,7 @@ export default function Customers() {
   }
 
   return (
-    <div className="space-y-5">
+    <div data-tour="customers-root" className="space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>

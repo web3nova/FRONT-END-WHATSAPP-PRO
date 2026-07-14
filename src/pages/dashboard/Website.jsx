@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Globe, Eye, CheckCircle, ExternalLink, Layout, Image, Type, ToggleLeft, ToggleRight, Plus, Loader, Monitor, Smartphone, ChevronDown, ChevronUp, Save, Trash2, Star, Grid3x3, Check, History, X, Upload } from 'lucide-react'
+import { Globe, Eye, CheckCircle, ExternalLink, Layout, Image, Type, ToggleLeft, ToggleRight, Plus, Loader, Monitor, Smartphone, ChevronDown, ChevronUp, Save, Trash2, Star, Grid3x3, Check, History, X, Upload, HelpCircle } from 'lucide-react'
+import { getTours } from '../../api/toursApi'
+import { useTour } from '../../lib/tour/useTour'
+import { websiteBuilderTour } from '../../lib/tour/websiteBuilderTour'
 import { API_BASE } from '../../lib/apiConfig'
 import { getStoredAccessToken } from '../../lib/auth'
 import { resolveImageUrl, slugify } from '../../lib/utils'
@@ -390,6 +393,20 @@ export default function Website() {
   const [savingLogo, setSavingLogo] = useState(false)
   const [brandError, setBrandError] = useState('')
   const [brandingOpen, setBrandingOpen] = useState(false)
+
+  // --- Website builder tour ---
+  const [tours, setTours] = useState(null)
+  const builderTourCtl = useTour(websiteBuilderTour, tours?.websiteBuilder)
+  useEffect(() => { getTours().then(setTours).catch(() => setTours({})) }, [])
+  useEffect(() => {
+    if (tours && !tours.websiteBuilder) builderTourCtl.startAtChapter(0)
+  }, [tours]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Lets the tour switch the editor tab (pages/sections/navigation/design) before highlighting.
+  useEffect(() => {
+    const h = (e) => setTab(e.detail)
+    window.addEventListener('tour:set-editor-tab', h)
+    return () => window.removeEventListener('tour:set-editor-tab', h)
+  }, [])
 
   useEffect(() => {
     if (business?.displayName && !brandNameDraft) setBrandNameDraft(business.displayName)
@@ -1465,6 +1482,14 @@ export default function Website() {
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
+            onClick={builderTourCtl.startFromBeginning}
+            aria-label="Take the builder tour"
+            title="Take the builder tour"
+            className="flex items-center justify-center p-2.5 sm:p-2 border border-gray-200 bg-white text-gray-600 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition"
+          >
+            <HelpCircle size={15} />
+          </button>
+          <button
             onClick={openHistory}
             aria-label="Version history"
             title="Version history"
@@ -1557,7 +1582,7 @@ export default function Website() {
         {/* Left - controls */}
         <div className="col-span-1 lg:col-span-1 space-y-4">
           {/* Tabs */}
-          <div className="flex bg-white rounded-xl border border-gray-100 p-1 gap-1">
+          <div data-tour="editor-tabs" className="flex bg-white rounded-xl border border-gray-100 p-1 gap-1">
             {['pages', 'sections', 'navigation', 'design'].map(t => (
               <button
                 key={t}
@@ -2462,7 +2487,7 @@ export default function Website() {
           )}
 
           {tab === 'design' && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50 overflow-hidden">
+            <div data-tour="editor-design" className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50 overflow-hidden">
               <DesignAccordionSection
                 title="Starter Templates"
                 subtitle="One-click setup for your kind of business — color theme, section styles, and layout together. Always overwrites current choices, never applied automatically."

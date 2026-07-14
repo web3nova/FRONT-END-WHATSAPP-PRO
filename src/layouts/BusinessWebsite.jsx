@@ -74,8 +74,8 @@ const Select = ({ children, style, ...props }) => (
   </select>
 );
 
-const SectionCard = ({ title, children }) => (
-  <div style={{ background: COLORS.card, borderRadius: 16, border: `1.5px solid ${COLORS.border}`, marginBottom: 24, overflow: "hidden" }}>
+const SectionCard = ({ title, children, dataTour }) => (
+  <div data-tour={dataTour} style={{ background: COLORS.card, borderRadius: 16, border: `1.5px solid ${COLORS.border}`, marginBottom: 24, overflow: "hidden" }}>
     <div style={{ padding: "14px 20px", borderBottom: `1.5px solid ${COLORS.border}`, background: COLORS.white }}>
       <span style={{ fontWeight: 700, fontSize: 15, color: COLORS.text }}>{title}</span>
     </div>
@@ -115,8 +115,9 @@ const StarRating = ({ value, onChange }) => (
   </div>
 );
 
-const Btn = ({ children, onClick, variant = "primary", style, disabled }) => (
+const Btn = ({ children, onClick, variant = "primary", style, disabled, dataTour }) => (
   <button
+    data-tour={dataTour}
     onClick={onClick}
     disabled={disabled}
     style={{
@@ -213,11 +214,11 @@ function BusinessProfile({ data, setData }) {
 
   return (
     <div>
-      <SectionCard title="Brand Identity">
+      <SectionCard dataTour="builder-brand" title="Brand Identity">
         <Row>
           <Field>
             <Label required>Brand name</Label>
-            <Input placeholder="e.g. Nova Styles" value={data.brandName || ""} onChange={e => setData(d => ({ ...d, brandName: e.target.value }))} />
+            <Input data-tour="builder-brand-name" placeholder="e.g. Nova Styles" value={data.brandName || ""} onChange={e => setData(d => ({ ...d, brandName: e.target.value }))} />
           </Field>
           <Field>
             <Label>Brand logo</Label>
@@ -409,7 +410,7 @@ function BusinessProfile({ data, setData }) {
         ))}
       </SectionCard>
 
-      <SectionCard title="Payment Methods">
+      <SectionCard dataTour="builder-payments" title="Payment Methods">
         <p style={{ fontSize: 13, color: COLORS.muted, marginTop: 0, marginBottom: 14 }}>Select how customers can pay you</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
           {paymentOptions.map(opt => (
@@ -547,15 +548,15 @@ function ProductsUpload({ data, setData }) {
 
   return (
     <div>
-      <SectionCard title={editIndex !== null ? "Edit Product" : "Add Product"}>
+      <SectionCard dataTour="builder-product" title={editIndex !== null ? "Edit Product" : "Add Product"}>
         <Field>
           <Label required>Product name</Label>
-          <Input placeholder="e.g. Ankara Tote Bag" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+          <Input data-tour="builder-product-name" placeholder="e.g. Ankara Tote Bag" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
         </Field>
         <Row>
           <Field>
             <Label required>Price (N)</Label>
-            <Input type="number" placeholder="5000" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} />
+            <Input data-tour="builder-product-price" type="number" placeholder="5000" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} />
           </Field>
           <Field>
             <Label>Category</Label>
@@ -587,7 +588,7 @@ function ProductsUpload({ data, setData }) {
           <input ref={imgRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handleProductImages} />
         </Field>
         <div style={{ display: "flex", gap: 10 }}>
-          <Btn onClick={saveProduct} disabled={!form.name.trim() || !form.price}>
+          <Btn dataTour="builder-save-product" onClick={saveProduct} disabled={!form.name.trim() || !form.price}>
             {editIndex !== null ? "Update Product" : "+ Save Product"}
           </Btn>
           {editIndex !== null && (
@@ -643,7 +644,7 @@ function ProductsUpload({ data, setData }) {
         ))}
       </SectionCard>
 
-      <SectionCard title="Delivery Options">
+      <SectionCard dataTour="builder-delivery" title="Delivery Options">
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
           {deliveryOptions.map(opt => (
             <OptionCheckbox key={opt.key} label={opt.label}
@@ -1049,6 +1050,13 @@ export default function BusinessWebsiteBuilder() {
   const logoInputRef = useRef();
   const [data, setData] = useState({ products: [], reviews: [], socialHandles: [], payments: [], delivery: [], deliveryFees: {}, cartRecovery: { enabled: true, delayHours: 6 }, policies: {} });
 
+  // Lets the product tour drive the wizard step (0/1/2) before highlighting.
+  useEffect(() => {
+    const h = (e) => setStep(e.detail);
+    window.addEventListener('tour:set-builder-step', h);
+    return () => window.removeEventListener('tour:set-builder-step', h);
+  }, []);
+
   useEffect(() => {
     let ignore = false;
     async function load() {
@@ -1332,7 +1340,7 @@ export default function BusinessWebsiteBuilder() {
         {step === 0 && <BusinessProfile data={data} setData={setData} />}
         {step === 1 && <ProductsUpload data={data} setData={setData} />}
         {step === 2 && (
-          <div style={{ position: "relative" }}>
+          <div data-tour="builder-preview" style={{ position: "relative" }}>
             <WebsitePreview data={data} />
           </div>
         )}
@@ -1345,7 +1353,7 @@ export default function BusinessWebsiteBuilder() {
           <div style={{ fontSize: 13, color: COLORS.muted }}>{step + 1} of {steps.length}</div>
           {step < steps.length - 1
             ? <Btn onClick={() => setStep(s => s + 1)}>Next: {steps[step + 1]}</Btn>
-            : <Btn onClick={publish} disabled={saving}>
+            : <Btn dataTour="builder-publish" onClick={publish} disabled={saving}>
                 {saving ? 'Publishing...' : 'Publish Website'}
               </Btn>
           }

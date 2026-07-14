@@ -1054,6 +1054,7 @@ export default function Settings() {
           {ALL_TABS.filter(t => !t.ownerOnly || isOwner(user)).map(t => (
             <button
               key={t.id}
+              data-tour={t.id === 'domain' ? 'settings-domain' : t.id === 'team' ? 'settings-team' : undefined}
               onClick={() => switchTab(t.id)}
               className="flex flex-col md:flex-row items-center justify-center md:justify-start gap-1.5 md:gap-2.5 px-2 py-3 md:px-3.5 md:py-2.5 rounded-xl text-[11px] md:text-sm font-medium transition text-center md:text-left"
               style={activeTab === t.id

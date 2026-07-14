@@ -251,7 +251,7 @@ export default function BusinessOverview() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div data-tour="overview-metrics" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard label="Total Customers"   value={loading ? '…' : stats.customers.toLocaleString()} sub="all time"   positive icon={Users} />
         <StatCard label="Orders This Month" value={loading ? '…' : stats.orders}                     sub="this month" positive icon={ShoppingBag} />
         <StatCard label="Monthly Revenue"   value={loading ? '…' : formatAmount(stats.revenue)}      sub="this month" positive icon={DollarSign} />

@@ -136,6 +136,7 @@ function ConnectBanner({ onConnected }) {
         )}
 
         <button
+          data-tour="whatsapp-connect"
           onClick={handleConnect}
           disabled={connecting}
           className="w-full flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition disabled:opacity-60"
