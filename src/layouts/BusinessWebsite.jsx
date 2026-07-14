@@ -433,11 +433,21 @@ const deliveryOptions = [
   { key: "digital", label: "Digital / Instant" },
 ];
 
+const NIGERIA_STATES = [
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
+  "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "FCT (Abuja)", "Gombe",
+  "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos",
+  "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto",
+  "Taraba", "Yobe", "Zamfara",
+];
+
 function ProductsUpload({ data, setData }) {
   const imgRef = useRef();
   const [form, setForm] = useState({ name: "", price: "", category: PRODUCT_CATEGORIES[0], description: "", images: [] });
   const [editIndex, setEditIndex] = useState(null);
   const [checkoutFields, setCheckoutFields] = useState(data.checkoutFields || { name: true, phone: true, address: true, email: false });
+  const [zonesOpen, setZonesOpen] = useState({});
+  const [zoneInput, setZoneInput] = useState({});
 
   const handleProductImages = (e) => {
     const files = Array.from(e.target.files);
@@ -479,12 +489,44 @@ function ProductsUpload({ data, setData }) {
   };
 
   // Fees kept as major-unit strings in builder state (like product prices);
-  // converted to minor units on publish.
+  // converted to minor units on publish. A method may be a plain string
+  // (no zone overrides) or { default, states: { [state]: fee } } once the
+  // merchant adds per-state pricing.
   const setDeliveryFee = (key, value) => {
     setData(d => {
       const fees = { ...(d.deliveryFees || {}) };
-      if (value === "" || Number(value) <= 0 || Number.isNaN(Number(value))) delete fees[key];
-      else fees[key] = value;
+      const current = fees[key];
+      const hasZones = current && typeof current === "object";
+      if (hasZones) {
+        fees[key] = { ...current, default: value };
+      } else if (value === "" || Number(value) <= 0 || Number.isNaN(Number(value))) {
+        delete fees[key];
+      } else {
+        fees[key] = value;
+      }
+      return { ...d, deliveryFees: fees };
+    });
+  };
+
+  const addStateFee = (key, state, fee) => {
+    if (!state || fee === "" || Number.isNaN(Number(fee)) || Number(fee) < 0) return;
+    setData(d => {
+      const fees = { ...(d.deliveryFees || {}) };
+      const current = fees[key];
+      const base = current && typeof current === "object" ? current : { default: current ?? "", states: {} };
+      fees[key] = { ...base, states: { ...(base.states || {}), [state]: fee } };
+      return { ...d, deliveryFees: fees };
+    });
+  };
+
+  const removeStateFee = (key, state) => {
+    setData(d => {
+      const fees = { ...(d.deliveryFees || {}) };
+      const current = fees[key];
+      if (!current || typeof current !== "object") return d;
+      const states = { ...(current.states || {}) };
+      delete states[state];
+      fees[key] = { ...current, states };
       return { ...d, deliveryFees: fees };
     });
   };
@@ -608,16 +650,73 @@ function ProductsUpload({ data, setData }) {
         {(data.delivery || []).length > 0 && (
           <div style={{ marginTop: 14 }}>
             <p style={{ fontSize: 13, color: COLORS.muted, margin: "0 0 8px" }}>Delivery fee per option (N) — leave blank for free</p>
-            {(data.delivery || []).map(key => (
-              <div key={key} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, width: 170 }}>
-                  {deliveryOptions.find(o => o.key === key)?.label || key}
-                </span>
-                <Input type="number" min="0" placeholder="0 (free)" style={{ maxWidth: 150 }}
-                  value={(data.deliveryFees || {})[key] ?? ""}
-                  onChange={e => setDeliveryFee(key, e.target.value)} />
-              </div>
-            ))}
+            {(data.delivery || []).map(key => {
+              const entry = (data.deliveryFees || {})[key];
+              const hasZones = entry && typeof entry === "object";
+              const defaultFee = hasZones ? (entry.default ?? "") : (entry ?? "");
+              const stateFees = hasZones ? (entry.states || {}) : {};
+              const isOpen = zonesOpen[key] || Object.keys(stateFees).length > 0;
+              const input = zoneInput[key] || { state: NIGERIA_STATES[0], fee: "" };
+              return (
+                <div key={key} style={{ marginBottom: 14, paddingBottom: 10, borderBottom: `1px solid ${COLORS.border}` }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, width: 170 }}>
+                      {deliveryOptions.find(o => o.key === key)?.label || key}
+                    </span>
+                    <Input type="number" min="0" placeholder="0 (free)" style={{ maxWidth: 150 }}
+                      value={defaultFee}
+                      onChange={e => setDeliveryFee(key, e.target.value)} />
+                  </div>
+                  <div style={{ marginLeft: 180 }}>
+                    <button
+                      type="button"
+                      onClick={() => setZonesOpen(z => ({ ...z, [key]: !isOpen }))}
+                      style={{ background: "none", border: "none", color: COLORS.blue, fontSize: 12, fontWeight: 600, cursor: "pointer", padding: 0 }}
+                    >
+                      {isOpen ? "− Hide state pricing" : "+ Add state pricing"}
+                    </button>
+                    {isOpen && (
+                      <div style={{ marginTop: 8 }}>
+                        {Object.entries(stateFees).map(([state, fee]) => (
+                          <div key={state} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                            <span style={{ fontSize: 13, color: COLORS.text, width: 140 }}>{state}</span>
+                            <span style={{ fontSize: 13, color: COLORS.muted }}>N{fee}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeStateFee(key, state)}
+                              style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }}
+                            >×</button>
+                          </div>
+                        ))}
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <Select
+                            style={{ maxWidth: 160 }}
+                            value={input.state}
+                            onChange={e => setZoneInput(zi => ({ ...zi, [key]: { ...input, state: e.target.value } }))}
+                          >
+                            {NIGERIA_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                          </Select>
+                          <Input type="number" min="0" placeholder="Fee (N)" style={{ maxWidth: 120 }}
+                            value={input.fee}
+                            onChange={e => setZoneInput(zi => ({ ...zi, [key]: { ...input, fee: e.target.value } }))}
+                          />
+                          <Btn
+                            variant="ghost"
+                            style={{ padding: "6px 14px", fontSize: 12 }}
+                            onClick={() => {
+                              addStateFee(key, input.state, input.fee);
+                              setZoneInput(zi => ({ ...zi, [key]: { state: NIGERIA_STATES[0], fee: "" } }));
+                            }}
+                          >
+                            Add
+                          </Btn>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </SectionCard>
@@ -667,7 +766,10 @@ function WebsitePreview({ data }) {
   };
 
   const cartTotal = cart.reduce((sum, i) => sum + Number(i.price) * i.qty, 0);
-  const deliveryFee = Number((data.deliveryFees || {})[checkoutForm.delivery] || 0);
+  // Zone overrides need a state field this quick in-builder preview doesn't
+  // collect, so it always shows the method's default fee here.
+  const feeAmount = (entry) => Number((entry && typeof entry === "object" ? entry.default : entry) || 0);
+  const deliveryFee = feeAmount((data.deliveryFees || {})[checkoutForm.delivery]);
   const paymentLabels = { bank: "Bank Transfer", card: "Credit/Debit Card", paystack: "Paystack", flutterwave: "Flutterwave", cash: "Cash on Delivery", crypto: "Crypto" };
   const deliveryLabels = { pickup: "Store Pickup", local: "Local Delivery", nationwide: "Nationwide Shipping", digital: "Digital / Instant" };
   const cf = data.checkoutFields || {};
@@ -865,7 +967,7 @@ function WebsitePreview({ data }) {
                 <Select value={checkoutForm.delivery || ""} onChange={e => setCheckoutForm(f => ({ ...f, delivery: e.target.value }))}>
                   <option value="">Select delivery method</option>
                   {data.delivery.map(k => {
-                    const fee = Number((data.deliveryFees || {})[k] || 0);
+                    const fee = feeAmount((data.deliveryFees || {})[k]);
                     return <option key={k} value={k}>{deliveryLabels[k]}{fee > 0 ? ` (+N${fee.toLocaleString()})` : ""}</option>;
                   })}
                 </Select>
@@ -989,8 +1091,21 @@ export default function BusinessWebsiteBuilder() {
               delivery: b.delivery || [],
               deliveryFees: Object.fromEntries(
                 Object.entries(b.deliveryFees || {})
-                  .filter(([, v]) => Number.isInteger(v) && v > 0)
-                  .map(([k, v]) => [k, String(v / 100)]),
+                  .map(([k, v]) => {
+                    if (Number.isInteger(v) && v > 0) return [k, String(v / 100)];
+                    if (v && typeof v === "object") {
+                      const states = Object.fromEntries(
+                        Object.entries(v.states || {})
+                          .filter(([, sv]) => Number.isInteger(sv) && sv > 0)
+                          .map(([s, sv]) => [s, String(sv / 100)]),
+                      );
+                      const hasDefault = Number.isInteger(v.default) && v.default > 0;
+                      if (!hasDefault && Object.keys(states).length === 0) return null;
+                      return [k, { default: hasDefault ? String(v.default / 100) : "", states }];
+                    }
+                    return null;
+                  })
+                  .filter(Boolean),
               ),
               checkoutFields: b.checkoutFields || { name: true, phone: true, address: true, email: false },
               cartRecovery: b.cartRecovery || { enabled: true, delayHours: 6 },
@@ -1068,10 +1183,25 @@ export default function BusinessWebsiteBuilder() {
         payments: data.payments,
         delivery: data.delivery,
         // Stored in minor units (kobo) — the backend resolves fees from this.
+        // Methods with per-state overrides publish as { default, states },
+        // methods without publish as a plain integer (Phase 1 shape).
         deliveryFees: Object.fromEntries(
           Object.entries(data.deliveryFees || {})
-            .map(([k, v]) => [k, Math.round(Number(v) * 100)])
-            .filter(([, v]) => Number.isInteger(v) && v > 0),
+            .map(([k, v]) => {
+              if (v && typeof v === "object") {
+                const states = Object.fromEntries(
+                  Object.entries(v.states || {})
+                    .map(([s, sv]) => [s, Math.round(Number(sv) * 100)])
+                    .filter(([, sv]) => Number.isInteger(sv) && sv > 0),
+                );
+                return [k, { default: Math.round(Number(v.default) * 100) || 0, states }];
+              }
+              return [k, Math.round(Number(v) * 100)];
+            })
+            .filter(([, v]) => {
+              if (v && typeof v === "object") return v.default > 0 || Object.keys(v.states).length > 0;
+              return Number.isInteger(v) && v > 0;
+            }),
         ),
         checkoutFields: data.checkoutFields,
         cartRecovery: {
