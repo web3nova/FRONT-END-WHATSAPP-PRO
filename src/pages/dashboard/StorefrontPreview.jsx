@@ -210,6 +210,12 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const [paymentRedirect, setPaymentRedirect] = useState(null)
   const [bankTransferInfo, setBankTransferInfo] = useState(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const [createdOrderId, setCreatedOrderId] = useState(null)
+  const [claimingPayment, setClaimingPayment] = useState(false)
+  const [paymentClaimed, setPaymentClaimed] = useState(false)
+  const [orderConfirm, setOrderConfirm] = useState(null)
+  const [orderConfirmLoading, setOrderConfirmLoading] = useState(false)
+  const [showOrderConfirm, setShowOrderConfirm] = useState(false)
 
   const deliveryLabels = { pickup: 'Store Pickup', local: 'Local Delivery', nationwide: 'Nationwide Shipping', digital: 'Digital / Instant' }
   const paymentLabels = { bank: 'Bank Transfer', card: 'Credit/Debit Card', paystack: 'Paystack', flutterwave: 'Flutterwave', cash: 'Cash on Delivery', crypto: 'Crypto' }
@@ -303,6 +309,8 @@ async function placeOrder() {
       if (!result.ok) throw new Error(body?.message || `Failed to place order (${result.status})`)
       const orderResult = body?.data ?? body
 
+      setCreatedOrderId(orderResult?.order?.id || null)
+      setPaymentClaimed(false)
       setCheckoutOpen(false)
       setCheckoutStep(1)
       setCart([])
@@ -347,6 +355,65 @@ async function placeOrder() {
       setTimeout(() => setOrderPlaced(false), 5000)
     }
   }, [paymentRedirect])
+
+  // ── Order confirmation (post-payment return) ──────────────────────────────
+  // Fetches the customer's order and shows the confirmation panel. Used both
+  // when the customer returns from a payment gateway with ?order=<id> in the
+  // URL and by the "Check again" button in the panel.
+  async function fetchOrderStatus(orderId) {
+    if (!orderId || !token) return
+    setOrderConfirmLoading(true)
+    try {
+      const res = await fetch(`${API_BASE}/checkout/orders/${orderId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const body = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(body?.message || `Failed to fetch order (${res.status})`)
+      const order = body?.data ?? body
+      setOrderConfirm(order)
+      setShowOrderConfirm(true)
+    } catch (err) {
+      console.error('Failed to fetch order status:', err)
+      toast.error('Could not load your order. Please try again.')
+    } finally {
+      setOrderConfirmLoading(false)
+    }
+  }
+
+  // On load, if the URL carries ?order=<id> (payment gateway return), show
+  // the confirmation panel for that order. Reads window.location directly —
+  // this body renders in both routed and unrouted contexts, so router hooks
+  // are off-limits here.
+  useEffect(() => {
+    if (!token) return
+    let orderId = null
+    try {
+      orderId = new URLSearchParams(window.location.search).get('order')
+    } catch { /* ignore */ }
+    if (orderId) fetchOrderStatus(orderId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token])
+
+  // "I've made the transfer" — flags the order as payment-claimed so the
+  // merchant gets a verify-and-confirm notification.
+  async function claimBankPayment(orderId) {
+    if (!orderId || !token) return
+    setClaimingPayment(true)
+    try {
+      const res = await fetch(`${API_BASE}/checkout/orders/${orderId}/claim-payment`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const body = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(body?.message || `Failed to claim payment (${res.status})`)
+      setPaymentClaimed(true)
+    } catch (err) {
+      console.error('Failed to claim payment:', err)
+      toast.error('Could not notify the store. Please try again.')
+    } finally {
+      setClaimingPayment(false)
+    }
+  }
 
   // 'auto' = live storefront: follow the real viewport. Explicit
   // 'desktop'/'mobile' = builder preview toggle, unchanged behavior.
@@ -1518,7 +1585,7 @@ async function placeOrder() {
                       </div>
                       <div className="text-xs text-green-700 flex items-center gap-1">
                         <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        After transferring, tap <strong>Place Order</strong> below to notify the store.
+                        Tap <strong>Place Order</strong> below, then confirm your transfer to notify the store.
                       </div>
                     </div>
                   )}
@@ -1650,31 +1717,135 @@ async function placeOrder() {
                 </div>
               </div>
 
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
-                After making the transfer, the store will be notified and will confirm your payment. You will receive an update once your order is being processed.
+              {paymentClaimed ? (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-700 flex items-start gap-2">
+                  <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  Thanks — the store will confirm your payment shortly.
+                </div>
+              ) : (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
+                  After making the transfer, tap <strong>I've made the transfer</strong> below so the store can verify and confirm your payment.
+                </div>
+              )}
+
+              <div className="flex flex-col gap-2.5">
+                {paymentClaimed ? (
+                  <button
+                    onClick={() => {
+                      setBankTransferInfo(null)
+                      setOrderPlaced(true)
+                      setTimeout(() => setOrderPlaced(false), 4000)
+                    }}
+                    className="w-full py-3.5 rounded-xl text-sm font-bold text-white transition hover:opacity-90 active:scale-[0.98]"
+                    style={{ background: INK }}
+                  >
+                    Done
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => claimBankPayment(createdOrderId)}
+                      disabled={claimingPayment || !createdOrderId}
+                      className="w-full py-3.5 rounded-xl text-sm font-bold text-white transition hover:opacity-90 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
+                      style={{ background: INK }}
+                    >
+                      {claimingPayment ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <Loader size={16} className="animate-spin" />
+                          Notifying the store…
+                        </span>
+                      ) : "I've made the transfer"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setBankTransferInfo(null)
+                        setOrderPlaced(true)
+                        setTimeout(() => setOrderPlaced(false), 3000)
+                      }}
+                      className="w-full py-3 rounded-xl text-sm font-medium text-gray-500 border border-gray-200 hover:bg-gray-50 transition active:scale-[0.98]"
+                    >
+                      I'll transfer later
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Order Confirmation Modal (payment gateway return / re-check) ── */}
+      {showOrderConfirm && orderConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.5)' }}>
+          <div className="bg-white w-full max-w-md mx-auto rounded-2xl shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-lg font-bold" style={{ color: INK }}>Order #{orderConfirm.reference}</h2>
+              <button onClick={() => setShowOrderConfirm(false)} className="p-1 text-gray-400 hover:text-gray-600 transition">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              {['confirmed', 'paid', 'shipped', 'delivered', 'fulfilled'].includes(orderConfirm.status) ? (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-700 flex items-start gap-2">
+                  <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  <span className="font-semibold">Payment confirmed — Order #{orderConfirm.reference} placed!</span>
+                </div>
+              ) : orderConfirm.status === 'cancelled' ? (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
+                  This order has been cancelled. Contact the store if this is unexpected.
+                </div>
+              ) : orderConfirm.paymentMethod === 'bank' ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-700">
+                  {orderConfirm.paymentClaimed
+                    ? 'Thanks — the store will confirm your payment shortly.'
+                    : 'Awaiting your bank transfer. The store will confirm once payment is received.'}
+                </div>
+              ) : (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-700 flex items-start gap-2">
+                  <Loader size={16} className="animate-spin mt-0.5 flex-shrink-0" />
+                  <span>Confirming payment… This can take a moment. Tap "Check again" to refresh.</span>
+                </div>
+              )}
+
+              <div className="bg-gray-50 rounded-xl p-4 space-y-2.5">
+                {(orderConfirm.items || []).map((it, i) => (
+                  <div key={i} className="flex justify-between text-sm">
+                    <span className="text-gray-600">{it.name}{it.quantity ? ` × ${it.quantity}` : ''}</span>
+                    <span className="font-semibold text-gray-800">₦ {(((it.priceMinor || 0) * (it.quantity || 1)) / 100).toLocaleString()}</span>
+                  </div>
+                ))}
+                <div className="border-t border-gray-200" />
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-500">Total</span>
+                  <span className="text-lg font-bold" style={{ color: INK }}>₦ {((orderConfirm.totalMinor || 0) / 100).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Status</span>
+                  <span className="font-semibold capitalize">{orderConfirm.status}</span>
+                </div>
               </div>
 
               <div className="flex flex-col gap-2.5">
+                {orderConfirm.status === 'pending' && orderConfirm.paymentMethod !== 'bank' && (
+                  <button
+                    onClick={() => fetchOrderStatus(orderConfirm.id)}
+                    disabled={orderConfirmLoading}
+                    className="w-full py-3.5 rounded-xl text-sm font-bold text-white transition hover:opacity-90 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
+                    style={{ background: INK }}
+                  >
+                    {orderConfirmLoading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader size={16} className="animate-spin" />
+                        Checking…
+                      </span>
+                    ) : 'Check again'}
+                  </button>
+                )}
                 <button
-                  onClick={() => {
-                    setBankTransferInfo(null)
-                    setOrderPlaced(true)
-                    setTimeout(() => setOrderPlaced(false), 4000)
-                  }}
-                  className="w-full py-3.5 rounded-xl text-sm font-bold text-white transition hover:opacity-90 active:scale-[0.98]"
-                  style={{ background: INK }}
-                >
-                  I've Completed the Transfer
-                </button>
-                <button
-                  onClick={() => {
-                    setBankTransferInfo(null)
-                    setOrderPlaced(true)
-                    setTimeout(() => setOrderPlaced(false), 3000)
-                  }}
+                  onClick={() => setShowOrderConfirm(false)}
                   className="w-full py-3 rounded-xl text-sm font-medium text-gray-500 border border-gray-200 hover:bg-gray-50 transition active:scale-[0.98]"
                 >
-                  I'll transfer later
+                  Close
                 </button>
               </div>
             </div>
