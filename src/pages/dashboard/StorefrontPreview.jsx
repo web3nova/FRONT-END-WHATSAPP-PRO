@@ -216,6 +216,10 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const [orderConfirm, setOrderConfirm] = useState(null)
   const [orderConfirmLoading, setOrderConfirmLoading] = useState(false)
   const [showOrderConfirm, setShowOrderConfirm] = useState(false)
+  const [couponInput, setCouponInput] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState(null) // { code, discountMinor }
+  const [couponError, setCouponError] = useState('')
+  const [applyingCoupon, setApplyingCoupon] = useState(false)
 
   const deliveryLabels = { pickup: 'Store Pickup', local: 'Local Delivery', nationwide: 'Nationwide Shipping', digital: 'Digital / Instant' }
   const paymentLabels = { bank: 'Bank Transfer', card: 'Credit/Debit Card', paystack: 'Paystack', flutterwave: 'Flutterwave', cash: 'Cash on Delivery', crypto: 'Crypto' }
@@ -261,7 +265,63 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const cartCount = cart.reduce((s, i) => s + i.qty, 0)
   const cartTotal = cart.reduce((s, i) => s + (i.product.priceMinor || 0) * i.qty, 0)
   const selectedDeliveryFee = feeFor(selectedDelivery)
-  const orderTotal = cartTotal + selectedDeliveryFee
+  const couponDiscount = appliedCoupon?.discountMinor || 0
+  const orderTotal = Math.max(0, cartTotal - couponDiscount) + selectedDeliveryFee
+
+  const COUPON_ERROR_MESSAGES = {
+    not_found: 'Coupon not found',
+    inactive: 'Coupon is not active',
+    expired: 'Coupon has expired',
+    min_subtotal_not_met: 'Cart total is below the minimum for this coupon',
+    max_uses_reached: 'Coupon has reached its usage limit',
+  }
+
+  async function applyCoupon() {
+    const code = couponInput.trim()
+    if (!code) return
+    setApplyingCoupon(true)
+    setCouponError('')
+    try {
+      const tenantId = tenantIdProp || business?.tenantId || ''
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers.Authorization = `Bearer ${token}`
+
+      const res = await fetch(`${API_BASE}/checkout/validate-coupon`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          tenantId,
+          code,
+          items: cart.map(i => ({
+            productId: i.product.id,
+            quantity: i.qty,
+          })),
+        }),
+      })
+      const body = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(body?.message || `Failed to validate coupon (${res.status})`)
+      const result = body?.data ?? body
+
+      if (result?.valid) {
+        setAppliedCoupon({ code: result.code || code, discountMinor: result.discountMinor || 0 })
+        setCouponError('')
+      } else {
+        setAppliedCoupon(null)
+        setCouponError(COUPON_ERROR_MESSAGES[result?.reason] || 'Could not apply coupon')
+      }
+    } catch (err) {
+      setAppliedCoupon(null)
+      setCouponError('Could not validate coupon. Please try again.')
+    } finally {
+      setApplyingCoupon(false)
+    }
+  }
+
+  function removeCoupon() {
+    setAppliedCoupon(null)
+    setCouponInput('')
+    setCouponError('')
+  }
 
 async function placeOrder() {
     if (!token) {
@@ -303,6 +363,7 @@ async function placeOrder() {
           currency: 'NGN',
           deliveryMethod: selectedDelivery,
           paymentMethod: selectedPayment,
+          ...(appliedCoupon?.code ? { couponCode: appliedCoupon.code } : {}),
         }),
       })
       const body = await result.json().catch(() => null)
@@ -318,6 +379,9 @@ async function placeOrder() {
       setCheckoutForm({ name: '', phone: '', email: '', address: '', state: '', city: '', whatsapp: '', postBox: '', landmark: '' })
       setSelectedDelivery('')
       setSelectedPayment('')
+      setAppliedCoupon(null)
+      setCouponInput('')
+      setCouponError('')
 
       if (orderResult?.payment?.checkoutUrl) {
         setPaymentRedirect(orderResult.payment.checkoutUrl)
@@ -1599,6 +1663,41 @@ async function placeOrder() {
                     </div>
                   )}
 
+                  {/* Coupon code */}
+                  <div className="bg-white border border-gray-200 rounded-xl px-4 py-3.5">
+                    {appliedCoupon ? (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-green-700 font-semibold">
+                          Code <span className="tracking-wide">{appliedCoupon.code}</span> applied — −₦ {(appliedCoupon.discountMinor / 100).toLocaleString()}
+                        </span>
+                        <button onClick={removeCoupon} className="text-xs font-semibold text-gray-400 hover:text-red-500 flex items-center gap-1 flex-shrink-0 ml-2">
+                          <X size={13} /> Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-xs font-semibold text-gray-600 mb-2">Have a coupon?</div>
+                        <div className="flex gap-2">
+                          <input
+                            value={couponInput}
+                            onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError('') }}
+                            placeholder="Enter code"
+                            className="flex-1 px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 tracking-wide"
+                          />
+                          <button
+                            onClick={applyCoupon}
+                            disabled={applyingCoupon || !couponInput.trim()}
+                            className="px-4 py-2.5 text-sm font-semibold rounded-xl text-white transition disabled:opacity-40"
+                            style={{ background: INK }}
+                          >
+                            {applyingCoupon ? '...' : 'Apply'}
+                          </button>
+                        </div>
+                        {couponError && <div className="text-xs text-red-600 mt-2">{couponError}</div>}
+                      </>
+                    )}
+                  </div>
+
                   {/* Order Summary */}
                   <div className="bg-gray-50 rounded-xl px-4 py-4">
                     <h3 className="text-sm font-bold text-gray-700 mb-3">Order Summary</h3>
@@ -1615,6 +1714,12 @@ async function placeOrder() {
                         <span className="text-gray-500">Subtotal</span>
                         <span className="font-semibold text-gray-800">₦ {(cartTotal / 100).toLocaleString()}</span>
                       </div>
+                      {appliedCoupon && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-green-600">Code applied ({appliedCoupon.code})</span>
+                          <span className="font-semibold text-green-600">−₦ {(couponDiscount / 100).toLocaleString()}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500">Delivery{selectedDelivery ? ` — ${deliveryLabels[selectedDelivery] || selectedDelivery}` : ''}</span>
                         {selectedDeliveryFee > 0 ? (
