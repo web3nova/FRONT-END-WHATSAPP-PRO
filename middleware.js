@@ -32,6 +32,51 @@ export default async function middleware(request) {
   const ua = request.headers.get('user-agent') || ''
   if (!BOT_RE.test(ua)) return
 
+  // Same backend base URL the SPA uses (VITE_API_URL in the Vercel project env).
+  const apiBase = process.env.VITE_API_URL
+  if (!apiBase) return
+
+  // Product pages carry their own self-contained public OG endpoint (no
+  // tenant/domain context needed), so they're handled independently of the
+  // storefront-level branch below — same host-agnostic regex whether the
+  // product was reached via /b/:slug, /storefront/:tenantId, or a custom domain.
+  const productMatch = url.pathname.match(/\/product\/([^/]+)/)
+  if (productMatch) {
+    try {
+      const res = await fetch(`${apiBase}/products/${encodeURIComponent(productMatch[1])}/og`)
+      if (!res.ok) return
+      const body = await res.json()
+      const p = body?.data || body
+      const business = p?.business || {}
+      const title = escapeHtml(business.displayName ? `${p.name} — ${business.displayName}` : p.name || 'Product')
+      const price = Number.isFinite(p.priceMinor) ? `₦${(p.priceMinor / 100).toLocaleString()}` : ''
+      const description = escapeHtml(
+        p.description?.trim() || (price ? `${price} at ${business.displayName || 'our store'}` : business.displayName || '')
+      )
+      const rawImage = p.imageUrl || ''
+      const image = escapeHtml(
+        rawImage && !rawImage.startsWith('http') ? `${new URL(apiBase).origin}${rawImage}` : rawImage
+      )
+      const pageUrl = escapeHtml(url.href)
+
+      const html = `<!doctype html><html><head>
+<meta charset="utf-8">
+<title>${title}</title>
+<meta name="description" content="${description}">
+<meta property="og:type" content="product">
+<meta property="og:title" content="${title}">
+<meta property="og:description" content="${description}">
+${image ? `<meta property="og:image" content="${image}">` : ''}
+<meta property="og:url" content="${pageUrl}">
+<meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}">
+</head><body>${title}</body></html>`
+
+      return new Response(html, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } })
+    } catch {
+      return
+    }
+  }
+
   const host = url.hostname
   const isPlatformHost = PLATFORM_HOSTS.has(host) || host.endsWith('.vercel.app')
 
@@ -43,10 +88,6 @@ export default async function middleware(request) {
     query = `domain=${encodeURIComponent(host)}`
   }
   if (!query) return
-
-  // Same backend base URL the SPA uses (VITE_API_URL in the Vercel project env).
-  const apiBase = process.env.VITE_API_URL
-  if (!apiBase) return
 
   try {
     const res = await fetch(`${apiBase}/website/storefront?${query}`)
@@ -86,6 +127,10 @@ ${image ? `<meta property="og:image" content="${image}">` : ''}
 export const config = {
   // Storefront paths on platform hosts; root/shop/page paths for custom
   // domains. Non-storefront platform paths produce no query above and fall
-  // through even for bots.
-  matcher: ['/storefront/:path*', '/assets/website-images/:path*', '/assets/product-images/:path*', '/', '/shop', '/:view'],
+  // through even for bots. Product paths added explicitly since `/:view`
+  // only matches a single path segment (`/product/:id` is two).
+  matcher: [
+    '/storefront/:path*', '/assets/website-images/:path*', '/assets/product-images/:path*',
+    '/', '/shop', '/:view', '/product/:id', '/b/:slug/product/:id',
+  ],
 }
