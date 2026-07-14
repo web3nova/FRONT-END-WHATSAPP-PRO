@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { X, Loader, LogIn, UserPlus, Globe, Fingerprint } from 'lucide-react'
-import { startAuthentication } from '@simplewebauthn/browser'
+import { startAuthentication, startRegistration } from '@simplewebauthn/browser'
 import { useCustomerAuth } from '../context/CustomerAuthContext'
 import { API_BASE } from '../lib/apiConfig'
 
@@ -35,6 +35,22 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
   const [confirmPassword, setConfirmPassword] = useState('')
   const [passkeyLoading, setPasskeyLoading] = useState(false)
   const [isFedCMUnsupported, setIsFedCMUnsupported] = useState(false)
+  // After a fresh signup, offer to add a passkey before closing.
+  const [passkeyOffer, setPasskeyOffer] = useState(null) // { token, customer } | null
+  const [passkeyRegistering, setPasskeyRegistering] = useState(false)
+  const [passkeyOfferError, setPasskeyOfferError] = useState('')
+
+  const passkeySupported = typeof window !== 'undefined' && !!window.PublicKeyCredential
+
+  // Clear any pending passkey offer when the modal closes, so reopening never
+  // shows a stale offer tied to an old signup token.
+  useEffect(() => {
+    if (!open) {
+      setPasskeyOffer(null)
+      setPasskeyOfferError('')
+      setPasskeyRegistering(false)
+    }
+  }, [open])
 
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID || !open) return
@@ -251,7 +267,14 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
     setLoading(true)
     try {
       if (mode === 'signup') {
-        await signup(tenantId, name.trim(), phone.trim(), email.trim(), password)
+        const result = await signup(tenantId, name.trim(), phone.trim(), email.trim(), password)
+        // Offer to set up a passkey right after signup — the moment it's most
+        // useful. Only when the browser supports WebAuthn; otherwise just finish.
+        if (passkeySupported && result?.token && result?.customer?.id) {
+          setPasskeyOffer({ token: result.token, customer: result.customer })
+          setLoading(false)
+          return
+        }
       } else {
         await login(tenantId, phone.trim(), email.trim(), password)
       }
@@ -262,6 +285,51 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
     } finally {
       setLoading(false)
     }
+  }
+
+  // Register a passkey for the just-created account, then finish.
+  const handleAddPasskey = async () => {
+    if (!passkeyOffer || passkeyRegistering) return
+    setPasskeyRegistering(true)
+    setPasskeyOfferError('')
+    const { token: freshToken, customer: freshCustomer } = passkeyOffer
+    try {
+      const startRes = await fetch(`${API_BASE}/customer-auth/passkey/register/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${freshToken}` },
+        body: JSON.stringify({ customerId: freshCustomer.id, tenantId }),
+      })
+      const startBody = await startRes.json()
+      if (!startRes.ok) throw new Error(startBody?.message || 'Could not start passkey setup')
+      const optionsJSON = startBody?.data ?? startBody
+
+      const credential = await startRegistration({ optionsJSON })
+
+      const completeRes = await fetch(`${API_BASE}/customer-auth/passkey/register/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${freshToken}` },
+        body: JSON.stringify({ customerId: freshCustomer.id, credential }),
+      })
+      const completeBody = await completeRes.json()
+      if (!completeRes.ok) throw new Error(completeBody?.message || 'Could not save passkey')
+      finishAfterSignup()
+    } catch (err) {
+      // A user cancelling the browser prompt is not an error worth blocking on —
+      // but surface real failures so they can retry or skip.
+      if (err?.name === 'NotAllowedError' || err?.name === 'AbortError') {
+        setPasskeyOfferError('Passkey setup was cancelled. You can add one later from your account.')
+      } else {
+        setPasskeyOfferError(err.message || 'Passkey setup failed. You can add one later from your account.')
+      }
+      setPasskeyRegistering(false)
+    }
+  }
+
+  const finishAfterSignup = () => {
+    setPasskeyOffer(null)
+    setPasskeyRegistering(false)
+    onSuccess?.()
+    onClose()
   }
 
   const switchAuthMethod = () => {
@@ -302,6 +370,43 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
           </button>
         </div>
 
+        {passkeyOffer ? (
+          <div className="px-8 py-8 space-y-5 text-center">
+            <div className="mx-auto w-14 h-14 rounded-full flex items-center justify-center" style={{ background: colors.background }}>
+              <Fingerprint size={26} style={{ color: colors.primary }} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold" style={{ color: colors.textPrimary }}>Set up a passkey?</h3>
+              <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
+                Sign in instantly next time with your fingerprint, face, or device PIN — no password to remember.
+              </p>
+            </div>
+            {passkeyOfferError && (
+              <div className="bg-red-50 border border-red-200 text-red-600 text-sm font-medium px-4 py-3 rounded-lg text-left">
+                {passkeyOfferError}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={handleAddPasskey}
+              disabled={passkeyRegistering}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-lg font-semibold text-white transition disabled:opacity-60"
+              style={{ background: colors.primary }}
+            >
+              {passkeyRegistering ? <Loader size={18} className="animate-spin" /> : <Fingerprint size={18} />}
+              {passkeyRegistering ? 'Setting up…' : 'Add a passkey'}
+            </button>
+            <button
+              type="button"
+              onClick={finishAfterSignup}
+              disabled={passkeyRegistering}
+              className="w-full py-2.5 text-sm font-medium transition disabled:opacity-60"
+              style={{ color: colors.textSecondary }}
+            >
+              Skip for now
+            </button>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="px-8 py-6 space-y-5">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-600 text-sm font-medium px-4 py-3 rounded-lg">
@@ -494,6 +599,7 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
             )}
           </div>
         </form>
+        )}
       </div>
     </div>
   )
