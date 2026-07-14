@@ -219,6 +219,79 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const [selectedAttrs, setSelectedAttrs] = useState({})
   const [userMenuOpen, setUserMenuOpen] = useState(false)
 
+  // ── Product reviews (public list + customer eligibility/submission) ──────
+  const [productReviews, setProductReviews] = useState({ items: [], total: 0, average: 0, count: 0 })
+  const [reviewsLoading, setReviewsLoading] = useState(false)
+  const [reviewEligibility, setReviewEligibility] = useState(null) // { eligible, orderId }
+  const [reviewForm, setReviewForm] = useState({ rating: 0, text: '' })
+  const [reviewSubmitting, setReviewSubmitting] = useState(false)
+  const [reviewSubmitted, setReviewSubmitted] = useState(false)
+  const [reviewError, setReviewError] = useState('')
+
+  // Fetch reviews (and, if logged in, eligibility) once per product open.
+  useEffect(() => {
+    const productId = selectedProduct?.id
+    setReviewForm({ rating: 0, text: '' })
+    setReviewSubmitted(false)
+    setReviewError('')
+    setReviewEligibility(null)
+    setProductReviews({ items: [], total: 0, average: 0, count: 0 })
+    if (!productId) return
+
+    let cancelled = false
+    setReviewsLoading(true)
+    fetch(`${API_BASE}/products/${productId}/reviews`)
+      .then(res => res.json())
+      .then(body => {
+        if (cancelled) return
+        const d = body?.data || {}
+        setProductReviews({
+          items: Array.isArray(d.items) ? d.items : [],
+          total: d.total ?? (Array.isArray(d.items) ? d.items.length : 0),
+          average: d.average ?? 0,
+          count: d.count ?? d.total ?? 0,
+        })
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setReviewsLoading(false) })
+
+    if (token) {
+      fetch(`${API_BASE}/products/${productId}/review-eligibility`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(res => res.json())
+        .then(body => { if (!cancelled) setReviewEligibility(body?.data || { eligible: false, orderId: null }) })
+        .catch(() => {})
+    }
+
+    return () => { cancelled = true }
+  }, [selectedProduct?.id, token])
+
+  const submitReview = async () => {
+    if (!selectedProduct?.id || !reviewEligibility?.orderId) return
+    if (!reviewForm.rating) { setReviewError('Pick a star rating.'); return }
+    setReviewSubmitting(true)
+    setReviewError('')
+    try {
+      const res = await fetch(`${API_BASE}/products/${selectedProduct.id}/reviews`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          orderId: reviewEligibility.orderId,
+          rating: reviewForm.rating,
+          text: reviewForm.text.trim() || undefined,
+        }),
+      })
+      const body = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(body?.message || 'Could not submit review.')
+      setReviewSubmitted(true)
+    } catch (err) {
+      setReviewError(err.message || 'Could not submit review.')
+    } finally {
+      setReviewSubmitting(false)
+    }
+  }
+
   // ── Cart / Checkout ────────────────────────────────────────────────────────
   const [cart, setCart] = useState(() => {
     try {
@@ -962,6 +1035,91 @@ async function placeOrder() {
                   <p className="text-sm text-gray-600 italic leading-relaxed">"{selectedProduct.review}"</p>
                 </div>
               )}
+
+              {/* ── Customer reviews ── */}
+              <div className="mb-6 pb-5 border-b border-gray-100">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs font-bold uppercase tracking-wider text-gray-400">Reviews</div>
+                  {productReviews.count > 0 && (
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <div className="flex gap-0.5">
+                        {[1, 2, 3, 4, 5].map(s => (
+                          <Star key={s} size={13} fill={s <= Math.round(productReviews.average) ? '#f59e0b' : 'none'} strokeWidth={1.5} style={{ color: s <= Math.round(productReviews.average) ? '#f59e0b' : '#d1d5db' }} />
+                        ))}
+                      </div>
+                      <span className="text-gray-500">
+                        {Number(productReviews.average || 0).toFixed(1)} ({productReviews.count} review{productReviews.count === 1 ? '' : 's'})
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {reviewsLoading && <div className="text-xs text-gray-400">Loading reviews…</div>}
+
+                {!reviewsLoading && productReviews.items.length === 0 && (
+                  <div className="text-xs text-gray-400">No reviews yet.</div>
+                )}
+
+                {!reviewsLoading && productReviews.items.length > 0 && (
+                  <div className="space-y-3">
+                    {productReviews.items.map(rev => (
+                      <div key={rev.id} className="rounded-xl p-3" style={{ background: CREAM }}>
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <div className="flex gap-0.5">
+                            {[1, 2, 3, 4, 5].map(s => (
+                              <Star key={s} size={11} fill={s <= rev.rating ? '#f59e0b' : 'none'} strokeWidth={1.5} style={{ color: s <= rev.rating ? '#f59e0b' : '#d1d5db' }} />
+                            ))}
+                          </div>
+                          <span className="text-[11px] text-gray-400">
+                            {rev.createdAt ? new Date(rev.createdAt).toLocaleDateString() : ''}
+                          </span>
+                        </div>
+                        {rev.text && <p className="text-sm text-gray-600 leading-relaxed">{rev.text}</p>}
+                        <div className="text-xs font-semibold text-gray-500 mt-1">{rev.customerName || 'Verified buyer'}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Write-a-review — only for logged-in, eligible customers */}
+                {reviewEligibility?.eligible && (
+                  <div className="mt-4 rounded-xl p-4 border border-gray-100">
+                    {reviewSubmitted ? (
+                      <p className="text-sm font-medium" style={{ color: INK }}>
+                        Thanks — your review is pending approval.
+                      </p>
+                    ) : (
+                      <>
+                        <div className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Write a review</div>
+                        <div className="flex gap-1 mb-3">
+                          {[1, 2, 3, 4, 5].map(s => (
+                            <button key={s} type="button" onClick={() => setReviewForm(f => ({ ...f, rating: s }))}>
+                              <Star size={20} fill={s <= reviewForm.rating ? '#f59e0b' : 'none'} strokeWidth={1.5} style={{ color: s <= reviewForm.rating ? '#f59e0b' : '#d1d5db' }} />
+                            </button>
+                          ))}
+                        </div>
+                        <textarea
+                          value={reviewForm.text}
+                          onChange={e => setReviewForm(f => ({ ...f, text: e.target.value }))}
+                          placeholder="Share your thoughts about this product (optional)"
+                          className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 mb-3"
+                          style={{ minHeight: 70 }}
+                        />
+                        {reviewError && <div className="text-xs text-red-600 mb-2">{reviewError}</div>}
+                        <button
+                          type="button"
+                          onClick={submitReview}
+                          disabled={reviewSubmitting}
+                          className="w-full py-2.5 rounded-xl text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                          style={{ background: INK }}
+                        >
+                          {reviewSubmitting ? 'Submitting…' : 'Submit review'}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {!isSoldOut(selectedProduct) ? (
                 <button
