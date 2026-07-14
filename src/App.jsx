@@ -31,6 +31,7 @@ import Knowledge from './pages/dashboard/Knowledge';
 import Settings from './pages/dashboard/Settings';
 import PaymentSettings from './pages/dashboard/PaymentSettings';
 import Coupons from './pages/dashboard/Coupons';
+import Reviews from './pages/dashboard/Reviews';
 
 import LandingPage from './pages/LandingPage';
 import StorefrontPage from './pages/StorefrontPage';
@@ -260,6 +261,11 @@ export default function App() {
                 <Route
                   path="coupons"
                   element={<Coupons />}
+                />
+
+                <Route
+                  path="reviews"
+                  element={<Reviews />}
                 />
 
                 <Route
