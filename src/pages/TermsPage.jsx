@@ -89,7 +89,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-lg font-semibold text-gray-900 mb-2">13. Contact</h2>
-            <p>For questions about these terms, contact us at <a href="mailto:biziqonline@gmail.com" className="text-blue-600 hover:underline">biziqonline@gmail.com</a>.</p>
+            <p>For questions about these terms, contact us on WhatsApp at <a href="https://wa.me/2348029545794" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">+234 802 954 5794</a>.</p>
           </section>
 
         </div>

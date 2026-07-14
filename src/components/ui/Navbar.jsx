@@ -45,7 +45,7 @@ export default function Navbar() {
                 el.scrollIntoView({ behavior: 'smooth' });
               }
             }}>Pricing</a>
-            <a href="mailto:biziqonline@gmail.com" className="bp-nav-item">Contact Us</a>
+            <a href="https://wa.me/2348029545794" target="_blank" rel="noreferrer" className="bp-nav-item">Contact Us</a>
           </div>
         </div>
 
