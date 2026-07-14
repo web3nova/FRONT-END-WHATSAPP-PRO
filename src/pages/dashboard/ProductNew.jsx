@@ -53,7 +53,7 @@ export default function ProductNew() {
       if (file && product?.id) {
         const imgRes = await uploadImage(product.id, file)
         if (!imgRes) {
-          setError('Product saved but image upload failed. Unsupported format or file too large (max 20MB).')
+          setError('Product saved but image upload failed. Only JPG, PNG, WebP, and HEIC photos are accepted (max 20MB).')
           return
         }
       }
