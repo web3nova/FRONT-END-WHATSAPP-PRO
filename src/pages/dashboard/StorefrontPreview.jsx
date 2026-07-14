@@ -56,14 +56,45 @@ export default function StorefrontPreview(props) {
     : <UnroutedStorefrontPreview {...props} />
 }
 
+// Store Policies is builder JSON (theme.builder.policies: { refund?, delivery?,
+// contact? }), not a real CMS page row — there's no backend page to fetch. When
+// at least one field is filled in, synthesize a page in the same shape a real
+// CMS page/content block would take so it can flow through the exact same
+// lookup/routing/rendering paths as any other custom page.
+function buildPoliciesPage(settings) {
+  const fields = settings?.theme?.builder?.policies || {}
+  const sections = [
+    { key: 'refund', label: 'Refund Policy' },
+    { key: 'delivery', label: 'Delivery Policy' },
+    { key: 'contact', label: 'Contact' },
+  ].filter(s => (fields[s.key] || '').trim())
+  if (sections.length === 0) return null
+  return {
+    slug: 'policies',
+    title: 'Policies',
+    content: {
+      blocks: sections.flatMap(s => ([
+        { type: 'heading', text: s.label },
+        { type: 'paragraph', text: fields[s.key] },
+      ])),
+    },
+  }
+}
+
 function RoutedStorefrontPreview(props) {
-  const { pages = [] } = props
+  const { pages = [], settings } = props
   const { tenantId, slug, view: viewParam } = useParams()
   const navigate = useNavigate()
 
   const [view, setView] = useState('home')
   const [activePage, setActivePage] = useState(null)
   const [shopCategory, setShopCategory] = useState('all')
+
+  // Merge in the synthetic Policies page (builder JSON, no CMS row) so a
+  // direct/deep-linked visit to /policies resolves the same way any other
+  // custom page slug does.
+  const policiesPage = useMemo(() => buildPoliciesPage(settings), [settings])
+  const effectivePages = useMemo(() => policiesPage ? [...pages, policiesPage] : pages, [pages, policiesPage])
 
   const base = slug ? `/b/${slug}` : tenantId ? `/storefront/${tenantId}` : ''
   const homePath = base || '/'
@@ -83,24 +114,24 @@ function RoutedStorefrontPreview(props) {
       setActivePage(null)
       return
     }
-    const match = pages.find(p => p.slug === viewParam)
+    const match = effectivePages.find(p => p.slug === viewParam)
     if (match) {
       setActivePage(match)
       setView('page')
     } else {
-      // Unknown or unpublished slug. `pages` is complete by the time this
-      // mounts (StorefrontPage only renders us after data lands), so redirect
-      // to the canonical home URL instead of silently rendering Home under a
-      // wrong address.
+      // Unknown or unpublished slug. `effectivePages` is complete by the time
+      // this mounts (StorefrontPage only renders us after data lands), so
+      // redirect to the canonical home URL instead of silently rendering
+      // Home under a wrong address.
       navigate(homePath, { replace: true })
     }
-  }, [viewParam, pages, homePath, navigate])
+  }, [viewParam, effectivePages, homePath, navigate])
 
   // Keep the tab title and meta description in sync with the current view.
   // StorefrontPage sets the site-level tags once on load; this layers the
   // per-view value on top, on the live (routed) storefront only — the
   // unrouted builder preview must never touch the dashboard's title.
-  const { business, settings } = props
+  const { business } = props
   useEffect(() => {
     const brand = business?.displayName || ''
     const siteTitle = settings?.seo?.title || brand
@@ -735,6 +766,14 @@ async function placeOrder() {
 
   const navLinks = dataNavLinks.length > 0 ? dataNavLinks : derivedNavLinks
 
+  // Store Policies (builder JSON, not a real CMS page) — synthesized here so
+  // it renders through the same `view === 'page'` block-content path as any
+  // other custom page, and surfaced via an explicit footer link since it
+  // isn't part of `pages`/`navLinks` (a tenant's custom `settings.navigation`
+  // could otherwise hide it entirely).
+  const policiesPage = useMemo(() => buildPoliciesPage(settings), [settings])
+  const hasPolicies = !!policiesPage
+
   // Everything a section component might need, built once. Keeps section
   // files to a two-prop signature (`variant`, `ctx`) instead of threading
   // 15+ individual props through each.
@@ -1320,6 +1359,9 @@ async function placeOrder() {
             {navLinks.map((l, i) => (
               <button key={`${l.label}-${i}`} onClick={l.action} className="hover:text-gray-700 transition">{l.label}</button>
             ))}
+            {hasPolicies && (
+              <button onClick={() => navigateToPage(policiesPage)} className="hover:text-gray-700 transition">Policies</button>
+            )}
           </div>
 
           {/* Social icons */}
