@@ -8,7 +8,7 @@ import { resolveImageUrl } from '../lib/utils'
 import {
   LayoutDashboard, ShoppingBag, Package, Users, MessageCircle,
   Globe, BarChart3, BookOpen, Settings, Bell, Search, ExternalLink, Menu, X, CreditCard,
-  MessageSquare, ShoppingCart, CheckCircle, Wifi, CreditCard as CardIcon, AlertCircle, LogOut
+  MessageSquare, ShoppingCart, CheckCircle, Wifi, CreditCard as CardIcon, AlertCircle, LogOut, Tag
 } from 'lucide-react'
 
 const PRIMARY = '#4166F5'
@@ -19,6 +19,7 @@ const navItems = [
   { label: 'Overview',      icon: LayoutDashboard, path: '/dashboard',            end: true },
   { label: 'Orders',        icon: ShoppingBag,     path: '/dashboard/orders' },
   { label: 'Products',      icon: Package,         path: '/dashboard/products' },
+  { label: 'Coupons',       icon: Tag,             path: '/dashboard/coupons',    minRole: 'admin' },
   { label: 'Customers',     icon: Users,           path: '/dashboard/customers' },
   { label: 'WhatsApp',      icon: MessageCircle,   path: '/dashboard/whatsapp' },
   { label: 'Website',       icon: Globe,           path: '/dashboard/website',    minRole: 'admin' },

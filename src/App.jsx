@@ -30,6 +30,7 @@ import Analytics from './pages/dashboard/Analytics';
 import Knowledge from './pages/dashboard/Knowledge';
 import Settings from './pages/dashboard/Settings';
 import PaymentSettings from './pages/dashboard/PaymentSettings';
+import Coupons from './pages/dashboard/Coupons';
 
 import LandingPage from './pages/LandingPage';
 import StorefrontPage from './pages/StorefrontPage';
@@ -254,6 +255,11 @@ export default function App() {
                 <Route
                   path="products/:id/edit"
                   element={<ProductEdit />}
+                />
+
+                <Route
+                  path="coupons"
+                  element={<Coupons />}
                 />
 
                 <Route
