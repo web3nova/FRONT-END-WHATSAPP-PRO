@@ -24,7 +24,7 @@ export default async function middleware(request) {
   // Proxy /assets/website-images/* and /assets/product-images/* to the backend
   // (bypasses Cross-Origin-Resource-Policy). Only these sub-paths are backend
   // assets — frontend build files under /assets/index-* must NOT be proxied.
-  if (API_BASE && url.pathname.startsWith('/assets/website-images/')) {
+  if (API_BASE && (url.pathname.startsWith('/assets/website-images/') || url.pathname.startsWith('/assets/product-images/'))) {
     const target = `${API_BASE}${url.pathname}${url.search}`
     return fetch(target, { headers: { accept: request.headers.get('accept') || '*/*' } })
   }
@@ -87,5 +87,5 @@ export const config = {
   // Storefront paths on platform hosts; root/shop/page paths for custom
   // domains. Non-storefront platform paths produce no query above and fall
   // through even for bots.
-  matcher: ['/storefront/:path*', '/assets/website-images/:path*', '/', '/shop', '/:view'],
+  matcher: ['/storefront/:path*', '/assets/website-images/:path*', '/assets/product-images/:path*', '/', '/shop', '/:view'],
 }
