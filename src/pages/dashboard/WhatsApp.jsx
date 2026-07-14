@@ -206,6 +206,9 @@ export default function WhatsAppPage() {
   const [selectedId, setSelectedId] = useState(null)
   const [messages, setMessages] = useState([])
   const [msgsLoading, setMsgsLoading] = useState(false)
+  const [msgsPage, setMsgsPage] = useState(1)
+  const [hasMoreMsgs, setHasMoreMsgs] = useState(false)
+  const [loadingMoreMsgs, setLoadingMoreMsgs] = useState(false)
 
   // UI state
   const [filter, setFilter] = useState('all')
@@ -283,17 +286,60 @@ export default function WhatsAppPage() {
     }
   }, [deepLinkId, conversations])
 
-  // Load messages when selected conversation changes
+  // Load messages when selected conversation changes. Page 1 = the most
+  // recent `limit` messages (see getConversationHistory on the backend) —
+  // hasMoreMsgs tracks whether older history exists beyond what's loaded.
   useEffect(() => {
-    if (!selectedId) { setMessages([]); return }
+    if (!selectedId) { setMessages([]); setHasMoreMsgs(false); setMsgsPage(1); return }
     let ignore = false
     setMsgsLoading(true)
-    getConversationMessages(selectedId, { limit: 100 })
-      .then(({ data }) => { if (!ignore) setMessages(data) })
-      .catch(() => { if (!ignore) setMessages([]) })
+    setMsgsPage(1)
+    getConversationMessages(selectedId, { page: 1, limit: 100 })
+      .then(({ data, meta }) => {
+        if (ignore) return
+        setMessages(data)
+        setHasMoreMsgs((meta?.total ?? 0) > data.length)
+      })
+      .catch(() => { if (!ignore) { setMessages([]); setHasMoreMsgs(false) } })
       .finally(() => { if (!ignore) setMsgsLoading(false) })
     return () => { ignore = true }
   }, [selectedId])
+
+  // Load the next-older page and prepend it, preserving scroll position so
+  // the view doesn't jump when older messages appear above the fold. Also
+  // tells the scroll-to-bottom effect below to sit this update out — a
+  // prepend is the one case that must NOT jump to the newest message.
+  const messagesContainerRef = useRef(null)
+  const isPrependingRef = useRef(false)
+  const loadOlderMessages = useCallback(async () => {
+    if (!selectedId || loadingMoreMsgs || !hasMoreMsgs) return
+    const container = messagesContainerRef.current
+    const prevScrollHeight = container?.scrollHeight ?? 0
+    const prevScrollTop = container?.scrollTop ?? 0
+    setLoadingMoreMsgs(true)
+    try {
+      const nextPage = msgsPage + 1
+      const { data, meta } = await getConversationMessages(selectedId, { page: nextPage, limit: 100 })
+      isPrependingRef.current = true
+      setMessages(prev => [...data, ...prev])
+      setMsgsPage(nextPage)
+      setHasMoreMsgs(nextPage * 100 < (meta?.total ?? 0))
+      // Restore position: keep the same message in view instead of snapping
+      // to the top now that new (shorter) content has been prepended above it.
+      requestAnimationFrame(() => {
+        if (!container) return
+        container.scrollTop = container.scrollHeight - prevScrollHeight + prevScrollTop
+      })
+    } catch {
+      // Leave hasMoreMsgs as-is — a failed fetch shouldn't silently disable retry.
+    } finally {
+      setLoadingMoreMsgs(false)
+    }
+  }, [selectedId, msgsPage, hasMoreMsgs, loadingMoreMsgs])
+
+  const handleMessagesScroll = useCallback((e) => {
+    if (e.target.scrollTop < 80) loadOlderMessages()
+  }, [loadOlderMessages])
 
   // Keep a stable ref to selectedId so the SSE handler can read it without re-subscribing
   const selectedIdRef = useRef(selectedId)
@@ -328,8 +374,11 @@ export default function WhatsAppPage() {
     return unsubscribe
   }, [account])
 
-  // Scroll to bottom when messages update
+  // Scroll to bottom when messages update — except when the update was
+  // loadOlderMessages prepending history above the fold, which manages its
+  // own scroll position to avoid fighting that restoration.
   useEffect(() => {
+    if (isPrependingRef.current) { isPrependingRef.current = false; return }
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
@@ -659,7 +708,12 @@ export default function WhatsAppPage() {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3" style={{ background: '#f9fafb' }}>
+                <div
+                  ref={messagesContainerRef}
+                  onScroll={handleMessagesScroll}
+                  className="flex-1 overflow-y-auto px-5 py-4 space-y-3"
+                  style={{ background: '#f9fafb' }}
+                >
                   {msgsLoading ? (
                     <div className="flex items-center justify-center h-full text-sm text-gray-400">
                       Loading messages…
@@ -669,7 +723,13 @@ export default function WhatsAppPage() {
                       No messages yet.
                     </div>
                   ) : (
-                    messages.map(msg => {
+                    <>
+                    {loadingMoreMsgs && (
+                      <div className="flex items-center justify-center py-2 text-xs text-gray-400">
+                        Loading older messages…
+                      </div>
+                    )}
+                    {messages.map(msg => {
                       const isCustomer = msg.role === 'customer'
                       const isAi = msg.role === 'ai'
                       return (
@@ -718,7 +778,8 @@ export default function WhatsAppPage() {
                           </div>
                         </div>
                       )
-                    })
+                    })}
+                    </>
                   )}
                   <div ref={messagesEndRef} />
                 </div>
