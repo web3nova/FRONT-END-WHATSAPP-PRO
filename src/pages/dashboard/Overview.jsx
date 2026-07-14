@@ -481,7 +481,7 @@ export default function BusinessOverview() {
               const customer = q.customer?.name || 'Unknown'
               const item = q.details?.item || q.details?.description || '—'
               return (
-                <div key={q.id} className="px-5 py-4 hover:bg-gray-50 transition-colors">
+                <div key={q.id} onClick={() => navigate('/dashboard/quotes')} className="px-5 py-4 hover:bg-gray-50 transition-colors cursor-pointer">
                   <div className="flex items-start justify-between mb-1">
                     <div>
                       <div className="text-sm font-medium text-gray-900">{customer}</div>
@@ -500,7 +500,7 @@ export default function BusinessOverview() {
             })}
           </div>
           <div className="px-5 py-3 border-t border-gray-50">
-            <button className="w-full text-center text-sm font-semibold hover:opacity-70 transition" style={{ color: PRIMARY }}>
+            <button onClick={() => navigate('/dashboard/quotes')} className="w-full text-center text-sm font-semibold hover:opacity-70 transition" style={{ color: PRIMARY }}>
               View all quotations →
             </button>
           </div>
