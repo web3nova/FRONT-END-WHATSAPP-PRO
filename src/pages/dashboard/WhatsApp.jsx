@@ -511,7 +511,7 @@ export default function WhatsAppPage() {
         </div>
       )}
 
-      <div className="flex flex-col min-h-[600px] lg:h-[calc(100vh-64px-48px)] rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-sm">
+      <div className="flex flex-col h-[calc(100vh-64px-32px)] lg:h-[calc(100vh-64px-48px)] rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-sm">
 
         <ConnectedBadge account={account} />
 
@@ -605,7 +605,7 @@ export default function WhatsAppPage() {
           </div>
 
           {/* ── Middle: Chat window ── */}
-          <div className={`${mobilePanel === 'chat' ? 'flex' : 'hidden'} lg:flex flex-1 flex-col min-w-0`}>
+          <div className={`${mobilePanel === 'chat' ? 'flex' : 'hidden'} lg:flex flex-1 flex-col min-w-0 min-h-0`}>
             {!selected ? (
               <div className="flex-1 flex items-center justify-center text-sm text-gray-400">
                 Select a conversation
