@@ -176,7 +176,7 @@ export default function App() {
 
               {/* Public Storefront Preview */}
               <Route
-                path="/storefront/:tenantId/:view?"
+                path="/storefront/:tenantId/:view?/:productId?"
                 element={
                   <CustomerAuthProvider>
                     <StorefrontPage />
@@ -186,7 +186,7 @@ export default function App() {
 
               {/* Slug-based storefront URL */}
               <Route
-                path="/b/:slug/:view?"
+                path="/b/:slug/:view?/:productId?"
                 element={
                   <CustomerAuthProvider>
                     <StorefrontPage />

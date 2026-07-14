@@ -82,12 +82,13 @@ function buildPoliciesPage(settings) {
 }
 
 function RoutedStorefrontPreview(props) {
-  const { pages = [], settings } = props
-  const { tenantId, slug, view: viewParam } = useParams()
+  const { pages = [], settings, products = [] } = props
+  const { tenantId, slug, view: viewParam, productId } = useParams()
   const navigate = useNavigate()
 
   const [view, setView] = useState('home')
   const [activePage, setActivePage] = useState(null)
+  const [selectedProduct, setSelectedProduct] = useState(null)
   const [shopCategory, setShopCategory] = useState('all')
 
   // Merge in the synthetic Policies page (builder JSON, no CMS row) so a
@@ -100,6 +101,7 @@ function RoutedStorefrontPreview(props) {
   const homePath = base || '/'
   const shopPath = `${base}/shop`
   const pagePath = (pSlug) => `${base}/${pSlug}`
+  const productPath = (pId) => `${base}/product/${pId}`
 
   // URL is the source of truth: read :view on mount and whenever it changes
   // (browser back/forward, or a navigate() call below) and derive view state.
@@ -107,16 +109,34 @@ function RoutedStorefrontPreview(props) {
     if (!viewParam) {
       setView('home')
       setActivePage(null)
+      setSelectedProduct(null)
       return
     }
     if (viewParam === 'shop') {
       setView('shop')
       setActivePage(null)
+      setSelectedProduct(null)
+      return
+    }
+    if (viewParam === 'product') {
+      const match = productId ? products.find(p => String(p.id) === String(productId)) : null
+      if (match) {
+        // `products` here is the raw prop (Body resolves image URLs itself for
+        // click-driven opens); resolve here too so a deep link / refresh on
+        // /product/:id renders the same image as opening from the shop grid.
+        setSelectedProduct({ ...match, imageUrl: resolveImageUrl(match.imageUrl || '') })
+        setActivePage(null)
+        setView('product')
+      } else {
+        // Unknown product id — same fallback as an unknown page slug below.
+        navigate(homePath, { replace: true })
+      }
       return
     }
     const match = effectivePages.find(p => p.slug === viewParam)
     if (match) {
       setActivePage(match)
+      setSelectedProduct(null)
       setView('page')
     } else {
       // Unknown or unpublished slug. `effectivePages` is complete by the time
@@ -125,7 +145,7 @@ function RoutedStorefrontPreview(props) {
       // Home under a wrong address.
       navigate(homePath, { replace: true })
     }
-  }, [viewParam, effectivePages, homePath, navigate])
+  }, [viewParam, productId, products, effectivePages, homePath, navigate])
 
   // Keep the tab title and meta description in sync with the current view.
   // StorefrontPage sets the site-level tags once on load; this layers the
@@ -137,6 +157,8 @@ function RoutedStorefrontPreview(props) {
     const siteTitle = settings?.seo?.title || brand
     if (view === 'shop') {
       document.title = brand ? `Shop — ${brand}` : 'Shop'
+    } else if (view === 'product' && selectedProduct) {
+      document.title = brand ? `${selectedProduct.name} — ${brand}` : selectedProduct.name
     } else if (view === 'page' && activePage) {
       document.title = brand ? `${activePage.title} — ${brand}` : activePage.title
       const desc = activePage.content?.seoDescription
@@ -152,17 +174,25 @@ function RoutedStorefrontPreview(props) {
     } else if (siteTitle) {
       document.title = siteTitle
     }
-  }, [view, activePage, business, settings])
+  }, [view, activePage, selectedProduct, business, settings])
 
   const accountPath = `${base}/account`
   const nav = {
     view, activePage, shopCategory, setShopCategory, accountPath,
+    selectedProduct, setSelectedProduct,
     // Guard against re-pushing the same route on every call (e.g. typing in
     // the search box calls navigateShop on each keystroke) — only push a
     // new history entry when the target view actually differs.
     navigateHome: () => { if (viewParam) navigate(homePath) },
     navigateShop: () => { if (viewParam !== 'shop') navigate(shopPath) },
     navigateToPage: (page) => { if (viewParam !== page.slug) navigate(pagePath(page.slug)) },
+    navigateToProduct: (product) => {
+      if (viewParam !== 'product' || productId !== String(product.id)) navigate(productPath(product.id))
+    },
+    // Products are shop items — going "back" from a product detail reads
+    // best as returning to the shop grid, regardless of where the product
+    // was opened from (there's no reliable way to know the originating context).
+    closeProduct: () => { if (viewParam === 'product') navigate(shopPath) },
   }
 
   return <StorefrontPreviewBody {...props} nav={nav} />
@@ -171,13 +201,18 @@ function RoutedStorefrontPreview(props) {
 function UnroutedStorefrontPreview(props) {
   const [view, setView] = useState('home')
   const [activePage, setActivePage] = useState(null)
+  const [selectedProduct, setSelectedProduct] = useState(null)
   const [shopCategory, setShopCategory] = useState('all')
 
   const nav = {
     view, activePage, shopCategory, setShopCategory, accountPath: `/account`,
+    selectedProduct, setSelectedProduct,
     navigateHome: () => { setView('home'); setActivePage(null) },
     navigateShop: () => setView('shop'),
     navigateToPage: (page) => { setActivePage(page); setView('page') },
+    // No router in the builder's in-dashboard preview — just flip local state.
+    navigateToProduct: (product) => setSelectedProduct(product),
+    closeProduct: () => setSelectedProduct(null),
   }
 
   return <StorefrontPreviewBody {...props} nav={nav} />
@@ -213,8 +248,10 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const [navOpen, setNavOpen] = useState(false)
   const [announceIdx, setAnnounceIdx] = useState(0)
   const [testiIdx, setTestiIdx] = useState(0)
-  const { view, activePage, shopCategory, setShopCategory, navigateHome, navigateShop, navigateToPage, accountPath } = nav
-  const [selectedProduct, setSelectedProduct] = useState(null)
+  const {
+    view, activePage, shopCategory, setShopCategory, navigateHome, navigateShop, navigateToPage, accountPath,
+    selectedProduct, setSelectedProduct, navigateToProduct, closeProduct,
+  } = nav
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedAttrs, setSelectedAttrs] = useState({})
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -763,7 +800,7 @@ async function placeOrder() {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   function openProduct(product) {
-    setSelectedProduct(product)
+    navigateToProduct(product)
     setSelectedAttrs({})
     fetch(`${API_BASE}/products/${product.id}/view`, { method: 'POST' }).catch(() => {})
   }
@@ -943,7 +980,7 @@ async function placeOrder() {
         <div
           className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center"
           style={{ background: 'rgba(0,0,0,0.65)' }}
-          onClick={e => { if (e.target === e.currentTarget) setSelectedProduct(null) }}
+          onClick={e => { if (e.target === e.currentTarget) closeProduct() }}
         >
           <div
             className="bg-white w-full sm:max-w-2xl overflow-y-auto"
@@ -955,7 +992,7 @@ async function placeOrder() {
                 ? <img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="w-full object-cover" style={{ maxHeight: 440, minHeight: 280 }} />
                 : <div className="flex items-center justify-center text-5xl opacity-20" style={{ minHeight: 220 }}>📦</div>}
               <button
-                onClick={() => setSelectedProduct(null)}
+                onClick={() => closeProduct()}
                 className="absolute top-3 right-3 w-9 h-9 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-gray-50 transition"
               >
                 <X size={16} style={{ color: INK }} />
@@ -1123,7 +1160,7 @@ async function placeOrder() {
 
               {!isSoldOut(selectedProduct) ? (
                 <button
-                  onClick={() => { addToCart(selectedProduct, selectedAttrs); setSelectedProduct(null) }}
+                  onClick={() => { addToCart(selectedProduct, selectedAttrs); closeProduct() }}
                   className="flex items-center justify-center gap-2 w-full py-4 rounded-full text-sm font-bold text-white transition hover:opacity-90"
                   style={{ background: INK }}
                 >
