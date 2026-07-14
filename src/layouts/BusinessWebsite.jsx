@@ -489,6 +489,10 @@ function ProductsUpload({ data, setData }) {
     });
   };
 
+  const setCartRecovery = (patch) => {
+    setData(d => ({ ...d, cartRecovery: { enabled: true, delayHours: 6, ...d.cartRecovery, ...patch } }));
+  };
+
   const toggleCheckout = (key) => {
     const updated = { ...checkoutFields, [key]: !checkoutFields[key] };
     setCheckoutFields(updated);
@@ -615,6 +619,27 @@ function ProductsUpload({ data, setData }) {
               </div>
             ))}
           </div>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Cart Reminders">
+        <p style={{ fontSize: 13, color: COLORS.muted, marginTop: 0, marginBottom: 14 }}>Automatically send a WhatsApp reminder to customers who leave items in their cart</p>
+        <OptionCheckbox
+          label="Send WhatsApp reminders for abandoned carts"
+          checked={data.cartRecovery?.enabled ?? true}
+          onChange={() => setCartRecovery({ enabled: !(data.cartRecovery?.enabled ?? true) })} />
+        {(data.cartRecovery?.enabled ?? true) && (
+          <Field style={{ marginTop: 10, maxWidth: 220 }}>
+            <Label>Remind after</Label>
+            <Select
+              value={data.cartRecovery?.delayHours ?? 6}
+              onChange={e => setCartRecovery({ delayHours: Number(e.target.value) })}
+            >
+              <option value={1}>1 hour</option>
+              <option value={6}>6 hours</option>
+              <option value={24}>24 hours</option>
+            </Select>
+          </Field>
         )}
       </SectionCard>
     </div>
@@ -900,7 +925,7 @@ export default function BusinessWebsiteBuilder() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const logoInputRef = useRef();
-  const [data, setData] = useState({ products: [], reviews: [], socialHandles: [], payments: [], delivery: [], deliveryFees: {} });
+  const [data, setData] = useState({ products: [], reviews: [], socialHandles: [], payments: [], delivery: [], deliveryFees: {}, cartRecovery: { enabled: true, delayHours: 6 } });
 
   useEffect(() => {
     let ignore = false;
@@ -968,6 +993,7 @@ export default function BusinessWebsiteBuilder() {
                   .map(([k, v]) => [k, String(v / 100)]),
               ),
               checkoutFields: b.checkoutFields || { name: true, phone: true, address: true, email: false },
+              cartRecovery: b.cartRecovery || { enabled: true, delayHours: 6 },
               reviews: b.reviews || [],
               heroHeadline: b.hero?.headline || '',
               heroSubtitle: b.hero?.subtitle || '',
@@ -1048,6 +1074,10 @@ export default function BusinessWebsiteBuilder() {
             .filter(([, v]) => Number.isInteger(v) && v > 0),
         ),
         checkoutFields: data.checkoutFields,
+        cartRecovery: {
+          enabled: data.cartRecovery?.enabled ?? true,
+          delayHours: data.cartRecovery?.delayHours ?? 6,
+        },
         reviews: data.reviews,
       };
       if (data.heroHeadline || data.heroSubtitle || data.heroCta || data.heroBg || data.heroBgImage || data.heroLayout) {

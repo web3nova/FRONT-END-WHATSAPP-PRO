@@ -268,6 +268,30 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const couponDiscount = appliedCoupon?.discountMinor || 0
   const orderTotal = Math.max(0, cartTotal - couponDiscount) + selectedDeliveryFee
 
+  // Debounced cart-ping: signal backend of cart state changes for abandoned-cart recovery.
+  const cartPingTimeoutRef = useRef(null)
+  useEffect(() => {
+    if (!token) return
+    if (cartPingTimeoutRef.current) clearTimeout(cartPingTimeoutRef.current)
+    cartPingTimeoutRef.current = setTimeout(() => {
+      const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+      fetch(`${API_BASE}/checkout/cart-ping`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          items: cart.map(i => ({
+            productId: i.product.id,
+            quantity: i.qty,
+          })),
+          totalMinor: cartTotal,
+        }),
+      }).catch(() => {})
+    }, 3000)
+    return () => {
+      if (cartPingTimeoutRef.current) clearTimeout(cartPingTimeoutRef.current)
+    }
+  }, [cart, token])
+
   const COUPON_ERROR_MESSAGES = {
     not_found: 'Coupon not found',
     inactive: 'Coupon is not active',
