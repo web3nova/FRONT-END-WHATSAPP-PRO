@@ -31,7 +31,19 @@ export function runTour({ steps, startIndex = 0, navigate, currentPath, onChapte
       await waitForElement(step.element);
     }
     if (step.onEnter) { step.onEnter(); await waitForElement(step.element); }
-    d.highlight({ element: step.element, popover: step.popover });
+    // highlight() defaults popover.showButtons to [] (no next/prev/close at
+    // all) unless a call explicitly sets it — unlike drive(), which shows
+    // them by default. We use highlight() per-step (not drive()) because our
+    // steps change route/tab between them, so this has to be set on every
+    // call or the tour renders with no way to advance, go back, or skip.
+    d.highlight({
+      element: step.element,
+      popover: {
+        showButtons: ['next', 'previous', 'close'],
+        showProgress: true,
+        ...step.popover,
+      },
+    });
   };
 
   const advance = async (dir) => {
