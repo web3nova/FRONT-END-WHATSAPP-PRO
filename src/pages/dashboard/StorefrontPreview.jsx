@@ -1171,6 +1171,24 @@ async function placeOrder() {
                   Currently Unavailable
                 </button>
               )}
+
+              {/* You may also like — same category, excludes the open product */}
+              {(() => {
+                const related = (resolvedProducts || [])
+                  .filter(p => p.category && p.category === selectedProduct.category && p.id !== selectedProduct.id)
+                  .slice(0, 4)
+                if (related.length === 0) return null
+                return (
+                  <div className="mt-8 pt-6 border-t border-gray-100">
+                    <div className="text-sm font-bold mb-4" style={{ color: INK }}>You may also like</div>
+                    <div className="grid grid-cols-2 gap-4">
+                      {related.map((p, i) => (
+                        <ProductCard key={p.id} variant={sectionStyles.products || 'boutique'} ctx={{ ...ctx, openProduct: () => navigateToProduct(p) }} p={p} i={i} compact />
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
           </div>
         </div>
