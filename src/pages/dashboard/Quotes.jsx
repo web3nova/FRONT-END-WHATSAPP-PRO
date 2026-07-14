@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, FileText } from 'lucide-react'
 import { listQuotes, updateQuoteStatus } from '../../api/quotesApi'
+import { createOrder } from '../../api/ordersApi'
 import { useNotify } from '../../context/NotificationContext'
 
 const PRIMARY = '#4166F5'
@@ -68,6 +69,32 @@ export default function Quotes() {
       await updateQuoteStatus(quote.id, status)
       setQuotes(prev => prev.map(q => q.id === quote.id ? { ...q, status } : q))
       toast.success(`Quote marked ${STATUS_CONFIG[status]?.label || status}.`)
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  // Manual equivalent of what the AI does automatically when a customer
+  // accepts a quote in chat — creates the order and links it back to this
+  // quote (marks it accepted), so staff-side quotes convert the same way.
+  const handleConvertToOrder = async (quote) => {
+    setUpdatingId(quote.id)
+    try {
+      const items = Array.isArray(quote.details?.items) && quote.details.items.length
+        ? quote.details.items
+        : [{ name: extractItem(quote.details), qty: 1, priceMinor: quote.amountMinor }]
+      const order = await createOrder({
+        customerId: quote.customerId || null,
+        conversationId: quote.conversationId || null,
+        quoteId: quote.id,
+        totalMinor: quote.amountMinor,
+        currency: quote.currency,
+        items,
+      })
+      setQuotes(prev => prev.map(q => q.id === quote.id ? { ...q, status: 'accepted', orderId: order.id } : q))
+      toast.success('Order created and linked to this quote.')
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -160,11 +187,19 @@ export default function Quotes() {
                         {(q.status === 'sent' || q.status === 'draft') && (
                           <div className="flex items-center justify-end gap-2">
                             <button
+                              onClick={() => handleConvertToOrder(q)}
+                              disabled={updatingId === q.id}
+                              className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg transition disabled:opacity-50"
+                              style={{ background: PRIMARY }}
+                            >
+                              {updatingId === q.id ? '…' : 'Convert to Order'}
+                            </button>
+                            <button
                               onClick={() => handleStatusChange(q, 'cancelled')}
                               disabled={updatingId === q.id}
                               className="text-xs font-semibold text-red-600 hover:bg-red-50 px-2.5 py-1.5 rounded-lg transition disabled:opacity-50"
                             >
-                              {updatingId === q.id ? '…' : 'Cancel'}
+                              Cancel
                             </button>
                           </div>
                         )}
