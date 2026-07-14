@@ -21,7 +21,7 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = {} }) {
   const colors = { ...VENDOR_COLORS, ...theme }
 
-  const { login, signup, customer, token } = useCustomerAuth()
+  const { login, signup, saveSession, customer, token } = useCustomerAuth()
   const [mode, setMode] = useState('login')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -88,8 +88,7 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
       if (event.origin !== apiOrigin) return
       const data = event.data
       if (data?.type === 'GOOGLE_LOGIN_SUCCESS' && data.token && data.customer) {
-        localStorage.setItem('customer_token', data.token)
-        localStorage.setItem('customer_data', JSON.stringify(data.customer))
+        saveSession(data.token, data.customer)
         onSuccess?.()
         onClose()
         window.location.reload()
@@ -120,8 +119,7 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
 
       const result = body?.data ?? body
       if (result.token && result.customer) {
-        localStorage.setItem('customer_token', result.token)
-        localStorage.setItem('customer_data', JSON.stringify(result.customer))
+        saveSession(result.token, result.customer)
         window.location.reload()
       }
 
@@ -231,8 +229,7 @@ export default function AuthModal({ tenantId, open, onClose, onSuccess, theme = 
       const completeData = completeBody?.data ?? completeBody
 
       if (completeData.token && completeData.customer) {
-        localStorage.setItem('customer_token', completeData.token)
-        localStorage.setItem('customer_data', JSON.stringify(completeData.customer))
+        saveSession(completeData.token, completeData.customer)
         window.location.reload()
       }
 

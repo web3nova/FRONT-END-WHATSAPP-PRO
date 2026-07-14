@@ -1,39 +1,73 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { useParams } from 'react-router-dom'
 import { API_BASE } from '../lib/apiConfig'
 
 const CustomerAuthContext = createContext(null)
 
-function storeToken(token) {
-  if (token) localStorage.setItem('customer_token', token)
-  else localStorage.removeItem('customer_token')
+// Per-store storage keys. Storefronts served on the shared platform origin
+// (/b/:slug, /storefront/:tenantId) would otherwise all read one global
+// localStorage slot, so a login on one store bled into every other store in the
+// same browser. Namespacing the session by the store in the URL gives each
+// store its own independent session; a customer can be signed into several of
+// our stores at once with none bleeding into another. Custom domains are
+// already origin-isolated by the browser, so they fall back to a single slot.
+function tokenKey(storeKey) { return `customer_token:${storeKey}` }
+function dataKey(storeKey) { return `customer_data:${storeKey}` }
+
+function writeToken(storeKey, token) {
+  if (token) localStorage.setItem(tokenKey(storeKey), token)
+  else localStorage.removeItem(tokenKey(storeKey))
 }
 
-function getToken() {
-  return localStorage.getItem('customer_token')
+function readToken(storeKey) {
+  return localStorage.getItem(tokenKey(storeKey))
 }
 
-function storeCustomer(c) {
-  if (c) localStorage.setItem('customer_data', JSON.stringify(c))
-  else localStorage.removeItem('customer_data')
+function writeCustomer(storeKey, c) {
+  if (c) localStorage.setItem(dataKey(storeKey), JSON.stringify(c))
+  else localStorage.removeItem(dataKey(storeKey))
 }
 
-function loadCustomer() {
+function readCustomer(storeKey) {
   try {
-    const raw = localStorage.getItem('customer_data')
+    const raw = localStorage.getItem(dataKey(storeKey))
     return raw ? JSON.parse(raw) : null
   } catch { return null }
 }
 
+// One-time cleanup of the legacy un-scoped keys that caused the cross-store
+// bleed. Removing them logs a customer out once; they re-authenticate into the
+// now correctly-scoped slot.
+function purgeLegacyKeys() {
+  localStorage.removeItem('customer_token')
+  localStorage.removeItem('customer_data')
+}
+
 export function CustomerAuthProvider({ children }) {
-  const [customer, setCustomer] = useState(loadCustomer)
-  const [token, setToken] = useState(getToken)
+  const params = useParams()
+  // The store the current storefront URL points at. On a custom domain neither
+  // param is present, but localStorage is already origin-isolated there, so a
+  // single 'default' slot per domain is correct.
+  const storeKey = params.tenantId || params.slug || 'default'
+
+  const [customer, setCustomer] = useState(() => readCustomer(storeKey))
+  const [token, setToken] = useState(() => readToken(storeKey))
 
   const logout = useCallback(() => {
     setCustomer(null)
     setToken(null)
-    storeToken(null)
-    storeCustomer(null)
-  }, [])
+    writeToken(storeKey, null)
+    writeCustomer(storeKey, null)
+  }, [storeKey])
+
+  // Persist an authenticated session into THIS store's slot and update state.
+  // Shared by the password flows here and the Google/passkey flows in AuthModal.
+  const saveSession = useCallback((newToken, newCustomer) => {
+    writeToken(storeKey, newToken)
+    writeCustomer(storeKey, newCustomer)
+    setToken(newToken)
+    setCustomer(newCustomer)
+  }, [storeKey])
 
   const login = useCallback(async (tenantId, phone, email, password) => {
     const res = await fetch(`${API_BASE}/customer-auth/login`, {
@@ -44,12 +78,9 @@ export function CustomerAuthProvider({ children }) {
     const body = await res.json()
     if (!res.ok) throw new Error(body?.message || 'Login failed')
     const data = body?.data ?? body
-    storeToken(data.token)
-    storeCustomer(data.customer)
-    setToken(data.token)
-    setCustomer(data.customer)
+    saveSession(data.token, data.customer)
     return data
-  }, [])
+  }, [saveSession])
 
   const signup = useCallback(async (tenantId, name, phone, email, password) => {
     const res = await fetch(`${API_BASE}/customer-auth/signup`, {
@@ -60,25 +91,23 @@ export function CustomerAuthProvider({ children }) {
     const body = await res.json()
     if (!res.ok) throw new Error(body?.message || 'Signup failed')
     const data = body?.data ?? body
-    storeToken(data.token)
-    storeCustomer(data.customer)
-    setToken(data.token)
-    setCustomer(data.customer)
+    saveSession(data.token, data.customer)
     return data
-  }, [])
+  }, [saveSession])
 
-  const fetchProfile = useCallback(async () => {
-    if (!token) return null
+  const fetchProfile = useCallback(async (tk) => {
+    const authToken = tk || token
+    if (!authToken) return null
     const res = await fetch(`${API_BASE}/customer-auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${authToken}` },
     })
     if (!res.ok) { logout(); return null }
     const body = await res.json()
     const data = body?.data ?? body
-    storeCustomer(data)
+    writeCustomer(storeKey, data)
     setCustomer(data)
     return data
-  }, [token, logout])
+  }, [token, logout, storeKey])
 
   const googleLogin = useCallback(async () => {
     const popup = window.open(
@@ -92,10 +121,7 @@ export function CustomerAuthProvider({ children }) {
         try {
           if (event.data.type === 'GOOGLE_LOGIN_SUCCESS') {
             const data = event.data
-            storeToken(data.token)
-            storeCustomer(data.customer)
-            setToken(data.token)
-            setCustomer(data.customer)
+            saveSession(data.token, data.customer)
             resolve(data)
           } else if (event.data.type === 'GOOGLE_LOGIN_ERROR') {
             reject(new Error(event.data.error || 'Google login failed'))
@@ -109,14 +135,21 @@ export function CustomerAuthProvider({ children }) {
       }
       window.addEventListener('message', handleMessage)
     })
-  }, [])
+  }, [saveSession])
 
+  // Re-sync the session to the current store. Runs on mount and whenever the URL
+  // switches to a different store (the provider is reused across /b/:slug param
+  // changes without remounting, so useState initializers alone wouldn't update).
   useEffect(() => {
-    if (token) fetchProfile()
-  }, [])
+    purgeLegacyKeys()
+    const t = readToken(storeKey)
+    setToken(t)
+    setCustomer(readCustomer(storeKey))
+    if (t) fetchProfile(t)
+  }, [storeKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <CustomerAuthContext.Provider value={{ customer, token, login, signup, googleLogin, logout, fetchProfile }}>
+    <CustomerAuthContext.Provider value={{ customer, token, storeKey, login, signup, googleLogin, saveSession, logout, fetchProfile }}>
       {children}
     </CustomerAuthContext.Provider>
   )
@@ -124,6 +157,6 @@ export function CustomerAuthProvider({ children }) {
 
 export function useCustomerAuth() {
   const ctx = useContext(CustomerAuthContext)
-  if (!ctx) return { customer: null, token: null, login: async () => { throw new Error('Auth not available') }, signup: async () => { throw new Error('Auth not available') }, logout: () => {}, fetchProfile: async () => null }
+  if (!ctx) return { customer: null, token: null, storeKey: 'default', login: async () => { throw new Error('Auth not available') }, signup: async () => { throw new Error('Auth not available') }, googleLogin: async () => { throw new Error('Auth not available') }, saveSession: () => {}, logout: () => {}, fetchProfile: async () => null }
   return ctx
 }
