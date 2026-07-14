@@ -80,6 +80,26 @@ export function runTour({ steps, startIndex = 0, navigate, currentPath, onChapte
     return el;
   };
 
+  // driver.js has no way to atomically swap one step's content for the next —
+  // highlight() for the new step only fires once resolveTarget() resolves
+  // (route navigation + polling for the new element to mount), and the
+  // PREVIOUS step's popover stays on screen for that entire gap. On a
+  // route-changing step that's visibly wrong: the page underneath has
+  // already navigated to the new route while the old step's title/
+  // description is still sitting in the popover, so for a moment you see
+  // e.g. orders copy overlaid on the coupons page. Hide the tour chrome for
+  // the duration of the gap instead — nothing visible beats visibly wrong.
+  const hideCurrentPopover = () => {
+    document.querySelector('.driver-overlay')?.style.setProperty('opacity', '0');
+    const p = document.querySelector('.driver-popover');
+    if (p) p.style.visibility = 'hidden';
+  };
+  const revealPopover = () => {
+    document.querySelector('.driver-overlay')?.style.removeProperty('opacity');
+    const p = document.querySelector('.driver-popover');
+    if (p) p.style.visibility = '';
+  };
+
   const showStep = async () => {
     clearStepListeners();
     // Loop so that steps whose target can't render for this account are skipped
@@ -88,6 +108,7 @@ export function runTour({ steps, startIndex = 0, navigate, currentPath, onChapte
     while (guard-- > 0) {
       const step = steps[i];
       if (!step) { finish(); return; }
+      hideCurrentPopover();
       if (step.route && step.route !== currentPath()) navigate(step.route);
       if (step.onEnter) step.onEnter();
       const target = await resolveTarget(step);
@@ -118,6 +139,10 @@ export function runTour({ steps, startIndex = 0, navigate, currentPath, onChapte
           progressText: `${i + 1} of ${steps.length}`,
         },
       });
+      // Double rAF: give driver.js a paint cycle to finish positioning the
+      // overlay/popover against the new element before revealing it, so we
+      // don't flash the old (hidden) position for a frame.
+      requestAnimationFrame(() => requestAnimationFrame(revealPopover));
       setupAdvanceOn(step);
       return;
     }
