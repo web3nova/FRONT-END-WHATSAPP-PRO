@@ -31,17 +31,22 @@ export function runTour({ steps, startIndex = 0, navigate, currentPath, onChapte
       await waitForElement(step.element);
     }
     if (step.onEnter) { step.onEnter(); await waitForElement(step.element); }
-    // highlight() defaults popover.showButtons to [] (no next/prev/close at
-    // all) unless a call explicitly sets it — unlike drive(), which shows
-    // them by default. We use highlight() per-step (not drive()) because our
-    // steps change route/tab between them, so this has to be set on every
-    // call or the tour renders with no way to advance, go back, or skip.
+    const isFirst = i === 0;
+    const isLast = i === steps.length - 1;
+    // highlight() defaults popover.showButtons to [] (no next/prev/close at all)
+    // unless each call sets it — unlike drive(), which shows them by default. We
+    // use highlight() per-step (not drive()) because our steps change route/tab
+    // between them, so the footer has to be set on every call or the tour renders
+    // with no way to advance, go back, or skip. Back is hidden on the first step,
+    // Next becomes Done on the last, and we supply an accurate "N of total".
     d.highlight({
       element: step.element,
       popover: {
-        showButtons: ['next', 'previous', 'close'],
-        showProgress: true,
         ...step.popover,
+        showButtons: isFirst ? ['next', 'close'] : ['next', 'previous', 'close'],
+        nextBtnText: isLast ? 'Done' : 'Next',
+        prevBtnText: 'Back',
+        progressText: `${i + 1} of ${steps.length}`,
       },
     });
   };
@@ -59,8 +64,12 @@ export function runTour({ steps, startIndex = 0, navigate, currentPath, onChapte
 
   d = driver({
     showProgress: true,
+    showButtons: ['next', 'previous', 'close'],
     allowClose: true,
-    overlayClickBehavior: 'nextStep',
+    // Advance ONLY via the Next button — do not let a click on the dimmed
+    // backdrop step the tour forward (that made it feel like it auto-plays).
+    // A backdrop click just closes/skips the tour, like a normal modal.
+    overlayClickBehavior: 'close',
     overlayColor: 'rgba(15,23,42,0.55)', // slate-900 @ 55% — matches app modal scrims
     popoverClass: 'biq-tour',            // scopes the branded theme (tour-theme.css)
     nextBtnText: 'Next',

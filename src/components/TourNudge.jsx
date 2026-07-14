@@ -4,7 +4,7 @@ import { X, Compass } from 'lucide-react'
 // soft shadow, #4166F5 primary action, Manrope-weighted label.
 export default function TourNudge({ label, onStart, onDismiss }) {
   return (
-    <div className="fixed bottom-5 right-5 z-[90] max-w-xs bg-white border border-gray-100 shadow-[0_12px_32px_rgba(15,23,42,0.12)] rounded-2xl px-4 py-3.5 flex items-center gap-3">
+    <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-5 sm:bottom-5 z-[90] sm:max-w-xs bg-white border border-gray-100 shadow-[0_12px_32px_rgba(15,23,42,0.12)] rounded-2xl px-4 py-3.5 flex items-center gap-3">
       <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#eef2ff' }}>
         <Compass size={16} style={{ color: '#4166F5' }} />
       </div>

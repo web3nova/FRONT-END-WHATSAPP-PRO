@@ -6,8 +6,22 @@
   border-radius: 16px;                     /* rounded-2xl */
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
   padding: 20px 20px 16px;
-  max-width: 340px;
+  box-sizing: border-box;
+  /* Never wider than the viewport (minus a 16px gutter each side) on small
+     screens, so the popover can't run off the edge on phones/narrow laptops. */
+  max-width: min(340px, calc(100vw - 32px));
   font-family: 'Inter', system-ui, sans-serif;
+}
+@media (max-width: 480px) {
+  .driver-popover.biq-tour { padding: 16px 16px 14px; }
+  .driver-popover.biq-tour .driver-popover-title { font-size: 15px; }
+  .driver-popover.biq-tour .driver-popover-description { font-size: 13px; }
+}
+/* Let the button row wrap and stay right-aligned on narrow popovers rather than
+   overflowing the card. */
+.driver-popover.biq-tour .driver-popover-navigation-btns {
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 .driver-popover.biq-tour .driver-popover-title {
   font-family: 'Manrope', sans-serif;
@@ -29,6 +43,7 @@
 .driver-popover.biq-tour .driver-popover-footer {
   margin-top: 14px;
   gap: 8px;
+  flex-wrap: wrap;
 }
 .driver-popover.biq-tour .driver-popover-navigation-btns button {
   font-family: 'Inter', system-ui, sans-serif;
