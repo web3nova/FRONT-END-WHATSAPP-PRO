@@ -9,6 +9,7 @@ import { listConversations } from '../../api/conversationsApi'
 import { listQuotes } from '../../api/quotesApi'
 import { API_BASE } from '../../lib/apiConfig'
 import { generateBusinessReport } from '../../lib/generateBusinessReport'
+import { resolveImageUrl } from '../../lib/utils'
 
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
@@ -118,6 +119,8 @@ export default function BusinessOverview() {
   const [topProductChart, setTopProductChart] = useState([])
   const [dailyRevenue, setDailyRevenue] = useState([])
   const [customerSources, setCustomerSources] = useState(null)
+  const [businessLogoUrl, setBusinessLogoUrl] = useState('')
+  const [generatingReport, setGeneratingReport] = useState(false)
 
   useEffect(() => {
     let ignore = false
@@ -135,8 +138,10 @@ export default function BusinessOverview() {
       listQuotes({ limit: 3 }),
       fetch(`${API_BASE}/products?limit=100&sort=sortOrder`, { headers }).then(r => r.json()).catch(() => ({ data: [] })),
       fetch(`${API_BASE}/analytics/overview?days=${days30}`, { headers }).then(r => r.json()).catch(() => ({ data: null })),
-    ]).then(([custRes, ordRes, convRes, quoteRes, prodRes, analyticsRes]) => {
+      fetch(`${API_BASE}/business`, { headers }).then(r => r.json()).catch(() => ({ data: null })),
+    ]).then(([custRes, ordRes, convRes, quoteRes, prodRes, analyticsRes, businessRes]) => {
       if (ignore) return
+      setBusinessLogoUrl(resolveImageUrl(businessRes?.data?.logoUrl || ''))
 
       const allOrders = ordRes.data
       const monthOrders = allOrders.filter(o => new Date(o.createdAt) >= monthStart)
@@ -222,11 +227,18 @@ export default function BusinessOverview() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => generateBusinessReport({ businessName, stats, dailyRevenue, topProducts, recentOrders, customerSources })}
-            disabled={loading}
+            onClick={async () => {
+              setGeneratingReport(true)
+              try {
+                await generateBusinessReport({ businessName, logoUrl: businessLogoUrl, stats, dailyRevenue, topProducts, recentOrders, customerSources })
+              } finally {
+                setGeneratingReport(false)
+              }
+            }}
+            disabled={loading || generatingReport}
             className="hidden sm:block px-4 py-2 text-sm font-medium border border-gray-200 bg-white text-gray-600 rounded-xl hover:bg-gray-50 transition disabled:opacity-50"
           >
-            Download Report
+            {generatingReport ? 'Generating…' : 'Download Report'}
           </button>
           <button
             onClick={() => navigate('/dashboard/products/new')}

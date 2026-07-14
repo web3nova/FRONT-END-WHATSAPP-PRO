@@ -7,26 +7,65 @@ function formatAmount(minor = 0) {
   return `NGN ${(minor / 100).toLocaleString()}`
 }
 
+// Loads an image (same-origin, per resolveImageUrl) into a canvas so it can
+// be embedded in the PDF. Resolves null on any failure — a missing/broken
+// logo should never block the report, just fall back to the text-only header.
+function loadImage(url) {
+  return new Promise((resolve) => {
+    if (!url) return resolve(null)
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+        canvas.getContext('2d').drawImage(img, 0, 0)
+        resolve({ dataUrl: canvas.toDataURL('image/png'), width: img.naturalWidth, height: img.naturalHeight })
+      } catch {
+        resolve(null)
+      }
+    }
+    img.onerror = () => resolve(null)
+    img.src = url
+  })
+}
+
 // Builds and downloads a PDF business summary — uses the exact same
 // stats/dailyRevenue/topProducts/recentOrders/customerSources the Overview
 // dashboard already computed, so the report always matches what's on screen.
-export function generateBusinessReport({ businessName, stats, dailyRevenue, topProducts, recentOrders, customerSources }) {
+// If the business has a logo (logoUrl), it's used in the header instead of
+// a generic BizIQ-only header.
+export async function generateBusinessReport({ businessName, logoUrl, stats, dailyRevenue, topProducts, recentOrders, customerSources }) {
   const doc = new jsPDF()
   const pageWidth = doc.internal.pageSize.getWidth()
   const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+  const logo = await loadImage(logoUrl)
 
   // Header
   doc.setFillColor(...PRIMARY)
   doc.rect(0, 0, pageWidth, 28, 'F')
+
+  let titleX = 14
+  if (logo) {
+    const boxHeight = 16
+    const boxWidth = (logo.width / logo.height) * boxHeight
+    // White rounded backdrop so any logo (transparent or not) reads cleanly on the blue bar.
+    doc.setFillColor(255, 255, 255)
+    doc.roundedRect(12, 6, boxWidth + 4, boxHeight + 4, 2, 2, 'F')
+    doc.addImage(logo.dataUrl, 'PNG', 14, 8, boxWidth, boxHeight)
+    titleX = 12 + boxWidth + 4 + 8
+  }
+
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(16)
   doc.setFont(undefined, 'bold')
-  doc.text('BizIQ Business Report', 14, 18)
+  doc.text(logo ? (businessName || 'Business Report') : 'BizIQ Business Report', titleX, 18)
 
   doc.setTextColor(30, 41, 59)
   doc.setFontSize(11)
   doc.setFont(undefined, 'normal')
-  doc.text(`${businessName || 'Your business'} — generated ${today}`, 14, 38)
+  doc.text(logo ? `Business report — generated ${today}` : `${businessName || 'Your business'} — generated ${today}`, 14, 38)
   doc.setFontSize(9)
   doc.setTextColor(100, 116, 139)
   doc.text('Summary period: last 30 days', 14, 44)
