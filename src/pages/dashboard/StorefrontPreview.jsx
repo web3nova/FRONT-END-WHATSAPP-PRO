@@ -226,8 +226,20 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
 
   const deliveryOptions = settings?.theme?.builder?.delivery || []
   // Minor-unit fees from builder JSON; backend recomputes authoritatively.
+  // A method may be a plain integer (no zone overrides) or
+  // { default, states: { [state]: fee } } once zone pricing is configured —
+  // the customer's selected state (if any) wins over the default.
   const deliveryFees = settings?.theme?.builder?.deliveryFees || {}
-  const feeFor = (method) => (Number.isInteger(deliveryFees[method]) && deliveryFees[method] > 0 ? deliveryFees[method] : 0)
+  const feeFor = (method) => {
+    const entry = deliveryFees[method]
+    if (Number.isInteger(entry)) return entry > 0 ? entry : 0
+    if (entry && typeof entry === 'object') {
+      const stateFee = checkoutForm.state && entry.states?.[checkoutForm.state]
+      if (Number.isInteger(stateFee) && stateFee > 0) return stateFee
+      return Number.isInteger(entry.default) && entry.default > 0 ? entry.default : 0
+    }
+    return 0
+  }
 
   const computedPaymentOptions = useMemo(() => {
     const options = []
