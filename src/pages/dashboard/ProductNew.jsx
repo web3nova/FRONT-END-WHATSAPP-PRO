@@ -23,7 +23,9 @@ export default function ProductNew() {
     if (!res.ok) {
       const body = await res.json().catch(() => null)
       console.warn('Image upload failed:', body?.message || res.status)
+      return false
     }
+    return true
   }
 
   const handleSubmit = async (payload, file) => {
@@ -49,7 +51,11 @@ export default function ProductNew() {
       const product = data?.data || data
 
       if (file && product?.id) {
-        await uploadImage(product.id, file)
+        const imgRes = await uploadImage(product.id, file)
+        if (!imgRes) {
+          setError('Product saved but image upload failed. Unsupported format or file too large (max 20MB).')
+          return
+        }
       }
 
       setSuccess('Product saved!')
