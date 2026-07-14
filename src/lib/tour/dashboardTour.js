@@ -43,7 +43,7 @@ export const dashboardTour = {
           popover: { title: 'Your team', description: 'Invite staff and control what each teammate can access.' } },
         { route: '/dashboard/settings', element: '[data-tour="settings-domain"]',
           popover: { title: 'Custom domain', description: 'Point your own domain (e.g. mystore.com) at your storefront from here.' } },
-        { route: '/dashboard/website', element: '[data-tour="nav-website"]',
+        { route: '/dashboard/website', onEnter: () => window.dispatchEvent(new CustomEvent('tour:open-sidebar')), element: '[data-tour="nav-website"]',
           popover: { title: 'Build your website', description: 'Design your storefront in the Website Builder — start its own guided tour from there anytime.' } },
       ],
     },

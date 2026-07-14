@@ -22,8 +22,46 @@ export function waitForElement(selector, timeoutMs = 4000) {
 export function runTour({ steps, startIndex = 0, navigate, currentPath, onChapterComplete, onExit }) {
   let i = startIndex;
   let d = null;
+  let transitioning = false; // guards against a blur + Next firing two advances
+  let stepCleanup = null;    // tears down the current step's action listeners
+
+  const clearStepListeners = () => { if (stepCleanup) { stepCleanup(); stepCleanup = null; } };
+
+  // Wire the "advance when the merchant actually does the thing" behaviour. A
+  // step may carry `advanceOn`:
+  //   { type: 'click', target? }                → advance when the control is clicked
+  //   { type: 'input', target?, minLength = 1 } → advance only when the field has
+  //                                               content AND the user presses Enter
+  // `target` defaults to the step's highlighted element. Crucially we do NOT
+  // advance on blur: leaving a field doesn't mean the person is done (they might
+  // be tweaking the logo, rethinking the name, or just glancing away), so
+  // guessing would yank the tour forward mid-thought. Text steps therefore only
+  // auto-advance on an explicit Enter; otherwise the Next button drives them.
+  const setupAdvanceOn = (step) => {
+    const spec = step.advanceOn;
+    if (!spec) return;
+    const el = document.querySelector(spec.target || step.element);
+    if (!el) return;
+
+    if (spec.type === 'click') {
+      const handler = () => advance(1);
+      el.addEventListener('click', handler);
+      stepCleanup = () => el.removeEventListener('click', handler);
+      return;
+    }
+
+    if (spec.type === 'input') {
+      const minLength = spec.minLength ?? 1;
+      const onKey = (e) => {
+        if (e.key === 'Enter' && (el.value || '').trim().length >= minLength) advance(1);
+      };
+      el.addEventListener('keydown', onKey);
+      stepCleanup = () => el.removeEventListener('keydown', onKey);
+    }
+  };
 
   const showStep = async () => {
+    clearStepListeners();
     const step = steps[i];
     if (!step) { finish(); return; }
     if (step.route && step.route !== currentPath()) {
@@ -49,18 +87,23 @@ export function runTour({ steps, startIndex = 0, navigate, currentPath, onChapte
         progressText: `${i + 1} of ${steps.length}`,
       },
     });
+    setupAdvanceOn(step);
   };
 
   const advance = async (dir) => {
+    if (transitioning) return; // an auto-advance already fired for this step
+    transitioning = true;
+    clearStepListeners();
     const prev = steps[i];
     i += dir;
     if (dir > 0 && prev?.chapterEnd != null) onChapterComplete?.(prev.chapterEnd);
-    if (i < 0) { i = 0; return showStep(); }
-    if (i >= steps.length) { finish(); return; }
+    if (i < 0) i = 0;
+    if (i >= steps.length) { finish(); transitioning = false; return; }
     await showStep();
+    transitioning = false;
   };
 
-  const finish = () => { onChapterComplete?.(steps[steps.length - 1]?.chapterEnd); d?.destroy(); onExit?.(); };
+  const finish = () => { clearStepListeners(); onChapterComplete?.(steps[steps.length - 1]?.chapterEnd); d?.destroy(); onExit?.(); };
 
   d = driver({
     showProgress: true,
@@ -77,12 +120,12 @@ export function runTour({ steps, startIndex = 0, navigate, currentPath, onChapte
     doneBtnText: 'Done',
     onNextClick: () => advance(1),
     onPrevClick: () => advance(-1),
-    onCloseClick: () => { d.destroy(); onExit?.(); },
+    onCloseClick: () => { clearStepListeners(); d.destroy(); onExit?.(); },
   });
   // NOTE: we drive stepping ourselves (highlight per step) rather than handing
   // driver.js a fixed steps array — because our steps change route/tab between
   // them, so the next element often isn't in the DOM at the instant driver would
   // auto-advance. Do NOT call d.drive(); only d.highlight(...) via showStep().
   showStep();
-  return { destroy: () => d?.destroy() };
+  return { destroy: () => { clearStepListeners(); d?.destroy(); } };
 }

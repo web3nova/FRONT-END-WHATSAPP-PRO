@@ -194,6 +194,13 @@ export default function BusinessLayout() {
     // First-ever visit (no dashboard progress stored): auto-run chapter 1 only.
     if (!tours.dashboard) dash.startAtChapter(0)
   }, [tours]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Lets the tour open the mobile sidebar drawer before highlighting a nav item
+  // (on desktop the sidebar is always visible, so this is a no-op there).
+  useEffect(() => {
+    const h = () => setSidebarOpen(true)
+    window.addEventListener('tour:open-sidebar', h)
+    return () => window.removeEventListener('tour:open-sidebar', h)
+  }, [])
 
   // Poll unread count every 30s
   useEffect(() => {
