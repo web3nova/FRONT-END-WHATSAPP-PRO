@@ -535,6 +535,10 @@ function ProductsUpload({ data, setData }) {
     setData(d => ({ ...d, cartRecovery: { enabled: true, delayHours: 6, ...d.cartRecovery, ...patch } }));
   };
 
+  const setPolicy = (key, value) => {
+    setData(d => ({ ...d, policies: { ...(d.policies || {}), [key]: value } }));
+  };
+
   const toggleCheckout = (key) => {
     const updated = { ...checkoutFields, [key]: !checkoutFields[key] };
     setCheckoutFields(updated);
@@ -740,6 +744,22 @@ function ProductsUpload({ data, setData }) {
             </Select>
           </Field>
         )}
+      </SectionCard>
+
+      <SectionCard title="Store Policies">
+        <p style={{ fontSize: 13, color: COLORS.muted, marginTop: 0, marginBottom: 14 }}>Shown to customers on your storefront's policies page</p>
+        <Field>
+          <Label>Refund Policy</Label>
+          <Textarea placeholder="e.g. Returns accepted within 7 days of delivery..." value={data.policies?.refund || ""} onChange={e => setPolicy("refund", e.target.value)} />
+        </Field>
+        <Field>
+          <Label>Delivery Policy</Label>
+          <Textarea placeholder="e.g. Orders ship within 2-3 business days..." value={data.policies?.delivery || ""} onChange={e => setPolicy("delivery", e.target.value)} />
+        </Field>
+        <Field>
+          <Label>Contact / Other Info</Label>
+          <Textarea placeholder="e.g. For support, reach us on WhatsApp at..." value={data.policies?.contact || ""} onChange={e => setPolicy("contact", e.target.value)} />
+        </Field>
       </SectionCard>
     </div>
   );
@@ -1027,7 +1047,7 @@ export default function BusinessWebsiteBuilder() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const logoInputRef = useRef();
-  const [data, setData] = useState({ products: [], reviews: [], socialHandles: [], payments: [], delivery: [], deliveryFees: {}, cartRecovery: { enabled: true, delayHours: 6 } });
+  const [data, setData] = useState({ products: [], reviews: [], socialHandles: [], payments: [], delivery: [], deliveryFees: {}, cartRecovery: { enabled: true, delayHours: 6 }, policies: {} });
 
   useEffect(() => {
     let ignore = false;
@@ -1109,6 +1129,7 @@ export default function BusinessWebsiteBuilder() {
               ),
               checkoutFields: b.checkoutFields || { name: true, phone: true, address: true, email: false },
               cartRecovery: b.cartRecovery || { enabled: true, delayHours: 6 },
+              policies: b.policies || {},
               reviews: b.reviews || [],
               heroHeadline: b.hero?.headline || '',
               heroSubtitle: b.hero?.subtitle || '',
@@ -1209,6 +1230,7 @@ export default function BusinessWebsiteBuilder() {
           delayHours: data.cartRecovery?.delayHours ?? 6,
         },
         reviews: data.reviews,
+        policies: data.policies || {},
       };
       if (data.heroHeadline || data.heroSubtitle || data.heroCta || data.heroBg || data.heroBgImage || data.heroLayout) {
         themeBuilder.hero = {
