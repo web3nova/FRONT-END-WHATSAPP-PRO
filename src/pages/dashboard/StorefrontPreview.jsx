@@ -361,6 +361,9 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const [paymentRedirect, setPaymentRedirect] = useState(null)
   const [bankTransferInfo, setBankTransferInfo] = useState(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
+  // Why the auth modal was opened: 'checkout' resumes checkout after login,
+  // 'signin' (nav Sign In button) just signs in without opening checkout.
+  const [authIntent, setAuthIntent] = useState('signin')
   const [createdOrderId, setCreatedOrderId] = useState(null)
   const [claimingPayment, setClaimingPayment] = useState(false)
   const [paymentClaimed, setPaymentClaimed] = useState(false)
@@ -513,6 +516,7 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
 async function placeOrder() {
     if (!token) {
       setCheckoutOpen(false)
+      setAuthIntent('checkout')
       setShowAuthModal(true)
       return
     }
@@ -971,8 +975,12 @@ async function placeOrder() {
           onClose={() => setShowAuthModal(false)}
           onSuccess={() => {
             setShowAuthModal(false)
-            setCheckoutStep(1)
-            setCheckoutOpen(true)
+            // Only resume checkout when login was triggered from a checkout
+            // action — a plain nav "Sign In" shouldn't open the delivery form.
+            if (authIntent === 'checkout') {
+              setCheckoutStep(1)
+              setCheckoutOpen(true)
+            }
             if (customer) {
               setCheckoutForm(f => ({
                 ...f,
@@ -1245,7 +1253,7 @@ async function placeOrder() {
                   </div>
                 </Link>
               ) : (
-                <button onClick={() => setShowAuthModal(true)} className="flex items-center gap-1.5 px-2 py-1 text-sm font-medium rounded-lg transition hover:bg-gray-100" style={{ color: INK }}>
+                <button onClick={() => { setAuthIntent('signin'); setShowAuthModal(true) }} className="flex items-center gap-1.5 px-2 py-1 text-sm font-medium rounded-lg transition hover:bg-gray-100" style={{ color: INK }}>
                   <User size={16} /> Sign In
                 </button>
               )}
@@ -1330,7 +1338,7 @@ async function placeOrder() {
                   )}
                 </div>
               ) : (
-                <button onClick={() => setShowAuthModal(true)} className="flex items-center gap-1.5 px-2 py-1 text-sm font-medium rounded-lg hover:bg-gray-100 transition" style={{ color: INK }}>
+                <button onClick={() => { setAuthIntent('signin'); setShowAuthModal(true) }} className="flex items-center gap-1.5 px-2 py-1 text-sm font-medium rounded-lg hover:bg-gray-100 transition" style={{ color: INK }}>
                   <User size={16} /> Sign In
                 </button>
               )}
@@ -1702,6 +1710,7 @@ async function placeOrder() {
                   onClick={() => {
                     setCartOpen(false)
                     if (!token) {
+                      setAuthIntent('checkout')
                       setShowAuthModal(true)
                     } else {
                       setCheckoutStep(1)
