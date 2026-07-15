@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useSignup } from '../../hooks/useSignup'
+import { ttTrack, ttIdentify } from '../../lib/tiktok'
 import BizBackground from '../../components/BizBackground'
 import './Auth.css'
 
@@ -160,6 +161,11 @@ export default function SignUpPage() {
         email: form.email,
         password: form.password,
         tenantName: form.tenantName,
+      })
+
+      ttIdentify({ email: form.email })
+      ttTrack('CompleteRegistration', {
+        contents: [{ content_id: 'signup', content_name: 'BizIQ account signup' }],
       })
 
       navigate('/login', {

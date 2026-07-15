@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle2, Loader2, AlertTriangle } from 'lucide-react'
 import { fetchSubscription } from '../../api/billingApi'
+import { ttTrack } from '../../lib/tiktok'
 import BizBackground from '../../components/BizBackground'
 import './Auth.css'
 
@@ -31,7 +32,29 @@ export default function BillingCallbackPage() {
 
         if (sub?.isActive && sub?.status === 'ACTIVE') {
           setState('success')
+
+          // Fire TikTok CompletePayment exactly once per checkout: the
+          // pending* keys are set on the subscribe page and cleared here,
+          // so a refresh of this page can't double-count the conversion.
+          if (sessionStorage.getItem('pendingPaymentReference')) {
+            const priceMinor = Number(sessionStorage.getItem('pendingPlanPriceMinor'))
+            ttTrack('CompletePayment', {
+              content_type: 'product',
+              contents: [{
+                content_id: sessionStorage.getItem('pendingPlanId') || 'subscription',
+                content_name: sessionStorage.getItem('pendingPlanName') || 'BizIQ subscription',
+              }],
+              ...(Number.isFinite(priceMinor) && priceMinor > 0
+                ? { value: priceMinor / 100, currency: sessionStorage.getItem('pendingPlanCurrency') || 'NGN' }
+                : {}),
+            })
+          }
+
           sessionStorage.removeItem('pendingPaymentReference')
+          sessionStorage.removeItem('pendingPlanId')
+          sessionStorage.removeItem('pendingPlanPriceMinor')
+          sessionStorage.removeItem('pendingPlanCurrency')
+          sessionStorage.removeItem('pendingPlanName')
           return
         }
 

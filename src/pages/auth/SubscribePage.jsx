@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { Check, Loader2 } from 'lucide-react'
 import { fetchPlans, initializePayment } from '../../api/billingApi'
+import { ttTrack } from '../../lib/tiktok'
 import BizBackground from '../../components/BizBackground'
 import './Auth.css'
 
@@ -68,6 +69,13 @@ const formatPeriod = (intervalDays) => {
 
 const FREE_TRIAL_DAYS = 14
 
+function clearPendingPlan() {
+  sessionStorage.removeItem('pendingPlanId')
+  sessionStorage.removeItem('pendingPlanPriceMinor')
+  sessionStorage.removeItem('pendingPlanCurrency')
+  sessionStorage.removeItem('pendingPlanName')
+}
+
 export default function SubscribePage() {
   const { startFreeTrial } = useAuth()
   const navigate = useNavigate()
@@ -118,18 +126,31 @@ export default function SubscribePage() {
       // user lands back from Monnify. Set BEFORE the redirect, not after
       // — we never get a chance to run code "after" window.location.href.
       sessionStorage.setItem('pendingPlanId', plan.id)
+      // Stash price details too, so the callback page can attach
+      // value/currency to the TikTok CompletePayment event.
+      sessionStorage.setItem('pendingPlanPriceMinor', String(plan.priceMinor ?? ''))
+      sessionStorage.setItem('pendingPlanCurrency', plan.currency || 'NGN')
+      sessionStorage.setItem('pendingPlanName', plan.label || plan.name || '')
 
       const { checkoutUrl } = await initializePayment(plan.id)
 
       if (checkoutUrl) {
-        window.location.href = checkoutUrl
+        ttTrack('PlaceAnOrder', {
+          content_type: 'product',
+          contents: [{ content_id: plan.id, content_name: plan.label || plan.name || 'plan' }],
+          value: (plan.priceMinor ?? 0) / 100,
+          currency: plan.currency || 'NGN',
+        })
+        // Give the pixel a beat to flush the event before leaving the page —
+        // an instant redirect can drop the request.
+        setTimeout(() => { window.location.href = checkoutUrl }, 400)
         return
       }
 
-      sessionStorage.removeItem('pendingPlanId')
+      clearPendingPlan()
       setSelectError('Checkout could not be started. Please try again.')
     } catch (err) {
-      sessionStorage.removeItem('pendingPlanId')
+      clearPendingPlan()
       setSelectError(err.message || 'Could not start checkout. Please try again.')
     } finally {
       setSelectingId(null)
