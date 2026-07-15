@@ -33,8 +33,14 @@ function shortId(uuid) {
 }
 
 function extractItem(details) {
-  const item = details?.items?.[0]
-  return item?.name || details?.item || details?.description || '—'
+  const items = details?.items
+  const item = items?.[0]
+  const name = item?.name || details?.item || details?.description || '—'
+  // A multi-item quote showing only the first item's name is misleading —
+  // a ₦97,500 quote reading "Polo Shirt" (real price ₦6,500) looks like a
+  // pricing bug at a glance when it's actually a legitimate 5-item bundle.
+  if (Array.isArray(items) && items.length > 1) return `${name} +${items.length - 1} more`
+  return name
 }
 
 export default function Quotes() {
