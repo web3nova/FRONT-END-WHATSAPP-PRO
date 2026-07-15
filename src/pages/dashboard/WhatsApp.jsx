@@ -429,16 +429,26 @@ export default function WhatsAppPage() {
 
   const handleSend = async () => {
     const text = inputText.trim()
-    if ((!text && !pendingFile) || !selectedId || sending) return
+    if ((!text && pendingFiles.length === 0) || !selectedId || sending) return
     setSending(true)
     try {
-      if (pendingFile) {
-        // Media message — text becomes the caption
-        const result = await sendStaffMedia(selectedId, pendingFile, text)
-        const msg = result?.message ?? result
+      if (pendingFiles.length > 0) {
+        // WhatsApp has no "multiple attachments in one message" concept —
+        // each file becomes its own message, sent in sequence like a gallery.
+        // The caption rides on the first one only, so it isn't repeated on
+        // every image.
+        const sent = []
+        for (let i = 0; i < pendingFiles.length; i++) {
+          const caption = i === 0 ? text : ''
+          const result = await sendStaffMedia(selectedId, pendingFiles[i].file, caption)
+          sent.push(result?.message ?? result)
+        }
         clearPending()
         setInputText('')
-        setMessages(prev => prev.some(m => m.id === msg?.id) ? prev : [...prev, msg])
+        setMessages(prev => {
+          const newOnes = sent.filter(msg => !prev.some(m => m.id === msg?.id))
+          return [...prev, ...newOnes]
+        })
       } else {
         const result = await sendStaffMessage(selectedId, text)
         const saved = result?.message ?? result
@@ -461,22 +471,32 @@ export default function WhatsAppPage() {
   }
 
   const fileInputRef = useRef(null)
-  const [pendingFile, setPendingFile] = useState(null)
-  const [pendingPreview, setPendingPreview] = useState(null)
+  const [pendingFiles, setPendingFiles] = useState([]) // [{ file, preview }]
 
   const handleAttach = (e) => {
-    const file = e.target.files?.[0]
+    const files = Array.from(e.target.files || [])
     e.target.value = ''
-    if (!file) return
-    if (pendingPreview) URL.revokeObjectURL(pendingPreview)
-    setPendingFile(file)
-    setPendingPreview(file.type.startsWith('image/') ? URL.createObjectURL(file) : null)
+    if (!files.length) return
+    const staged = files.map(file => ({
+      file,
+      preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
+    }))
+    setPendingFiles(prev => [...prev, ...staged])
+  }
+
+  const removePendingFile = (index) => {
+    setPendingFiles(prev => {
+      const target = prev[index]
+      if (target?.preview) URL.revokeObjectURL(target.preview)
+      return prev.filter((_, i) => i !== index)
+    })
   }
 
   const clearPending = () => {
-    if (pendingPreview) URL.revokeObjectURL(pendingPreview)
-    setPendingFile(null)
-    setPendingPreview(null)
+    setPendingFiles(prev => {
+      prev.forEach(p => { if (p.preview) URL.revokeObjectURL(p.preview) })
+      return []
+    })
   }
 
   // Never carry a staged attachment across conversations
@@ -813,28 +833,38 @@ export default function WhatsAppPage() {
                       </button>
                     </div>
                   )}
-                  {pendingFile && (
-                    <div className="flex items-center gap-3 mb-2 p-2 bg-gray-50 border border-gray-200 rounded-xl">
-                      {pendingPreview ? (
-                        <img src={pendingPreview} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
-                      ) : (
-                        <div className="w-12 h-12 rounded-lg bg-gray-200 flex items-center justify-center flex-shrink-0">
-                          <Paperclip size={16} className="text-gray-500" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-semibold text-gray-700 truncate">{pendingFile.name}</div>
-                        <div className="text-[10px] text-gray-400">Type a caption below, then press Send</div>
+                  {pendingFiles.length > 0 && (
+                    <div className="mb-2 p-2 bg-gray-50 border border-gray-200 rounded-xl">
+                      <div className="flex flex-wrap gap-2">
+                        {pendingFiles.map((pf, i) => (
+                          <div key={i} className="relative flex-shrink-0">
+                            {pf.preview ? (
+                              <img src={pf.preview} alt="" className="w-14 h-14 rounded-lg object-cover" />
+                            ) : (
+                              <div className="w-14 h-14 rounded-lg bg-gray-200 flex flex-col items-center justify-center px-1">
+                                <Paperclip size={14} className="text-gray-500" />
+                                <span className="text-[9px] text-gray-500 truncate w-full text-center">{pf.file.name}</span>
+                              </div>
+                            )}
+                            <button
+                              onClick={() => removePendingFile(i)}
+                              className="absolute -top-1.5 -right-1.5 bg-gray-700 text-white rounded-full p-0.5 hover:bg-gray-900"
+                            >
+                              <X size={10} />
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                      <button onClick={clearPending} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg flex-shrink-0">
-                        <X size={14} />
-                      </button>
+                      <div className="text-[10px] text-gray-400 mt-1.5">
+                        {pendingFiles.length > 1 ? `${pendingFiles.length} files — caption applies to the first` : 'Type a caption below, then press Send'}
+                      </div>
                     </div>
                   )}
                   <div className="flex items-end gap-2">
                     <input
                       ref={fileInputRef}
                       type="file"
+                      multiple
                       accept="image/*,video/mp4,audio/*,.pdf"
                       className="hidden"
                       onChange={handleAttach}
@@ -842,7 +872,7 @@ export default function WhatsAppPage() {
                     <button
                       disabled={selected.status !== 'human' || sending}
                       onClick={() => fileInputRef.current?.click()}
-                      title="Attach image or video"
+                      title="Attach images or videos"
                       className="p-2.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition disabled:opacity-40 flex-shrink-0"
                     >
                       <Paperclip size={16} />
@@ -860,7 +890,7 @@ export default function WhatsAppPage() {
                       style={{ maxHeight: 100 }}
                     />
                     <button
-                      disabled={selected.status !== 'human' || (!inputText.trim() && !pendingFile) || sending}
+                      disabled={selected.status !== 'human' || (!inputText.trim() && pendingFiles.length === 0) || sending}
                       onClick={handleSend}
                       className="p-2.5 rounded-xl text-white transition disabled:opacity-40 flex-shrink-0"
                       style={{ background: PRIMARY }}
