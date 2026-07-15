@@ -61,6 +61,17 @@ function ConnectBanner({ onConnected }) {
   const META_APP_ID = import.meta.env.VITE_META_APP_ID
   const META_CONFIG_ID = import.meta.env.VITE_META_CONFIG_ID
 
+  // Preload the SDK as soon as this banner mounts, not when Connect is
+  // clicked. FB.login() opens a popup, and browsers only allow a popup to
+  // open when it's triggered synchronously inside the click handler that
+  // started it — an `await` for the SDK script to load first (a real network
+  // fetch on a first visit) breaks that chain, so the browser silently
+  // blocks the popup. By the time someone clicks, window.FB is already
+  // there and FB.login() runs synchronously in the click handler.
+  useEffect(() => {
+    if (META_APP_ID) loadFbSdk(META_APP_ID).catch(() => {})
+  }, [META_APP_ID])
+
   const handleConnect = async () => {
     setError('')
 
@@ -89,7 +100,9 @@ function ConnectBanner({ onConnected }) {
           (response) => {
             window.removeEventListener('message', messageListener)
             if (response.authResponse?.code) resolve(response.authResponse.code)
-            else reject(new Error(response.status === 'unknown' ? 'Popup closed' : 'Meta login failed'))
+            else reject(new Error(response.status === 'unknown'
+              ? 'The Meta login window closed before finishing, or your browser blocked the popup. If nothing opened, check your browser\'s address bar for a blocked-popup icon and allow popups for this site, then try again.'
+              : 'Meta login failed'))
           },
           {
             config_id: META_CONFIG_ID,
