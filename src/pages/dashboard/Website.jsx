@@ -400,16 +400,11 @@ export default function Website() {
   const builderTourCtl = useTour(websiteBuilderTour, tours?.websiteBuilder)
   useEffect(() => { getTours().then(setTours).catch(() => setTours({})) }, [])
   useEffect(() => {
-    if (!tours || tours.websiteBuilder) return
-    // The dashboard tour's last step lands on this page while still open — don't
-    // start a second tour on top of it. Wait for it to END, and chain into the
-    // builder tour only if the merchant finished it (not dismissed it).
-    if (!isTourActive()) { builderTourCtl.startAtChapter(0); return }
-    const h = (e) => {
-      if (e.detail?.reason === 'finished' && !isTourActive()) builderTourCtl.startAtChapter(0)
-    }
-    window.addEventListener('tour:ended', h)
-    return () => window.removeEventListener('tour:ended', h)
+    // Auto-start ONLY when the merchant comes to this page on their own. The
+    // dashboard tour's last step lands here while still open — in that case do
+    // nothing (no chaining): the builder tour offers itself on their next,
+    // deliberate visit instead.
+    if (tours && !tours.websiteBuilder && !isTourActive()) builderTourCtl.startAtChapter(0)
   }, [tours]) // eslint-disable-line react-hooks/exhaustive-deps
   // Lets the tour switch the editor tab (pages/sections/navigation/design) before highlighting.
   useEffect(() => {
