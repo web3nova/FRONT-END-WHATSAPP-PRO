@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useLogin } from '../../hooks/useLogin'
+import { ttTrack } from '../../lib/tiktok'
 import onboardingApi from '../../services/onboardingService'
 import BizBackground from '../../components/BizBackground'
 import './Auth.css'
@@ -166,6 +167,7 @@ export default function LoginPage() {
 
       // Fallback: no OTP (shouldn't happen but handle gracefully)
       const authData = result
+      ttTrack('Login', { email: authData.user?.email })
       await auth.login(authData.user, {
         accessToken: authData.accessToken,
         refreshToken: authData.refreshToken,
@@ -286,6 +288,7 @@ export default function LoginPage() {
                     setIsSubmitting(true)
                     try {
                       const authData = await verifyOtp({ userId: otpUserId, code: otpCode })
+                      ttTrack('Login', { email: authData.user?.email })
                       await auth.login(authData.user, { accessToken: authData.accessToken, refreshToken: authData.refreshToken })
                       try {
                         const profile = await onboardingApi.getProfile()

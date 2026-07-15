@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useOnboarding } from '../../hooks/useOnboarding'
+import { ttTrack } from '../../lib/tiktok'
 import BizBackground from '../../components/BizBackground'
 import { Zap, Loader2, ChevronDown, MapPin } from 'lucide-react'
 import CountryCodeModal from '../../components/CountryCodeModal'
@@ -172,6 +173,7 @@ export default function Onboarding() {
 
     try {
       await createProfile(payload)
+      ttTrack('CompleteOnboarding', { businessName: form.businessName })
       navigate('/business-profile', { replace: true })
     } catch (err) {
       console.error('Onboarding submit failed:', err)

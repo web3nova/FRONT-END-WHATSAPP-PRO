@@ -164,6 +164,7 @@ export default function SubscribePage() {
     try {
       const sub = typeof startFreeTrial === 'function' ? await startFreeTrial() : null
       if (sub?.isActive) {
+        ttTrack('StartTrial')
         navigate('/dashboard')
       } else {
         setSelectError('Your trial could not be confirmed. Please refresh and try again.')

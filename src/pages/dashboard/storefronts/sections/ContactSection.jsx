@@ -1,4 +1,5 @@
 import { MessageCircle, MapPin, AtSign } from 'lucide-react'
+import { ttTrack } from '../../../../lib/tiktok'
 
 export default function ContactSection({ variant, ctx }) {
   if (variant === 'catalog') return <CatalogContact ctx={ctx} />
@@ -19,6 +20,7 @@ function MagazineContact({ ctx }) {
         href={waLink(genericOrderMsg)}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => ttTrack('Contact', { method: 'WhatsApp' })}
         className="inline-flex items-center gap-2 text-sm font-semibold px-8 py-4 transition hover:opacity-90"
         style={{ background: '#fff', color: INK }}
       >
@@ -38,6 +40,7 @@ function CatalogContact({ ctx }) {
         href={waLink(genericOrderMsg)}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => ttTrack('Contact', { method: 'WhatsApp' })}
         className="text-xs font-bold px-4 py-2 rounded-md flex-shrink-0 transition hover:opacity-90"
         style={{ background: '#25D366', color: '#fff' }}
       >
@@ -60,6 +63,7 @@ function BoutiqueContact({ ctx }) {
           href={waLink(genericOrderMsg)}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => ttTrack('Contact', { method: 'WhatsApp' })}
           className="inline-flex items-center gap-2 text-sm font-semibold px-6 py-3 rounded-full transition hover:opacity-90"
           style={{ background: '#fff', color: INK }}
         >
