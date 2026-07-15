@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { getTours, updateTours } from '../api/toursApi'
 import { useTour } from '../lib/tour/useTour'
+import { isTourActive } from '../lib/tour/driver-tour'
 import { dashboardTour } from '../lib/tour/dashboardTour'
 import TourNudge from '../components/TourNudge'
 
@@ -192,7 +193,10 @@ export default function BusinessLayout() {
   useEffect(() => {
     if (!tours) return
     // First-ever visit (no dashboard progress stored): auto-run chapter 1 only.
-    if (!tours.dashboard) dash.startAtChapter(0)
+    // Skip if another tour already grabbed the screen (e.g. first load landed on
+    // /dashboard/website and the builder tour started first) — with no progress
+    // stored, this auto-start simply retries on the next visit.
+    if (!tours.dashboard && !isTourActive()) dash.startAtChapter(0)
   }, [tours]) // eslint-disable-line react-hooks/exhaustive-deps
   // Lets the tour open the mobile sidebar drawer before highlighting a nav item
   // (on desktop the sidebar is always visible, so this is a no-op there).

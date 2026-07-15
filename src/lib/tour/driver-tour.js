@@ -2,6 +2,16 @@ import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import './tour-theme.css';
 
+// Only one tour may run at a time. The dashboard tour's last step lands on the
+// Website page, whose own auto-start would otherwise fire a second tour on top
+// of it (two overlays + a navigation yank to /dashboard/builder). Auto-starters
+// check isTourActive() and, if busy, wait for 'tour:ended' — which carries
+// { reason: 'finished' | 'closed' } so they only chain after a real finish,
+// never after the merchant dismissed a tour.
+let activeTours = 0;
+let currentTour = null; // handle of the running tour, so a new start replaces it
+export function isTourActive() { return activeTours > 0; }
+
 // Poll for an element to appear (post-navigation renders aren't instant).
 export function waitForElement(selector, timeoutMs = 4000) {
   return new Promise((resolve) => {
@@ -25,6 +35,24 @@ export function runTour({ steps, startIndex = 0, navigate, currentPath, onChapte
   let transitioning = false; // guards against a blur + Next firing two advances
   let lastDir = 1;           // direction of travel, so skipped steps continue the same way
   let stepCleanup = null;    // tears down the current step's action listeners
+
+  // Hard invariant: one tour at a time. If another tour is still up (e.g. the
+  // merchant hit a "Take the tour" button mid-tour), tear it down first.
+  currentTour?.destroy();
+  activeTours++;
+  let handle = null;
+  let released = false;
+  // reason 'destroyed' = programmatic teardown (page unmount / restart): free the
+  // slot but don't announce it, so a waiting auto-starter isn't triggered by it.
+  const release = (reason) => {
+    if (released) return;
+    released = true;
+    activeTours--;
+    if (currentTour === handle) currentTour = null;
+    if (reason !== 'destroyed') {
+      window.dispatchEvent(new CustomEvent('tour:ended', { detail: { reason } }));
+    }
+  };
 
   const clearStepListeners = () => { if (stepCleanup) { stepCleanup(); stepCleanup = null; } };
 
@@ -163,7 +191,7 @@ export function runTour({ steps, startIndex = 0, navigate, currentPath, onChapte
     transitioning = false;
   };
 
-  const finish = () => { clearStepListeners(); onChapterComplete?.(steps[steps.length - 1]?.chapterEnd); d?.destroy(); onExit?.(); };
+  const finish = () => { clearStepListeners(); onChapterComplete?.(steps[steps.length - 1]?.chapterEnd); d?.destroy(); onExit?.(); release('finished'); };
 
   d = driver({
     showProgress: true,
@@ -180,12 +208,14 @@ export function runTour({ steps, startIndex = 0, navigate, currentPath, onChapte
     doneBtnText: 'Done',
     onNextClick: () => advance(1),
     onPrevClick: () => advance(-1),
-    onCloseClick: () => { clearStepListeners(); d.destroy(); onExit?.(); },
+    onCloseClick: () => { clearStepListeners(); d.destroy(); onExit?.(); release('closed'); },
   });
   // NOTE: we drive stepping ourselves (highlight per step) rather than handing
   // driver.js a fixed steps array — because our steps change route/tab between
   // them, so the next element often isn't in the DOM at the instant driver would
   // auto-advance. Do NOT call d.drive(); only d.highlight(...) via showStep().
   showStep();
-  return { destroy: () => { clearStepListeners(); d?.destroy(); } };
+  handle = { destroy: () => { clearStepListeners(); d?.destroy(); release('destroyed'); } };
+  currentTour = handle;
+  return handle;
 }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Globe, Eye, CheckCircle, ExternalLink, Layout, Image, Type, ToggleLeft, ToggleRight, Plus, Loader, Monitor, Smartphone, ChevronDown, ChevronUp, Save, Trash2, Star, Grid3x3, Check, History, X, Upload, HelpCircle } from 'lucide-react'
 import { getTours } from '../../api/toursApi'
 import { useTour } from '../../lib/tour/useTour'
+import { isTourActive } from '../../lib/tour/driver-tour'
 import { websiteBuilderTour } from '../../lib/tour/websiteBuilderTour'
 import { API_BASE } from '../../lib/apiConfig'
 import { getStoredAccessToken } from '../../lib/auth'
@@ -399,7 +400,16 @@ export default function Website() {
   const builderTourCtl = useTour(websiteBuilderTour, tours?.websiteBuilder)
   useEffect(() => { getTours().then(setTours).catch(() => setTours({})) }, [])
   useEffect(() => {
-    if (tours && !tours.websiteBuilder) builderTourCtl.startAtChapter(0)
+    if (!tours || tours.websiteBuilder) return
+    // The dashboard tour's last step lands on this page while still open — don't
+    // start a second tour on top of it. Wait for it to END, and chain into the
+    // builder tour only if the merchant finished it (not dismissed it).
+    if (!isTourActive()) { builderTourCtl.startAtChapter(0); return }
+    const h = (e) => {
+      if (e.detail?.reason === 'finished' && !isTourActive()) builderTourCtl.startAtChapter(0)
+    }
+    window.addEventListener('tour:ended', h)
+    return () => window.removeEventListener('tour:ended', h)
   }, [tours]) // eslint-disable-line react-hooks/exhaustive-deps
   // Lets the tour switch the editor tab (pages/sections/navigation/design) before highlighting.
   useEffect(() => {
