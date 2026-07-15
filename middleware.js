@@ -21,10 +21,11 @@ const escapeHtml = (s = '') =>
 export default async function middleware(request) {
   const url = new URL(request.url)
 
-  // Proxy /assets/website-images/* and /assets/product-images/* to the backend
-  // (bypasses Cross-Origin-Resource-Policy). Only these sub-paths are backend
-  // assets — frontend build files under /assets/index-* must NOT be proxied.
-  if (API_BASE && (url.pathname.startsWith('/assets/website-images/') || url.pathname.startsWith('/assets/product-images/'))) {
+  // Proxy /assets/website-images/*, /assets/product-images/*, and
+  // /assets/business-logos/* to the backend (bypasses Cross-Origin-Resource-
+  // Policy). Only these sub-paths are backend assets — frontend build files
+  // under /assets/index-* must NOT be proxied.
+  if (API_BASE && (url.pathname.startsWith('/assets/website-images/') || url.pathname.startsWith('/assets/product-images/') || url.pathname.startsWith('/assets/business-logos/'))) {
     const target = `${API_BASE}${url.pathname}${url.search}`
     return fetch(target, { headers: { accept: request.headers.get('accept') || '*/*' } })
   }
@@ -130,7 +131,7 @@ export const config = {
   // through even for bots. Product paths added explicitly since `/:view`
   // only matches a single path segment (`/product/:id` is two).
   matcher: [
-    '/storefront/:path*', '/assets/website-images/:path*', '/assets/product-images/:path*',
+    '/storefront/:path*', '/assets/website-images/:path*', '/assets/product-images/:path*', '/assets/business-logos/:path*',
     '/', '/shop', '/:view', '/product/:id', '/b/:slug/product/:id',
   ],
 }
