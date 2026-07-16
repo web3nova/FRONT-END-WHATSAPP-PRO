@@ -389,6 +389,13 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const [appliedCoupon, setAppliedCoupon] = useState(null) // { code, discountMinor }
   const [couponError, setCouponError] = useState('')
   const [applyingCoupon, setApplyingCoupon] = useState(false)
+  // Bank account details are deliberately left out of the general storefront
+  // payload (that loads on every page view, no auth) — fetched on demand
+  // only once the customer reaches the payment-method step and would
+  // actually see them, same account-number sensitivity reasoning as the
+  // order-creation response's own bankDetails field.
+  const [bankAccountDetails, setBankAccountDetails] = useState(null)
+
   // Reset ephemeral checkout/order state on a store switch — none of this is
   // persisted, but the component isn't remounted across stores (see cartKey
   // above), so a name typed or coupon applied on one store would otherwise
@@ -416,8 +423,23 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
     setAppliedCoupon(null)
     setCouponError('')
     setApplyingCoupon(false)
+    setBankAccountDetails(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeKey])
+
+  useEffect(() => {
+    if (!(checkoutOpen && checkoutStep === 2)) return
+    if (bankAccountDetails) return
+    const resolvedTenantId = tenantIdProp || business?.tenantId || ''
+    if (!resolvedTenantId) return
+    let cancelled = false
+    fetch(`${API_BASE}/website/storefront/bank-details?tenantId=${resolvedTenantId}`)
+      .then(res => res.json())
+      .then(body => { if (!cancelled) setBankAccountDetails(body?.data?.bankAccount || null) })
+      .catch(() => {})
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkoutOpen, checkoutStep])
 
   const deliveryLabels = { pickup: 'Store Pickup', local: 'Local Delivery', nationwide: 'Nationwide Shipping', digital: 'Digital / Instant' }
   const paymentLabels = { bank: 'Bank Transfer', card: 'Credit/Debit Card', paystack: 'Paystack', flutterwave: 'Flutterwave', cash: 'Cash on Delivery', crypto: 'Crypto' }
@@ -621,7 +643,7 @@ async function placeOrder() {
       if (orderResult?.payment?.checkoutUrl) {
         setPaymentRedirect(orderResult.payment.checkoutUrl)
       } else if (selectedPayment === 'bank') {
-        const bankAcct = orderResult?.bankDetails || paymentConfig?.manual?.bankAccount
+        const bankAcct = orderResult?.bankDetails || bankAccountDetails
         if (bankAcct) {
           setBankTransferInfo({
             orderRef: orderResult?.order?.reference || '',
@@ -1994,8 +2016,16 @@ async function placeOrder() {
                     )}
                   </div>
 
-                  {/* Bank transfer details — show account info before order */}
-                  {selectedPayment === 'bank' && paymentConfig?.manual?.bankAccount && (
+                  {/* Bank transfer details — show account info before order.
+                      Fetched on demand (see bankAccountDetails effect above)
+                      once this step is reached, not part of the initial
+                      storefront payload. */}
+                  {selectedPayment === 'bank' && !bankAccountDetails && (
+                    <div className="rounded-xl p-4 text-xs text-gray-400 border border-gray-100 flex items-center gap-2">
+                      <Loader size={13} className="animate-spin" /> Loading bank details…
+                    </div>
+                  )}
+                  {selectedPayment === 'bank' && bankAccountDetails && (
                     <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-2.5">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
@@ -2014,15 +2044,15 @@ async function placeOrder() {
                         <div className="border-t border-gray-100" />
                         <div className="flex justify-between">
                           <span className="text-sm text-gray-500">Bank</span>
-                          <span className="text-sm font-semibold text-gray-800">{paymentConfig.manual.bankAccount.bankName}</span>
+                          <span className="text-sm font-semibold text-gray-800">{bankAccountDetails.bankName}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-sm text-gray-500">Account Name</span>
-                          <span className="text-sm font-semibold text-gray-800">{paymentConfig.manual.bankAccount.accountName}</span>
+                          <span className="text-sm font-semibold text-gray-800">{bankAccountDetails.accountName}</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-gray-500">Account Number</span>
-                          <span className="text-lg font-bold tracking-widest" style={{ color: INK }}>{paymentConfig.manual.bankAccount.accountNumber}</span>
+                          <span className="text-lg font-bold tracking-widest" style={{ color: INK }}>{bankAccountDetails.accountNumber}</span>
                         </div>
                       </div>
                       <div className="text-xs text-green-700 flex items-center gap-1">

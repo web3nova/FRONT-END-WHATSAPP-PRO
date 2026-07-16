@@ -4,7 +4,6 @@ import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell
 } from 'recharts'
 import { TrendingUp, Users, ShoppingBag, MessageCircle, Globe, BarChart2 } from 'lucide-react'
-import { listOrders } from '../../api/ordersApi'
 import { listCustomers } from '../../api/customersApi'
 import { listConversations } from '../../api/conversationsApi'
 import { API_BASE } from '../../lib/apiConfig'
@@ -75,63 +74,35 @@ export default function Analytics() {
     setLoading(true)
     const token = localStorage.getItem('accessToken')
     const headers = { accept: 'application/json', Authorization: `Bearer ${token}` }
-    const now = new Date()
-    const rangeAgo = new Date(now)
-    rangeAgo.setDate(now.getDate() - (days - 1))
 
     Promise.all([
-      listOrders({ limit: 200 }),
       listCustomers({ limit: 1 }),
       listConversations({ limit: 1 }),
       fetch(`${API_BASE}/products?limit=100`, { headers }).then(r => r.json()).catch(() => ({ data: [] })),
       fetch(`${API_BASE}/analytics/overview?days=${days}`, { headers }).then(r => r.json()).catch(() => ({ data: null })),
-    ]).then(([ordRes, custRes, convRes, prodRes, analyticsRes]) => {
-      const allOrders = ordRes.data ?? []
-      const rangeOrders = allOrders.filter(o => new Date(o.createdAt) >= rangeAgo)
-      const rangeRevenue = rangeOrders.reduce((s, o) => s + (o.totalMinor || 0), 0)
+    ]).then(([custRes, convRes, prodRes, analyticsRes]) => {
+      const a = analyticsRes?.data
 
       setKpis({
-        revenue: rangeRevenue,
-        orders: rangeOrders.length,
+        revenue: a?.revenue ?? 0,
+        orders: a?.orderCount ?? 0,
         customers: custRes.meta?.total ?? 0,
         messages: convRes.meta?.total ?? 0,
       })
 
-      // Build daily revenue for the selected range from real orders
-      const dayList = Array.from({ length: days }, (_, i) => {
-        const d = new Date(now)
-        d.setDate(now.getDate() - (days - 1 - i))
-        return d
-      })
-      const daily = dayList.map(d => {
-        const label = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-        const dayOrders = allOrders.filter(o => {
-          const od = new Date(o.createdAt)
-          return od.toDateString() === d.toDateString()
-        })
-        return {
-          day: label,
-          revenue: Math.round(dayOrders.reduce((s, o) => s + (o.totalMinor || 0), 0) / 100),
-          orders: dayOrders.length,
-        }
-      })
-      setDailyRevenue(daily)
+      // Daily revenue for the selected range, computed server-side (bounded
+      // by date range, not a capped order fetch) — convert minor to major units.
+      setDailyRevenue((a?.dailyRevenue ?? []).map(d => ({
+        day: d.day,
+        revenue: Math.round((d.revenue || 0) / 100),
+        orders: d.orders,
+      })))
 
-      // Product order counts from orders
-      const prodCounts = {}
-      allOrders.forEach(o => {
-        (o.items || []).forEach(item => {
-          const name = item.name || item.productName || 'Unknown'
-          prodCounts[name] = (prodCounts[name] || 0) + (item.quantity || 1)
-        })
-      })
-      const sorted = Object.entries(prodCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(([name, orders]) => ({ name: name.length > 14 ? name.slice(0, 13) + '…' : name, orders }))
-      setProductData(sorted)
+      setProductData((a?.topProducts ?? []).map(p => ({
+        name: p.name.length > 14 ? p.name.slice(0, 13) + '…' : p.name,
+        orders: p.sales,
+      })))
 
-      const a = analyticsRes?.data
       setWebsiteVisits(a?.websiteVisits ?? null)
       setTrafficSources(a?.trafficSources ?? null)
       setCustomerGrowth(a?.customerGrowth ?? [])

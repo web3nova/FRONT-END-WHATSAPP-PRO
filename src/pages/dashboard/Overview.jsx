@@ -130,68 +130,44 @@ export default function BusinessOverview() {
     monthStart.setDate(1)
     monthStart.setHours(0, 0, 0, 0)
 
-    const days30 = 30
     Promise.all([
       listCustomers({ limit: 1 }),
-      listOrders({ limit: 200 }),
+      // Recent-orders list only needs the latest few, independent of the
+      // analytics range below (backend sorts createdAt desc by default).
+      listOrders({ limit: 5 }),
       listConversations({ limit: 4 }),
       listQuotes({ limit: 3 }),
       fetch(`${API_BASE}/products?limit=100&sort=sortOrder`, { headers }).then(r => r.json()).catch(() => ({ data: [] })),
-      fetch(`${API_BASE}/analytics/overview?days=${days30}`, { headers }).then(r => r.json()).catch(() => ({ data: null })),
+      // Month-to-date figures, computed server-side (bounded by date, not a
+      // capped order fetch) — used for both the KPI tiles and the trend chart.
+      fetch(`${API_BASE}/analytics/overview?since=${monthStart.toISOString()}`, { headers }).then(r => r.json()).catch(() => ({ data: null })),
       fetch(`${API_BASE}/business`, { headers }).then(r => r.json()).catch(() => ({ data: null })),
     ]).then(([custRes, ordRes, convRes, quoteRes, prodRes, analyticsRes, businessRes]) => {
       if (ignore) return
       setBusinessLogoUrl(resolveImageUrl(businessRes?.data?.logoUrl || ''))
 
-      const allOrders = ordRes.data
-      const monthOrders = allOrders.filter(o => new Date(o.createdAt) >= monthStart)
-      const monthRevenue = monthOrders.reduce((sum, o) => sum + (o.totalMinor || 0), 0)
-
       const a = analyticsRes?.data
       setStats({
         customers: custRes.meta?.total ?? 0,
-        orders: monthOrders.length,
-        revenue: monthRevenue,
+        orders: a?.orderCount ?? 0,
+        revenue: a?.revenue ?? 0,
         conversations: convRes.meta?.total ?? convRes.data.length,
         visits: a?.websiteVisits?.total || 0,
       })
       setCustomerSources(a?.customerSources ?? null)
 
-      // Build daily revenue for the trend chart from orders
-      const now = new Date()
-      const dayList = Array.from({ length: days30 }, (_, i) => {
-        const d = new Date(now)
-        d.setDate(now.getDate() - (days30 - 1 - i))
-        return d
-      })
-      setDailyRevenue(dayList.map(d => {
-        const label = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-        const dayOrders = allOrders.filter(o => new Date(o.createdAt).toDateString() === d.toDateString())
-        return {
-          day: label,
-          revenue: Math.round(dayOrders.reduce((s, o) => s + (o.totalMinor || 0), 0) / 100),
-          orders: dayOrders.length,
-        }
-      }))
+      setDailyRevenue((a?.dailyRevenue ?? []).map(d => ({
+        day: d.day,
+        revenue: Math.round((d.revenue || 0) / 100),
+        orders: d.orders,
+      })))
 
-      setRecentOrders(allOrders.slice(0, 5))
+      setRecentOrders(ordRes.data)
       setRecentChats(convRes.data)
       setRecentQuotes(quoteRes.data.slice(0, 3))
 
-      // Compute top products by order frequency
-      const prodCounts = {}
-      allOrders.forEach(o => {
-        (o.items || []).forEach(item => {
-          const id = item.productId || item.name || 'unknown'
-          const name = item.name || item.productName || 'Unknown'
-          if (!prodCounts[id]) prodCounts[id] = { name, sales: 0, revenue: 0 }
-          prodCounts[id].sales += item.quantity || 1
-          prodCounts[id].revenue += (item.priceMinor || 0) * (item.quantity || 1)
-        })
-      })
-
-      // If no order-derived product data, fall back to catalog
-      const sortedByOrders = Object.values(prodCounts).sort((a, b) => b.sales - a.sales).slice(0, 4)
+      // If no order-derived product data this month, fall back to catalog
+      const sortedByOrders = (a?.topProducts ?? []).slice(0, 4)
       if (sortedByOrders.length > 0) {
         setTopProducts(sortedByOrders)
         setTopProductChart(sortedByOrders.map(p => ({
