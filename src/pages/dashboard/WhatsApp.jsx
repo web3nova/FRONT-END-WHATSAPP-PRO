@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import {
   Search, Send, Bot, UserCheck, Phone, MoreHorizontal,
   Zap, CheckCheck, AlertCircle, FileText, ShoppingBag, ChevronLeft, X,
-  Link2, Loader2, CheckCircle2, Paperclip,
+  Link2, Loader2, CheckCircle2, Paperclip, MapPin, User,
 } from 'lucide-react'
 import { fetchWhatsappAccount, connectWhatsapp } from '../../api/whatsappApi'
 import { listConversations, getConversationMessages, takeOverConversation, releaseConversation, sendStaffMessage, sendStaffMedia, subscribeToEvents } from '../../api/conversationsApi'
@@ -765,6 +765,8 @@ export default function WhatsAppPage() {
                     {messages.map(msg => {
                       const isCustomer = msg.role === 'customer'
                       const isAi = msg.role === 'ai'
+                      const location = msg.meta?.structured?.location
+                      const sharedContacts = msg.meta?.structured?.contacts
                       return (
                         <div key={msg.id} className={`flex ${isCustomer ? 'justify-start' : 'justify-end'}`}>
                           <div className="max-w-[72%]">
@@ -802,7 +804,39 @@ export default function WhatsAppPage() {
                                   </a>
                                 )
                               ))}
-                              {msg.content}
+                              {location ? (
+                                <a
+                                  href={`https://www.google.com/maps?q=${location.latitude},${location.longitude}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-start gap-2 p-2.5 rounded-xl bg-white/60 hover:bg-white/90 transition -mx-1"
+                                >
+                                  <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: `${PRIMARY}22` }}>
+                                    <MapPin size={16} style={{ color: PRIMARY }} />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-semibold truncate">{location.name || 'Shared location'}</div>
+                                    {location.address && <div className="text-xs opacity-70 truncate">{location.address}</div>}
+                                    <div className="text-xs opacity-70 underline">View on map</div>
+                                  </div>
+                                </a>
+                              ) : sharedContacts?.length ? (
+                                <div className="space-y-1.5">
+                                  {sharedContacts.map((c, i) => (
+                                    <div key={i} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/60 -mx-1">
+                                      <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: `${PRIMARY}22` }}>
+                                        <User size={16} style={{ color: PRIMARY }} />
+                                      </div>
+                                      <div className="min-w-0">
+                                        <div className="text-sm font-semibold truncate">{c.name || 'Contact'}</div>
+                                        {c.phones?.length > 0 && <div className="text-xs opacity-70 truncate">{c.phones.join(', ')}</div>}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                msg.content
+                              )}
                             </div>
                             <div className={`flex items-center gap-1 mt-1 ${isCustomer ? 'justify-start' : 'justify-end'}`}>
                               <span className="text-xs text-gray-400">{formatTime(msg.createdAt)}</span>
