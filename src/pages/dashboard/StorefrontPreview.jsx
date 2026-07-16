@@ -230,7 +230,7 @@ function UnroutedStorefrontPreview(props) {
 
 function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 'desktop', settings, theme, pages = [], nav, paymentConfig, tenantId: tenantIdProp }) {
    const { toast } = useNotify()
-   const { customer, token, logout } = useCustomerAuth()
+   const { customer, token, logout, storeKey } = useCustomerAuth()
    const INK = theme?.ink || DEFAULT_INK
    const GOLD = theme?.accent || DEFAULT_GOLD
    const CREAM = theme?.soft || DEFAULT_CREAM
@@ -340,16 +340,31 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   }
 
   // ── Cart / Checkout ────────────────────────────────────────────────────────
+  // Per-store cart key, same reasoning as CustomerAuthContext's storeKey: this
+  // component is reused across /b/:slug and /storefront/:tenantId without
+  // remounting, so an unscoped key would bleed a cart from one store into
+  // another (and 'default' in the unrouted builder preview, which has no
+  // CustomerAuthProvider ancestor).
+  const cartKey = `storefront_cart:${storeKey}`
   const [cart, setCart] = useState(() => {
     try {
-      const saved = localStorage.getItem('storefront_cart')
+      localStorage.removeItem('storefront_cart') // legacy unscoped key
+      const saved = localStorage.getItem(cartKey)
       return saved ? JSON.parse(saved) : []
     } catch { return [] }
   })
+  // Re-sync cart when the store changes (URL param change, no remount).
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(cartKey)
+      setCart(saved ? JSON.parse(saved) : [])
+    } catch { setCart([]) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeKey])
   // Persist cart to localStorage on every change
   useEffect(() => {
-    localStorage.setItem('storefront_cart', JSON.stringify(cart))
-  }, [cart])
+    localStorage.setItem(cartKey, JSON.stringify(cart))
+  }, [cart, cartKey])
   const [cartOpen, setCartOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [checkoutStep, setCheckoutStep] = useState(0)
@@ -374,6 +389,35 @@ function StorefrontPreviewBody({ business, products, whatsapp, domain, device = 
   const [appliedCoupon, setAppliedCoupon] = useState(null) // { code, discountMinor }
   const [couponError, setCouponError] = useState('')
   const [applyingCoupon, setApplyingCoupon] = useState(false)
+  // Reset ephemeral checkout/order state on a store switch — none of this is
+  // persisted, but the component isn't remounted across stores (see cartKey
+  // above), so a name typed or coupon applied on one store would otherwise
+  // still be sitting there on the next.
+  useEffect(() => {
+    setCartOpen(false)
+    setCheckoutOpen(false)
+    setCheckoutStep(0)
+    setCheckoutForm({ name: '', phone: '', email: '', address: '', state: '', city: '', whatsapp: '', postBox: '', landmark: '' })
+    setPlacingOrder(false)
+    setOrderPlaced(false)
+    setSelectedDelivery('')
+    setSelectedPayment('')
+    setPaymentRedirect(null)
+    setBankTransferInfo(null)
+    setShowAuthModal(false)
+    setAuthIntent('signin')
+    setCreatedOrderId(null)
+    setClaimingPayment(false)
+    setPaymentClaimed(false)
+    setOrderConfirm(null)
+    setOrderConfirmLoading(false)
+    setShowOrderConfirm(false)
+    setCouponInput('')
+    setAppliedCoupon(null)
+    setCouponError('')
+    setApplyingCoupon(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeKey])
 
   const deliveryLabels = { pickup: 'Store Pickup', local: 'Local Delivery', nationwide: 'Nationwide Shipping', digital: 'Digital / Instant' }
   const paymentLabels = { bank: 'Bank Transfer', card: 'Credit/Debit Card', paystack: 'Paystack', flutterwave: 'Flutterwave', cash: 'Cash on Delivery', crypto: 'Crypto' }
@@ -566,7 +610,7 @@ async function placeOrder() {
       setCheckoutOpen(false)
       setCheckoutStep(1)
       setCart([])
-      localStorage.removeItem('storefront_cart')
+      localStorage.removeItem(cartKey)
       setCheckoutForm({ name: '', phone: '', email: '', address: '', state: '', city: '', whatsapp: '', postBox: '', landmark: '' })
       setSelectedDelivery('')
       setSelectedPayment('')
@@ -2144,29 +2188,48 @@ async function placeOrder() {
               </button>
             </div>
             <div className="px-6 py-5 space-y-4">
-              <div className="bg-blue-50 text-blue-700 text-sm p-4 rounded-xl leading-relaxed">
-                <div className="font-semibold mb-1">Order #{bankTransferInfo.orderRef}</div>
-                Please transfer the <strong>exact amount</strong> to the account below. Your order will be processed once payment is confirmed.
-              </div>
-              <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-500">Amount to send</span>
-                  <span className="text-lg font-bold" style={{ color: INK }}>₦ {(bankTransferInfo.total / 100).toLocaleString()}</span>
+              {paymentClaimed ? (
+                // Payment already claimed — the account number served its
+                // purpose; keep just the order/amount for reference instead
+                // of leaving the vendor's bank details on screen.
+                <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-500">Order</span>
+                    <span className="font-semibold text-gray-800">#{bankTransferInfo.orderRef}</span>
+                  </div>
+                  <div className="border-t border-gray-200" />
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-500">Amount sent</span>
+                    <span className="text-lg font-bold" style={{ color: INK }}>₦ {(bankTransferInfo.total / 100).toLocaleString()}</span>
+                  </div>
                 </div>
-                <div className="border-t border-gray-200" />
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Bank</span>
-                  <span className="font-semibold text-gray-800">{bankTransferInfo.bankName}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Account Name</span>
-                  <span className="font-semibold text-gray-800">{bankTransferInfo.accountName}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">Account Number</span>
-                  <span className="text-xl font-bold tracking-widest select-all" style={{ color: INK }}>{bankTransferInfo.accountNumber}</span>
-                </div>
-              </div>
+              ) : (
+                <>
+                  <div className="bg-blue-50 text-blue-700 text-sm p-4 rounded-xl leading-relaxed">
+                    <div className="font-semibold mb-1">Order #{bankTransferInfo.orderRef}</div>
+                    Please transfer the <strong>exact amount</strong> to the account below. Your order will be processed once payment is confirmed.
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500">Amount to send</span>
+                      <span className="text-lg font-bold" style={{ color: INK }}>₦ {(bankTransferInfo.total / 100).toLocaleString()}</span>
+                    </div>
+                    <div className="border-t border-gray-200" />
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Bank</span>
+                      <span className="font-semibold text-gray-800">{bankTransferInfo.bankName}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Account Name</span>
+                      <span className="font-semibold text-gray-800">{bankTransferInfo.accountName}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Account Number</span>
+                      <span className="text-xl font-bold tracking-widest select-all" style={{ color: INK }}>{bankTransferInfo.accountNumber}</span>
+                    </div>
+                  </div>
+                </>
+              )}
 
               {paymentClaimed ? (
                 <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-700 flex items-start gap-2">

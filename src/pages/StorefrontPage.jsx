@@ -21,7 +21,12 @@ export default function StorefrontPage({ domain: domainProp } = {}) {
           : domainProp
             ? `domain=${encodeURIComponent(domainProp)}`
             : `tenantId=${tenantId}`
-        const res = await fetch(`${API_BASE}/website/storefront?${query}`)
+        // document.referrer is the page that actually linked the visitor
+        // here (Google, WhatsApp, a shared link) — sent explicitly because
+        // this fetch's own Referer header would just be this same page,
+        // which the backend can't use to tell where the visitor came from.
+        const referrerQuery = document.referrer ? `&referrer=${encodeURIComponent(document.referrer)}` : ''
+        const res = await fetch(`${API_BASE}/website/storefront?${query}${referrerQuery}`)
         if (!res.ok) {
           if (res.status === 404) throw new Error('Storefront not found. The business may not be published yet.')
           throw new Error('Could not load storefront.')
