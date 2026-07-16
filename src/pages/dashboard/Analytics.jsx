@@ -172,14 +172,14 @@ export default function Analytics() {
         <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100 min-w-0 overflow-hidden">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h2 className="font-semibold text-gray-900">Daily Revenue (This Week)</h2>
+              <h2 className="font-semibold text-gray-900">Daily Revenue ({RANGES.find(r => r.days === days)?.label || `${days} days`})</h2>
               <p className="text-xs text-gray-400 mt-0.5">Revenue in ₦ · Orders count</p>
             </div>
           </div>
           {loading ? (
             <EmptyChart title="Loading…" height={200} />
           ) : dailyRevenue.every(d => d.revenue === 0 && d.orders === 0) ? (
-            <EmptyChart title="No orders yet this week" subtitle="Revenue will appear as orders come in" height={200} />
+            <EmptyChart title="No orders yet in this range" subtitle="Revenue will appear as orders come in" height={200} />
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={dailyRevenue} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
