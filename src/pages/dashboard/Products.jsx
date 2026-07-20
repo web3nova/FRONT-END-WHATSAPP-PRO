@@ -173,7 +173,13 @@ export default function Products() {
     const price = priceMinor > 0 ? priceMinor / 100 : Number(product?.price || product?.amount || product?.unitPrice || 0)
     const compareAt = product?.compareAtPrice != null ? Number(product.compareAtPrice) / 100 : null
     const stock = Number(product?.stock || product?.inventory || product?.quantity || 0)
-    const status = product?.isActive === false ? 'draft' : (stock > 0 ? 'active' : 'out-of-stock')
+    // "Out of stock" only means anything when the merchant is actually
+    // tracking stock for this product — otherwise a brand-new product left
+    // at the form's default stock of 0 shows as out of stock immediately,
+    // even though nothing about availability was ever tracked or enforced.
+    const status = product?.isActive === false
+      ? 'draft'
+      : (!product?.trackStock || stock > 0) ? 'active' : 'out-of-stock'
     const orders = Number(product?.orders || product?.sales || product?.orderCount || 0)
     const sku = product?.sku || ''
     const brand = product?.brand || ''
