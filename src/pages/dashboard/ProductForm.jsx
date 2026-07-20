@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { X, Trash2, Upload, Plus } from 'lucide-react'
 import { resolveImageUrl } from '../../lib/utils'
+import AiSuggestButton from '../../components/ui/AiSuggestButton'
 
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
@@ -262,12 +263,23 @@ export default function ProductForm({ initialData, onSubmit, loading, error }) {
         </div>
 
         <div>
-          <label className={labelClass}>Short Description</label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className={labelClass + ' mb-0'}>Short Description</label>
+            <AiSuggestButton
+              endpoint="/products/suggest"
+              payload={{ name, brand }}
+              disabled={!name.trim()}
+              onResult={(data) => {
+                if (data.description) setDescription(data.description)
+                if (data.tags?.length) setTags(prev => [...new Set([...prev, ...data.tags])])
+              }}
+            />
+          </div>
           <textarea
             value={description}
             onChange={e => setDescription(e.target.value)}
             rows={3}
-            placeholder="Brief description of the product..."
+            placeholder="Brief description of the product... or click AI Suggest above"
             className={`${inputClass} resize-none`}
           />
         </div>
