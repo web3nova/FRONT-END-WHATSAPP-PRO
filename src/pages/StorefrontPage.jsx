@@ -26,7 +26,12 @@ export default function StorefrontPage({ domain: domainProp } = {}) {
         // this fetch's own Referer header would just be this same page,
         // which the backend can't use to tell where the visitor came from.
         const referrerQuery = document.referrer ? `&referrer=${encodeURIComponent(document.referrer)}` : ''
-        const res = await fetch(`${API_BASE}/website/storefront?${query}${referrerQuery}`)
+        // Explicit ?utm_source=whatsapp on the link (we tag every storefront
+        // link sent via WhatsApp, e.g. cart recovery) beats document.referrer —
+        // WhatsApp's in-app browser frequently strips/omits it on navigation.
+        const utmSource = new URLSearchParams(window.location.search).get('utm_source')
+        const utmQuery = utmSource ? `&utm_source=${encodeURIComponent(utmSource)}` : ''
+        const res = await fetch(`${API_BASE}/website/storefront?${query}${referrerQuery}${utmQuery}`)
         if (!res.ok) {
           if (res.status === 404) throw new Error('Storefront not found. The business may not be published yet.')
           throw new Error('Could not load storefront.')
