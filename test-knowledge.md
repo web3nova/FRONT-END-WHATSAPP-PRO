@@ -1,107 +1,63 @@
-# AbrahamNAVIG — Smart Contract & Blockchain Development
+# Samtop Gadgets — Tech & Desk Setup Store
 
 ## About the Business
-AbrahamNAVIG is a blockchain and smart contract development studio founded by Adebanjo Abraham. We help businesses, startups, and Web3 projects build secure, audited smart contracts and decentralized applications (dApps) on EVM-compatible chains and beyond.
+Samtop Gadgets is a Lagos-based tech store founded by Adebanjo Abraham. We're a full workspace/desk-setup destination — phones, laptops, monitors, keyboards, mice, webcams, standing desks, chairs, docking stations, and cable management — brand new and UK-used (foreign-used) — with nationwide delivery across Nigeria.
 
-We operate on BizIQ — an AI-powered commerce platform — to manage client inquiries, project scoping, and order tracking efficiently.
+We operate on BizIQ — an AI-powered commerce platform — to manage customer inquiries, orders, and delivery efficiently, right here on WhatsApp.
 
-## Services & What We Build
+## What We Sell
+- Phones and laptops (new and UK-used)
+- Monitors and multi-monitor setups
+- Mechanical and wireless keyboards, mice
+- Webcams, microphones, and streaming gear
+- Standing desks and ergonomic chairs
+- Docking stations, hubs, and cable management
+- Chargers, cables, power banks, and other accessories
 
-### Smart Contract Development
-- Custom ERC-20, ERC-721 (NFT), ERC-1155 tokens
-- DeFi protocols: staking, liquidity pools, yield farming
-- DAO governance contracts
-- Multisig wallets and treasury management
-- Vesting and token distribution contracts
-- Cross-chain bridge contracts
+## Warranty
+- Brand new devices: 1-year manufacturer/vendor warranty
+- UK-used devices: 1-month device warranty (covers hardware faults, not physical/liquid damage)
 
-### dApp Frontend Development
-- Web3 frontends connected to smart contracts (React + ethers.js / wagmi)
-- Wallet integration: MetaMask, WalletConnect, Rainbow Kit
-- NFT minting sites and marketplaces
+## How to Order
+1. Message us here with the device/model you want, or describe what you need it for and we'll recommend options
+2. We confirm stock, condition (new/UK-used), and give you the price
+3. Full payment before dispatch (or online payment link)
+4. We share the IMEI/device details before shipping for verification
+5. Tracking details are sent once your order ships
 
-### Smart Contract Auditing & Review
-- Manual code review for vulnerabilities (reentrancy, overflow, access control issues)
-- Gas optimization
-- Security recommendations before mainnet deployment
+## Delivery
+- Lagos: same-day/next-day delivery available
+- Nationwide: we deliver to all 36 states via courier, 2–5 business days depending on location
+- Delivery fees depend on location — we'll confirm before you pay
+- Pay-on-delivery available in select Lagos locations only; all other orders require prepayment
 
-### Blockchain Consulting
-- Token economics design (tokenomics)
-- Chain selection advice (Ethereum, BNB Chain, Polygon, Base, Arbitrum, etc.)
-- Web3 strategy for businesses moving on-chain
-
-## Supported Blockchains
-- Ethereum (mainnet & testnets: Sepolia, Goerli)
-- BNB Smart Chain (BSC)
-- Polygon (MATIC)
-- Base
-- Arbitrum
-- Avalanche
-- Any EVM-compatible chain on request
-
-## Pricing & Packages
-
-### Starter Contract Package — ₦150,000
-- One simple smart contract (token or basic NFT)
-- Deployment to testnet + mainnet
-- Basic documentation
-- 2 weeks delivery
-
-### Standard dApp Package — ₦350,000
-- Smart contract + frontend integration
-- Up to 3 contract functions wired to UI
-- Wallet connection included
-- 4 weeks delivery
-
-### Full DeFi/Web3 Project — ₦750,000+
-- Custom DeFi protocol or full NFT marketplace
-- Complete frontend
-- Basic audit included
-- Ongoing support for 30 days post-launch
-- Timeline: 6–10 weeks depending on scope
-
-### Audit Only — ₦80,000
-- Manual review of existing contract code
-- Written security report
-- Gas optimization suggestions
-- 3–5 business day turnaround
-
-### Consulting Session — ₦25,000/hour
-- 1:1 strategy call
-- Tokenomics design
-- Architecture review
-
-*All prices are in NGN. USD pricing available on request. Rates may vary for complex scope — request a free quote.*
-
-## How to Get Started
-1. Message us here with a brief description of your project
-2. We'll schedule a free 20-minute discovery call
-3. Receive a custom proposal and timeline
-4. 50% deposit to begin, 50% on delivery
+## Refund & Cancellation Policy
+- Devices can be returned within 24 hours of delivery if faulty on arrival — full refund or swap, your choice
+- Device must be returned in the same condition it was delivered (box, accessories, no physical/liquid damage)
+- Change-of-mind returns are not accepted once a device has been activated/used
+- Accessories (chargers, cases, earphones) can be exchanged within 3 days if unopened/unused
 
 ## FAQ
 
-**Do you offer payment in crypto?**
-Yes — USDT (TRC-20 or ERC-20), ETH, and BNB accepted in addition to NGN bank transfer.
+**Is UK-used the same as fairly used or refurbished?**
+UK-used means the device was previously owned abroad and thoroughly tested before resale — not refurbished. We grade and test every device before listing it.
 
-**Can you audit a contract I didn't write?**
-Absolutely. Send the GitHub repo or contract address and we'll review it.
+**Do you deliver outside Lagos?**
+Yes, we deliver nationwide to all 36 states — 2–5 business days depending on location.
 
-**Do you offer maintenance after launch?**
-Yes — we offer a monthly retainer (₦50,000/month) for bug fixes, upgrades, and monitoring.
+**Can I pay on delivery?**
+Pay-on-delivery is only available for select Lagos locations. Orders outside Lagos require prepayment before dispatch.
 
-**How do I know my contract is secure?**
-All contracts go through internal review before delivery. For production-grade projects, we recommend the Audit Only package in addition to development.
+**What if the device develops a fault after delivery?**
+Report it within your warranty period (1 year for new, 1 month for UK-used) and we'll repair or replace it, depending on the issue.
 
-**Can you build on a chain not listed?**
-If it's EVM-compatible, yes. Non-EVM chains (Solana, TON, etc.) — contact us to discuss availability.
+**How do I know the device isn't stolen or blacklisted?**
+We share the IMEI before shipping so you can verify it, and all our devices are sourced through vetted suppliers.
 
-**What information do I need to provide?**
-- What the contract should do
-- Target blockchain
-- Any existing codebase or specifications
-- Launch timeline
+**Do you sell accessories separately, without buying a device?**
+Yes, chargers, cases, power banks, and earphones are all available to order on their own.
 
-## Contact & Links
+## Contact & Hours
 - Platform: BizIQ (this chat)
-- For urgent requests, describe your project and we'll respond within a few hours during business hours (Mon–Fri, 9am–6pm WAT)
+- Business hours: Mon–Sat, 9am–7pm WAT
+- For urgent orders, let us know upfront so we can confirm same-day/next-day availability
