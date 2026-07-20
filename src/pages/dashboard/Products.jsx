@@ -30,6 +30,9 @@ export default function Products() {
   const [error, setError] = useState('')
   const [deleteId, setDeleteId] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const [selectedIds, setSelectedIds] = useState(new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
   const [showPaymentAlert, setShowPaymentAlert] = useState(false)
   const [paymentChecked, setPaymentChecked] = useState(false)
 
@@ -130,6 +133,39 @@ export default function Products() {
     }
   }
 
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const handleBulkDelete = async () => {
+    const token = getStoredAccessToken()
+    if (!token) return
+    setBulkDeleting(true)
+    try {
+      const ids = [...selectedIds]
+      const results = await Promise.all(ids.map(id =>
+        fetch(`${API_BASE}/products/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+          .then(res => ({ id, ok: res.ok }))
+          .catch(() => ({ id, ok: false }))
+      ))
+      const deletedIds = new Set(results.filter(r => r.ok).map(r => r.id))
+      setProducts(prev => prev.filter(p => !deletedIds.has(p.id || p._id)))
+      setSelectedIds(prev => {
+        const next = new Set(prev)
+        deletedIds.forEach(id => next.delete(id))
+        return next
+      })
+    } finally {
+      setBulkDeleting(false)
+      setConfirmBulkDelete(false)
+    }
+  }
+
   const normalizeProduct = (product) => {
     const name = product?.name || product?.title || product?.productName || 'Untitled product'
     const category = product?.category || product?.type || product?.productCategory || 'regular'
@@ -209,6 +245,24 @@ export default function Products() {
           <Plus size={16} /> Add Product
         </button>
       </div>
+
+      {/* Bulk action bar — appears once anything is selected */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center justify-between gap-3 bg-white rounded-2xl border border-blue-100 px-4 py-3 shadow-sm">
+          <span className="text-sm font-medium text-gray-700">{selectedIds.size} selected</span>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setSelectedIds(new Set())} className="text-xs font-semibold text-gray-500 hover:text-gray-700 px-2 py-1.5">
+              Clear
+            </button>
+            <button
+              onClick={() => setConfirmBulkDelete(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition"
+            >
+              <Trash2 size={13} /> Delete selected
+            </button>
+          </div>
+        </div>
+      )}
 
       {loading && (
         <div className="flex items-center gap-2 text-sm text-gray-500 py-2">
@@ -310,6 +364,14 @@ export default function Products() {
                       <Package size={28} className="text-white" />
                     </div>
                   )}
+                  <label className="absolute top-2.5 left-2.5 z-10" onClick={e => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(p.id)}
+                      onChange={() => toggleSelect(p.id)}
+                      className="w-4.5 h-4.5 rounded cursor-pointer shadow"
+                    />
+                  </label>
                   {/* Always visible on touch devices, subtle fade-in on hover for pointer devices */}
                   <div className="absolute top-2.5 right-2.5 flex gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition">
                     <button
@@ -327,7 +389,7 @@ export default function Products() {
                       <Trash2 size={14} />
                     </button>
                   </div>
-                  <div className="absolute top-2.5 left-2.5 flex gap-1">
+                  <div className="absolute bottom-2.5 left-2.5 flex gap-1">
                     <span className="text-xs font-semibold px-2 py-1 rounded-lg" style={{ background: s.bg, color: s.color }}>
                       {s.label}
                     </span>
@@ -394,6 +456,12 @@ export default function Products() {
               return (
                 <div key={p.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3.5">
                   <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(p.id)}
+                      onChange={() => toggleSelect(p.id)}
+                      className="w-4.5 h-4.5 rounded cursor-pointer mt-1.5 flex-shrink-0"
+                    />
                     <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0" style={{ background: placeholderColors[i % placeholderColors.length] }}>
                       {p.imageUrl ? (
                         <img src={resolveImageUrl(p.imageUrl)} alt="" className="w-full h-full object-cover" />
@@ -449,6 +517,17 @@ export default function Products() {
             <table className="w-full">
               <thead>
                 <tr style={{ background: CREAM }}>
+                  <th className="px-5 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={filtered.length > 0 && filtered.every(p => selectedIds.has(p.id))}
+                      onChange={e => {
+                        if (e.target.checked) setSelectedIds(new Set(filtered.map(p => p.id)))
+                        else setSelectedIds(new Set())
+                      }}
+                      className="w-4.5 h-4.5 rounded cursor-pointer"
+                    />
+                  </th>
                   {['Product', 'Category', 'Brand', 'Price', 'Stock', 'Orders', 'Status', ''].map(h => (
                     <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
@@ -459,6 +538,14 @@ export default function Products() {
                   const s = statusStyle[p.status] || statusStyle.active
                   return (
                     <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-5 py-3.5">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(p.id)}
+                          onChange={() => toggleSelect(p.id)}
+                          className="w-4.5 h-4.5 rounded cursor-pointer"
+                        />
+                      </td>
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0" style={{ background: placeholderColors[i % placeholderColors.length] }}>
@@ -534,6 +621,37 @@ export default function Products() {
               </button>
               <button onClick={() => handleDelete(deleteId)} disabled={deleting} className="flex-1 px-4 py-3 sm:py-2.5 text-sm font-semibold text-white bg-red-500 rounded-xl active:bg-red-600 disabled:opacity-50">
                 {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk delete confirmation */}
+      {confirmBulkDelete && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-0 sm:px-4" onClick={() => !bulkDeleting && setConfirmBulkDelete(false)}>
+          <div
+            className="bg-white rounded-t-3xl sm:rounded-2xl shadow-xl w-full sm:max-w-sm p-5 sm:p-6"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#fee2e2' }}>
+                <Trash2 size={18} className="text-red-500" />
+              </div>
+              <button onClick={() => !bulkDeleting && setConfirmBulkDelete(false)} className="p-1 text-gray-400 hover:text-gray-600">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="text-sm font-semibold text-gray-900">Delete {selectedIds.size} products?</div>
+            <p className="text-sm text-gray-500 mt-1">
+              These products will be permanently removed from your catalog. This can't be undone.
+            </p>
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => setConfirmBulkDelete(false)} disabled={bulkDeleting} className="flex-1 px-4 py-3 sm:py-2.5 text-sm font-semibold border border-gray-200 rounded-xl text-gray-600 active:bg-gray-50 disabled:opacity-50">
+                Cancel
+              </button>
+              <button onClick={handleBulkDelete} disabled={bulkDeleting} className="flex-1 px-4 py-3 sm:py-2.5 text-sm font-semibold text-white bg-red-500 rounded-xl active:bg-red-600 disabled:opacity-50">
+                {bulkDeleting ? 'Deleting...' : `Delete ${selectedIds.size}`}
               </button>
             </div>
           </div>
