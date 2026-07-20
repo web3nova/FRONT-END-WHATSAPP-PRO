@@ -722,17 +722,18 @@ export default function WhatsAppPage() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleToggleMode}
-                      disabled={togglingMode}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition disabled:opacity-50"
+                    {/* Status only — the actionable switch lives in one place, right
+                        above the input field, so there's a single control instead of
+                        two buttons doing the same thing in different spots. */}
+                    <div
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold"
                       style={selected.status !== 'human'
-                        ? { background: '#dce5fd', color: PRIMARY, borderColor: '#c7d2fb' }
-                        : { background: '#fef9c3', color: '#92400e', borderColor: '#fde68a' }}
+                        ? { background: '#dce5fd', color: PRIMARY }
+                        : { background: '#fef9c3', color: '#92400e' }}
                     >
                       {selected.status !== 'human' ? <Bot size={13} /> : <UserCheck size={13} />}
-                      {togglingMode ? '…' : selected.status !== 'human' ? 'AI Handling' : 'Staff Handling'}
-                    </button>
+                      {selected.status !== 'human' ? 'AI Handling' : 'Staff Handling'}
+                    </div>
 
                     <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition">
                       <MoreHorizontal size={17} />
@@ -853,20 +854,20 @@ export default function WhatsAppPage() {
 
                 {/* Input */}
                 <div className="border-t border-gray-100 px-4 py-3 bg-white flex-shrink-0">
-                  {selected.status !== 'human' && (
-                    <div className="flex items-center gap-2 mb-2 px-1">
-                      <Bot size={13} style={{ color: PRIMARY }} />
-                      <span className="text-xs" style={{ color: PRIMARY }}>AI is handling this conversation · </span>
-                      <button
-                        onClick={handleToggleMode}
-                        disabled={togglingMode}
-                        className="text-xs font-semibold underline disabled:opacity-50"
-                        style={{ color: PRIMARY }}
-                      >
-                        Take over as Staff
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 mb-2 px-1">
+                    {selected.status !== 'human' ? <Bot size={13} style={{ color: PRIMARY }} /> : <UserCheck size={13} style={{ color: '#92400e' }} />}
+                    <span className="text-xs" style={{ color: selected.status !== 'human' ? PRIMARY : '#92400e' }}>
+                      {selected.status !== 'human' ? 'AI is handling this conversation · ' : "You're handling this conversation · "}
+                    </span>
+                    <button
+                      onClick={handleToggleMode}
+                      disabled={togglingMode}
+                      className="text-xs font-semibold underline disabled:opacity-50"
+                      style={{ color: selected.status !== 'human' ? PRIMARY : '#92400e' }}
+                    >
+                      {togglingMode ? '…' : selected.status !== 'human' ? 'Take over as Staff' : 'Switch back to AI'}
+                    </button>
+                  </div>
                   {pendingFiles.length > 0 && (
                     <div className="mb-2 p-2 bg-gray-50 border border-gray-200 rounded-xl">
                       <div className="flex flex-wrap gap-2">
