@@ -231,7 +231,7 @@ export default function BusinessOverview() {
         <StatCard label="Total Customers"   value={loading ? '…' : stats.customers.toLocaleString()} sub="all time"   positive icon={Users} />
         <StatCard label="Orders This Month" value={loading ? '…' : stats.orders}                     sub="this month" positive icon={ShoppingBag} />
         <StatCard label="Monthly Revenue"   value={loading ? '…' : formatAmount(stats.revenue)}      sub="this month" positive icon={DollarSign} />
-        <StatCard label="Website Visits"    value={loading ? '…' : stats.visits.toLocaleString()}    sub="30 days"    positive icon={Globe} />
+        <StatCard label="Website Visits"    value={loading ? '…' : stats.visits.toLocaleString()}    sub="this month" positive icon={Globe} />
         <StatCard label="Conversations"     value={loading ? '…' : stats.conversations.toLocaleString()} sub="total"  positive icon={MessageCircle} className="col-span-2 md:col-span-1 lg:col-span-1" />
       </div>
 
@@ -239,7 +239,7 @@ export default function BusinessOverview() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100 min-w-0 overflow-hidden">
           <div className="mb-5">
-            <h2 className="font-semibold text-gray-900">Revenue Trend (30 days)</h2>
+            <h2 className="font-semibold text-gray-900">Revenue Trend (This Month)</h2>
             <p className="text-xs text-gray-400 mt-0.5">Daily revenue in ₦</p>
           </div>
           {loading ? (
