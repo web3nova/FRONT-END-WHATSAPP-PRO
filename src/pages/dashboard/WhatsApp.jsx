@@ -374,7 +374,11 @@ export default function WhatsAppPage() {
               listConversations({ limit: 50 }).then(({ data: d }) => setConversations(d)).catch(() => {})
               return prev
             }
-            const updated = { ...existing, updatedAt: new Date().toISOString() }
+            const updated = {
+              ...existing,
+              updatedAt: new Date().toISOString(),
+              lastMessage: { role: message.role, content: message.content || (message.media?.length ? 'Sent an attachment' : 'Sent a message'), createdAt: message.createdAt },
+            }
             return [updated, ...prev.filter(c => c.id !== conversationId)]
           })
         }
@@ -666,7 +670,11 @@ export default function WhatsAppPage() {
                             <span className="text-sm font-semibold text-gray-900 truncate">{displayName}</span>
                             <span className="text-xs text-gray-400 flex-shrink-0">{formatTimeAgo(conv.updatedAt)}</span>
                           </div>
-                          <div className="text-xs text-gray-400 truncate mb-1.5">{conv.customer?.phone}</div>
+                          <div className="text-xs text-gray-400 truncate mb-1.5">
+                            {conv.lastMessage
+                              ? `${conv.lastMessage.role !== 'customer' ? 'You: ' : ''}${conv.lastMessage.content}`
+                              : conv.customer?.phone}
+                          </div>
                           <div
                             className="inline-flex items-center gap-1 text-xs font-medium rounded-full px-2 py-0.5"
                             style={isHuman
