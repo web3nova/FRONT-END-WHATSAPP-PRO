@@ -884,6 +884,7 @@ export default function Settings() {
     autoReply: true,
     collectMeasurements: true,
     generateQuotes: true,
+    suggestOutsideCatalog: false,
     persona: '',
     tone: 'Friendly',
   })
@@ -950,6 +951,7 @@ export default function Settings() {
             autoReply: ai.autoReply !== false,
             collectMeasurements: ai.collectMeasurements !== false,
             generateQuotes: ai.generateQuotes !== false,
+            suggestOutsideCatalog: ai.suggestOutsideCatalog === true,
             persona: ai.persona || '',
             tone: ai.tone || 'Friendly',
           }
@@ -1216,6 +1218,9 @@ export default function Settings() {
                 </SettingRow>
                 <SettingRow label="Generate Quotations" desc="AI automatically generates price quotes">
                   <Toggle on={aiSettings.generateQuotes} onToggle={() => setAiSettings(p => ({ ...p, generateQuotes: !p.generateQuotes }))} label="Toggle generate quotations" />
+                </SettingRow>
+                <SettingRow label="Suggest When Out of Stock" desc="If you don't stock what a customer wants, AI gives general buying advice instead of just saying no. Off = AI stays strictly within your catalog.">
+                  <Toggle on={aiSettings.suggestOutsideCatalog} onToggle={() => setAiSettings(p => ({ ...p, suggestOutsideCatalog: !p.suggestOutsideCatalog }))} label="Toggle suggest when out of stock" />
                 </SettingRow>
               </div>
               <div>
