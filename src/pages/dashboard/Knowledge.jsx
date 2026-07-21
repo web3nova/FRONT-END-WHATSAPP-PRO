@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Upload, FileText, CheckCircle, Clock, AlertCircle, Trash2, Send, Bot, RefreshCw, X } from 'lucide-react'
+import { Upload, FileText, CheckCircle, Clock, AlertCircle, Trash2, Send, Bot, RefreshCw, X, Info } from 'lucide-react'
 import { fetchDocuments, uploadDocument, retryDocument, deleteDocument } from '../../api/knowledgeApi'
 import { sendChatMessage, clearMemory } from '../../api/aiApi'
 
@@ -23,6 +23,45 @@ function formatBytes(bytes) {
 function formatDate(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+// Hover works fine on desktop but does nothing on touch devices, so this
+// also toggles on click/tap — closes on a second tap, on clicking elsewhere,
+// or on Escape, so it never gets stuck open on mobile.
+function InfoTooltip({ children }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onDocClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    const onEsc = (e) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('click', onDocClick)
+    document.addEventListener('keydown', onEsc)
+    return () => {
+      document.removeEventListener('click', onDocClick)
+      document.removeEventListener('keydown', onEsc)
+    }
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative inline-flex group">
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setOpen(o => !o) }}
+        aria-label="What to upload"
+        className="p-0.5 text-gray-300 hover:text-gray-500 transition"
+      >
+        <Info size={15} />
+      </button>
+      <div
+        className={`absolute z-20 left-1/2 -translate-x-1/2 top-full mt-2 w-72 max-w-[85vw] p-3.5 rounded-xl bg-gray-900 text-white text-xs leading-relaxed shadow-lg transition-opacity
+          ${open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'}`}
+      >
+        {children}
+      </div>
+    </div>
+  )
 }
 
 const ALLOWED_TYPES = [
@@ -188,7 +227,23 @@ export default function Knowledge() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Knowledge Base</h1>
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Knowledge Base</h1>
+            <InfoTooltip>
+              <p className="font-semibold text-white mb-1.5">What to upload</p>
+              <ul className="space-y-1 list-disc pl-3.5">
+                <li>FAQs — the questions customers actually ask you</li>
+                <li>Pricing sheets or a full price list</li>
+                <li>Return, refund, and shipping/delivery policies</li>
+                <li>Product details, sizing, or care instructions</li>
+                <li>Your business's tone/voice, if you want the AI to sound a specific way</li>
+              </ul>
+              <p className="mt-2 pt-2 border-t border-white/15 text-gray-300">
+                Keep it accurate and current — the AI treats this as fact, so outdated info gets repeated to customers as if it's still true.
+                <br />PDF, DOCX, TXT, MD, CSV, or JSON — up to 15MB.
+              </p>
+            </InfoTooltip>
+          </div>
           <p className="text-sm text-gray-400 mt-0.5">Upload documents to train your AI assistant</p>
         </div>
         <button

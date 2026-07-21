@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search, Edit2, Trash2, Package, Tag, Star, X } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, Package, Tag, Star, X, Upload, CheckCircle2, AlertCircle } from 'lucide-react'
 import { API_BASE } from '../../lib/apiConfig'
 import { getStoredAccessToken, clearStoredAuth } from '../../lib/auth'
 import { resolveImageUrl } from '../../lib/utils'
@@ -35,6 +35,48 @@ export default function Products() {
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
   const [showPaymentAlert, setShowPaymentAlert] = useState(false)
   const [paymentChecked, setPaymentChecked] = useState(false)
+  const csvInputRef = useRef(null)
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState(null)
+
+  const refreshProducts = async () => {
+    const token = getStoredAccessToken()
+    if (!token) return
+    const res = await fetch(PRODUCTS_API_URL, { headers: { accept: 'application/json', Authorization: `Bearer ${token}` } })
+    if (!res.ok) return
+    const body = await res.json().catch(() => null)
+    setProducts(Array.isArray(body) ? body : body?.data || body?.products || [])
+  }
+
+  const handleCsvSelected = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    const token = getStoredAccessToken()
+    if (!token) return
+    setImporting(true)
+    setImportResult(null)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch(`${API_BASE}/products/import-csv`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      })
+      const body = await res.json().catch(() => null)
+      if (!res.ok) {
+        setImportResult({ error: body?.message || 'Import failed. Please check your CSV and try again.' })
+        return
+      }
+      setImportResult(body?.data ?? body)
+      await refreshProducts()
+    } catch {
+      setImportResult({ error: 'Could not reach the server. Please try again.' })
+    } finally {
+      setImporting(false)
+    }
+  }
 
   useEffect(() => {
     let ignore = false
@@ -242,14 +284,24 @@ export default function Products() {
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Products</h1>
           <p className="text-sm text-gray-400 mt-0.5">{products.length} products in your catalog</p>
         </div>
-        <button
-          data-tour="products-add"
-          onClick={() => navigate('/dashboard/products/new')}
-          className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 text-sm font-semibold text-white rounded-xl shadow-sm active:opacity-80 hover:opacity-90 transition w-full sm:w-auto"
-          style={{ background: PRIMARY }}
-        >
-          <Plus size={16} /> Add Product
-        </button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <input ref={csvInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleCsvSelected} />
+          <button
+            onClick={() => csvInputRef.current?.click()}
+            disabled={importing}
+            className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 text-sm font-semibold rounded-xl border border-gray-200 text-gray-600 active:bg-gray-50 hover:bg-gray-50 transition disabled:opacity-50"
+          >
+            <Upload size={16} /> {importing ? 'Importing…' : 'Import CSV'}
+          </button>
+          <button
+            data-tour="products-add"
+            onClick={() => navigate('/dashboard/products/new')}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 sm:py-2 text-sm font-semibold text-white rounded-xl shadow-sm active:opacity-80 hover:opacity-90 transition"
+            style={{ background: PRIMARY }}
+          >
+            <Plus size={16} /> Add Product
+          </button>
+        </div>
       </div>
 
       {/* Bulk action bar — appears once anything is selected */}
@@ -660,6 +712,49 @@ export default function Products() {
                 {bulkDeleting ? 'Deleting...' : `Delete ${selectedIds.size}`}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* CSV import result */}
+      {importResult && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-0 sm:px-4" onClick={() => setImportResult(null)}>
+          <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-xl w-full sm:max-w-md p-5 sm:p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: importResult.error ? '#fee2e2' : '#dcfce7' }}>
+                {importResult.error ? <AlertCircle size={18} className="text-red-500" /> : <CheckCircle2 size={18} className="text-green-600" />}
+              </div>
+              <button onClick={() => setImportResult(null)} className="p-1 text-gray-400 hover:text-gray-600">
+                <X size={18} />
+              </button>
+            </div>
+            {importResult.error ? (
+              <>
+                <div className="text-sm font-semibold text-gray-900">Import failed</div>
+                <p className="text-sm text-gray-500 mt-1">{importResult.error}</p>
+              </>
+            ) : (
+              <>
+                <div className="text-sm font-semibold text-gray-900">
+                  {importResult.created} product{importResult.created === 1 ? '' : 's'} imported
+                </div>
+                {importResult.skipped?.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-xs font-semibold text-gray-500 mb-1.5">{importResult.skipped.length} row{importResult.skipped.length === 1 ? '' : 's'} skipped:</p>
+                    <div className="max-h-40 overflow-y-auto space-y-1">
+                      {importResult.skipped.map((s, i) => (
+                        <div key={i} className="text-xs text-gray-500 bg-gray-50 rounded-lg px-2.5 py-1.5">
+                          Row {s.row}: {s.reason}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            <button onClick={() => setImportResult(null)} className="w-full mt-5 px-4 py-3 sm:py-2.5 text-sm font-semibold text-white rounded-xl" style={{ background: PRIMARY }}>
+              Done
+            </button>
           </div>
         </div>
       )}

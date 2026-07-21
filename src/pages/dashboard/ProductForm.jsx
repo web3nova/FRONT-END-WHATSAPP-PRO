@@ -20,6 +20,10 @@ const labelClass = "text-sm font-medium text-gray-700 block mb-1.5"
 
 function Collapse({ title, subtitle, open: initialOpen, children }) {
   const [open, setOpen] = useState(initialOpen)
+  // Lets the parent force this open later (e.g. AI Fill Details populating
+  // fields inside) without fighting the user's own manual toggle — only
+  // reacts when the incoming prop flips true, never forces it closed.
+  useEffect(() => { if (initialOpen) setOpen(true) }, [initialOpen])
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <button type="button" onClick={() => setOpen(!open)} className="w-full flex items-center justify-between px-4 sm:px-5 py-4 text-left active:bg-gray-50">
@@ -56,6 +60,7 @@ export default function ProductForm({ initialData, onSubmit, loading, error }) {
   const [specs, setSpecs] = useState([])
   const [features, setFeatures] = useState([])
   const [faqs, setFaqs] = useState([])
+  const [moreDetailsOpen, setMoreDetailsOpen] = useState(false)
 
   const [quickAdd, setQuickAdd] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
@@ -267,11 +272,16 @@ export default function ProductForm({ initialData, onSubmit, loading, error }) {
             <label className={labelClass + ' mb-0'}>Short Description</label>
             <AiSuggestButton
               endpoint="/products/suggest"
-              payload={{ name, brand }}
+              payload={{ name, brand, category }}
               disabled={!name.trim()}
+              label="AI Fill Details"
               onResult={(data) => {
                 if (data.description) setDescription(data.description)
                 if (data.tags?.length) setTags(prev => [...new Set([...prev, ...data.tags])])
+                if (data.brand && !brand.trim()) setBrand(data.brand)
+                if (data.specifications?.length) setSpecs(prev => [...prev, ...data.specifications])
+                if (data.features?.length) setFeatures(prev => [...prev, ...data.features])
+                if (data.specifications?.length || data.features?.length) setMoreDetailsOpen(true)
               }}
             />
           </div>
@@ -279,9 +289,10 @@ export default function ProductForm({ initialData, onSubmit, loading, error }) {
             value={description}
             onChange={e => setDescription(e.target.value)}
             rows={3}
-            placeholder="Brief description of the product... or click AI Suggest above"
+            placeholder="Brief description of the product... or click AI Fill Details above"
             className={`${inputClass} resize-none`}
           />
+          <p className="text-xs text-gray-400 mt-1">AI Fill Details also adds tags, specifications, and features below — check the Specifications &amp; Features section.</p>
         </div>
 
         {/* Image */}
@@ -335,7 +346,7 @@ export default function ProductForm({ initialData, onSubmit, loading, error }) {
       )}
 
       {/* === ADVANCED DETAILS (collapsible) === */}
-      <Collapse title="More Details" subtitle="Helps your AI agent sell better" open={isEdit}>
+      <Collapse title="More Details" subtitle="Helps your AI agent sell better" open={isEdit || moreDetailsOpen}>
         {/* Brand & SKU */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
