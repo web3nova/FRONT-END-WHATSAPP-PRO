@@ -77,10 +77,11 @@ function clearPendingPlan() {
 }
 
 export default function SubscribePage() {
-  const { startFreeTrial } = useAuth()
+  const { startFreeTrial, subscription } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const upgradeMode = searchParams.get('upgrade') === '1'
+  const trialAlreadyUsed = subscription?.hasUsedTrial === true
 
   const [plans, setPlans] = useState([])
   const [loadingPlans, setLoadingPlans] = useState(true)
@@ -201,11 +202,13 @@ export default function SubscribePage() {
               <p className="auth-subheading">
                 {upgradeMode
                   ? 'Unlock unlimited AI messages, multiple WhatsApp numbers, and priority support.'
+                  : trialAlreadyUsed
+                  ? 'Subscribe to a plan to continue using BizIQ.'
                   : `Try free for ${FREE_TRIAL_DAYS} days, or subscribe now. Upgrade or cancel anytime.`}
               </p>
             </header>
 
-            {!upgradeMode && (
+            {!upgradeMode && !trialAlreadyUsed && (
               <div className="trial-banner">
                 <div className="trial-banner__copy">
                   <strong>Not ready to commit?</strong>
