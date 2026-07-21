@@ -132,11 +132,22 @@ export default function ProductForm({ initialData, onSubmit, loading, error }) {
     return p
   }
 
-  const handleImageSelect = (e) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setSelectedFile(file)
-      setPreviewUrl(URL.createObjectURL(file))
+  const setImageFile = (file) => {
+    if (!file) return
+    setSelectedFile(file)
+    setPreviewUrl(URL.createObjectURL(file))
+  }
+
+  const handleImageSelect = (e) => setImageFile(e.target.files?.[0])
+
+  const handleImagePaste = (e) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile()
+        if (file) { setImageFile(file); e.preventDefault(); break }
+      }
     }
   }
 
@@ -281,7 +292,8 @@ export default function ProductForm({ initialData, onSubmit, loading, error }) {
                 if (data.brand && !brand.trim()) setBrand(data.brand)
                 if (data.specifications?.length) setSpecs(prev => [...prev, ...data.specifications])
                 if (data.features?.length) setFeatures(prev => [...prev, ...data.features])
-                if (data.specifications?.length || data.features?.length) setMoreDetailsOpen(true)
+                if (data.faqs?.length) setFaqs(prev => [...prev, ...data.faqs])
+                if (data.specifications?.length || data.features?.length || data.faqs?.length) setMoreDetailsOpen(true)
               }}
             />
           </div>
@@ -312,8 +324,12 @@ export default function ProductForm({ initialData, onSubmit, loading, error }) {
                 </button>
               </div>
             ) : (
-              <div className="h-28 w-28 sm:h-32 sm:w-32 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 flex-shrink-0">
-                <span className="text-xs text-center px-2">No image</span>
+              <div
+                tabIndex={0}
+                onPaste={handleImagePaste}
+                className="h-28 w-28 sm:h-32 sm:w-32 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 flex-shrink-0 cursor-text focus:outline-none focus:border-blue-300 focus:text-blue-400"
+              >
+                <span className="text-xs text-center px-2">Click, then Ctrl+V to paste</span>
               </div>
             )}
             <div className="flex-1 w-full">
@@ -322,7 +338,7 @@ export default function ProductForm({ initialData, onSubmit, loading, error }) {
                 {previewUrl ? 'Change photo' : 'Upload photo'}
                 <input type="file" accept="image/*" onChange={handleImageSelect} className="sr-only" />
               </label>
-              <p className="text-xs text-gray-400 mt-1.5">JPG or PNG, max 5MB.</p>
+              <p className="text-xs text-gray-400 mt-1.5">JPG or PNG, max 5MB. You can also copy an image and paste it into the box on the left.</p>
             </div>
           </div>
         </div>
