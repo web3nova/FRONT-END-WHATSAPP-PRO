@@ -82,6 +82,9 @@ export default function SubscribePage() {
   const [searchParams] = useSearchParams()
   const upgradeMode = searchParams.get('upgrade') === '1'
   const trialAlreadyUsed = subscription?.hasUsedTrial === true
+  // Already paid and mid-cycle — the backend blocks re-purchase until the
+  // current period ends, so don't even offer the checkout flow here.
+  const alreadyActivePaid = subscription?.status === 'ACTIVE' && subscription?.isActive === true
 
   const [plans, setPlans] = useState([])
   const [loadingPlans, setLoadingPlans] = useState(true)
@@ -200,7 +203,9 @@ export default function SubscribePage() {
               </h1>
 
               <p className="auth-subheading">
-                {upgradeMode
+                {alreadyActivePaid
+                  ? "You're already subscribed. You can pick a new plan once your current period ends."
+                  : upgradeMode
                   ? 'Unlock unlimited AI messages, multiple WhatsApp numbers, and priority support.'
                   : trialAlreadyUsed
                   ? 'Subscribe to a plan to continue using BizIQ.'
@@ -208,7 +213,19 @@ export default function SubscribePage() {
               </p>
             </header>
 
-            {!upgradeMode && !trialAlreadyUsed && (
+            {alreadyActivePaid && (
+              <div className="trial-banner">
+                <div className="trial-banner__copy">
+                  <strong>You're all set</strong>
+                  <span>Your subscription is active. Head back to your dashboard.</span>
+                </div>
+                <button type="button" onClick={() => navigate('/dashboard')} className="auth-btn-primary">
+                  Go to dashboard
+                </button>
+              </div>
+            )}
+
+            {!upgradeMode && !trialAlreadyUsed && !alreadyActivePaid && (
               <div className="trial-banner">
                 <div className="trial-banner__copy">
                   <strong>Not ready to commit?</strong>

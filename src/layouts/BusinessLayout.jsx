@@ -156,18 +156,36 @@ function NotificationPanel({ onClose, onUnreadChange }) {
 }
 
 function TrialBanner({ subscription }) {
-  if (!subscription || subscription.status !== 'TRIAL' || !subscription.trialEndsAt) return null
-  const daysLeft = Math.max(0, Math.ceil((new Date(subscription.trialEndsAt) - Date.now()) / 86400000))
-  const color = daysLeft <= 2 ? '#dc2626' : daysLeft <= 5 ? '#d97706' : PRIMARY
-  const bg = daysLeft <= 2 ? '#fee2e2' : daysLeft <= 5 ? '#fef3c7' : '#dce5fd'
-  return (
-    <div className="mx-3 mb-3 rounded-xl px-3 py-2.5 flex-shrink-0" style={{ background: bg }}>
-      <div className="text-xs font-semibold" style={{ color }}>
-        {daysLeft === 0 ? 'Trial expires today' : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left on trial`}
+  if (!subscription) return null
+
+  if (subscription.status === 'TRIAL' && subscription.trialEndsAt) {
+    const daysLeft = Math.max(0, Math.ceil((new Date(subscription.trialEndsAt) - Date.now()) / 86400000))
+    const color = daysLeft <= 2 ? '#dc2626' : daysLeft <= 5 ? '#d97706' : PRIMARY
+    const bg = daysLeft <= 2 ? '#fee2e2' : daysLeft <= 5 ? '#fef3c7' : '#dce5fd'
+    return (
+      <div className="mx-3 mb-3 rounded-xl px-3 py-2.5 flex-shrink-0" style={{ background: bg }}>
+        <div className="text-xs font-semibold" style={{ color }}>
+          {daysLeft === 0 ? 'Trial expires today' : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left on trial`}
+        </div>
+        <div className="text-xs mt-0.5" style={{ color, opacity: 0.75 }}>Upgrade to keep access</div>
       </div>
-      <div className="text-xs mt-0.5" style={{ color, opacity: 0.75 }}>Upgrade to keep access</div>
-    </div>
-  )
+    )
+  }
+
+  // Payment isn't auto-debited — a missed renewal isn't caught until the
+  // tenant is already past renewsAt. Still inside the grace period (see
+  // RENEWAL_GRACE_DAYS in billing.service.js), so warn loudly instead of
+  // just silently cutting them off with no notice.
+  if (subscription.status === 'ACTIVE' && subscription.currentPeriodEnd && new Date(subscription.currentPeriodEnd) < new Date()) {
+    return (
+      <div className="mx-3 mb-3 rounded-xl px-3 py-2.5 flex-shrink-0" style={{ background: '#fee2e2' }}>
+        <div className="text-xs font-semibold" style={{ color: '#dc2626' }}>Payment overdue</div>
+        <div className="text-xs mt-0.5" style={{ color: '#dc2626', opacity: 0.75 }}>Renew now to avoid losing access</div>
+      </div>
+    )
+  }
+
+  return null
 }
 
 export default function BusinessLayout() {
