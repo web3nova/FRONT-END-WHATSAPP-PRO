@@ -303,11 +303,9 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
   const [form, setForm] = useState({ about: '', address: '', description: '', email: '', website: '' })
   const [savedForm, setSavedForm] = useState(null)
   const [displayName, setDisplayName] = useState('')
-  const [savingName, setSavingName] = useState(false)
-  const [nameSuccess, setNameSuccess] = useState(false)
+  const [savedDisplayName, setSavedDisplayName] = useState('')
   const [picPreview, setPicPreview] = useState(null)
   const [picFile, setPicFile] = useState(null)
-  const [uploadingPic, setUploadingPic] = useState(false)
   const picInputRef = useRef(null)
 
   const handleDisconnect = async () => {
@@ -346,6 +344,7 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
               setForm(loaded)
               setSavedForm(loaded)
               setDisplayName(p.verified_name || '')
+              setSavedDisplayName(p.verified_name || '')
             }
           })
           .catch(() => {})
@@ -354,45 +353,11 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
       .finally(() => setLoading(false))
   }, [])
 
-  const handleSave = async () => {
-    setSaving(true)
-    setError('')
-    setSuccess(false)
-    try {
-      await updateWhatsappBusinessProfile({
-        about: form.about || undefined,
-        address: form.address || undefined,
-        description: form.description || undefined,
-        email: form.email || undefined,
-        websites: form.website ? [form.website] : undefined,
-      })
-      setSavedForm({ ...form })
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
-    } catch (err) {
-      setError(err.message || 'Failed to update profile')
-    } finally {
-      setSaving(false)
-    }
-  }
-
   const isFormDirty = savedForm
     ? Object.keys(form).some(k => form[k] !== savedForm[k])
     : false
-
-  const handleSaveDisplayName = async () => {
-    if (!displayName.trim()) return
-    setSavingName(true)
-    try {
-      await requestWhatsappDisplayNameChange(displayName.trim())
-      setNameSuccess(true)
-      setTimeout(() => setNameSuccess(false), 4000)
-    } catch (err) {
-      setError(err.message || 'Failed to request name change')
-    } finally {
-      setSavingName(false)
-    }
-  }
+  const isNameDirty = displayName.trim() !== '' && displayName.trim() !== (savedDisplayName || '').trim()
+  const isDirty = isFormDirty || isNameDirty || !!picFile
 
   const handlePicChange = (e) => {
     const file = e.target.files?.[0]
@@ -401,18 +366,35 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
     setPicPreview(URL.createObjectURL(file))
   }
 
-  const handleUploadPic = async () => {
-    if (!picFile) return
-    setUploadingPic(true)
+  const handleSaveAll = async () => {
+    setSaving(true)
     setError('')
+    setSuccess(false)
     try {
-      await uploadWhatsappProfilePicture(picFile)
+      if (isFormDirty) {
+        await updateWhatsappBusinessProfile({
+          about: form.about || undefined,
+          address: form.address || undefined,
+          description: form.description || undefined,
+          email: form.email || undefined,
+          websites: form.website ? [form.website] : undefined,
+        })
+        setSavedForm({ ...form })
+      }
+      if (isNameDirty) {
+        await requestWhatsappDisplayNameChange(displayName.trim())
+        setSavedDisplayName(displayName.trim())
+      }
+      if (picFile) {
+        await uploadWhatsappProfilePicture(picFile)
+        setPicFile(null)
+      }
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (err) {
-      setError(err.message || 'Failed to upload profile picture')
+      setError(err.message || 'Failed to save changes')
     } finally {
-      setUploadingPic(false)
+      setSaving(false)
     }
   }
 
@@ -509,16 +491,7 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
                     {picPreview ? 'Change photo' : 'Upload photo'}
                   </button>
                   <p className="text-xs text-gray-400 mt-0.5">JPG or PNG, max 5MB. Square images work best.</p>
-                  {picFile && (
-                    <button
-                      onClick={handleUploadPic}
-                      disabled={uploadingPic}
-                      className="mt-2 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-lg hover:opacity-90 disabled:opacity-60"
-                      style={{ background: PRIMARY }}
-                    >
-                      {uploadingPic ? <><Loader2 size={12} className="animate-spin" /> Uploading…</> : <><Upload size={12} /> Set as WhatsApp Photo</>}
-                    </button>
-                  )}
+                  {picFile && <p className="text-xs mt-1.5" style={{ color: PRIMARY }}>Selected — click Save Changes below to apply</p>}
                 </div>
               </div>
             </div>
@@ -526,23 +499,12 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
             {/* Display name */}
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1.5">Display Name</label>
-              <div className="flex gap-2">
-                <input
-                  value={displayName}
-                  onChange={e => setDisplayName(e.target.value)}
-                  placeholder={waProfile?.verified_name || 'Your business name'}
-                  className="flex-1 px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100"
-                />
-                <button
-                  onClick={handleSaveDisplayName}
-                  disabled={savingName || !displayName.trim()}
-                  className="px-3 py-2.5 text-sm font-semibold text-white rounded-xl hover:opacity-90 disabled:opacity-50 flex-shrink-0"
-                  style={{ background: PRIMARY }}
-                >
-                  {savingName ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                </button>
-              </div>
-              {nameSuccess && <p className="text-xs text-green-600 mt-1">Name change submitted — Meta will review and approve it shortly.</p>}
+              <input
+                value={displayName}
+                onChange={e => setDisplayName(e.target.value)}
+                placeholder={waProfile?.verified_name || 'Your business name'}
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100"
+              />
               <p className="text-xs text-gray-400 mt-1">This is the name customers see. Changes require Meta approval (usually within 24–48hrs).</p>
             </div>
 
@@ -610,12 +572,12 @@ function WhatsAppSettingsTab({ profile, toggles, tog }) {
             )}
 
             <button
-              onClick={handleSave}
-              disabled={saving || !isFormDirty}
+              onClick={handleSaveAll}
+              disabled={saving || !isDirty}
               className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition disabled:opacity-60"
               style={{ background: PRIMARY }}
             >
-              {saving ? <><Loader2 size={14} className="animate-spin" /> Saving…</> : <><Save size={14} /> Save Profile</>}
+              {saving ? <><Loader2 size={14} className="animate-spin" /> Saving…</> : <><Save size={14} /> Save Changes</>}
             </button>
           </div>
         )}
