@@ -73,6 +73,36 @@ export default function LoginPage() {
     return () => clearInterval(t)
   }, [otpStep])
 
+  const handleVerifyOtp = async () => {
+    setError('')
+    setIsSubmitting(true)
+    try {
+      const authData = await verifyOtp({ userId: otpUserId, code: otpCode })
+      ttTrack('Login', { email: authData.user?.email })
+      await auth.login(authData.user, { accessToken: authData.accessToken, refreshToken: authData.refreshToken })
+      try {
+        const profile = await onboardingApi.getProfile()
+        navigate(profile?.displayName || profile?.id ? from : '/onboarding')
+      } catch {
+        navigate(from)
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Auto-submit the instant all 6 digits are in — no need to also hit a
+  // button. Guarded on isSubmitting so a failed attempt (code stays at 6
+  // digits, error shown) doesn't loop; it only re-fires when otpCode itself
+  // changes, i.e. the user actually retypes.
+  useEffect(() => {
+    if (otpStep && otpCode.length === 6 && !isSubmitting && !loading) {
+      handleVerifyOtp()
+    }
+  }, [otpCode, otpStep]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const from = fromSignup ? '/subscribe' : location.state?.from?.pathname || '/dashboard'
 
   // Auto-rotate testimonials (pauses on hover/focus)
@@ -282,26 +312,7 @@ export default function LoginPage() {
 
                 <form
                   className="auth-form"
-                  onSubmit={async (e) => {
-                    e.preventDefault()
-                    setError('')
-                    setIsSubmitting(true)
-                    try {
-                      const authData = await verifyOtp({ userId: otpUserId, code: otpCode })
-                      ttTrack('Login', { email: authData.user?.email })
-                      await auth.login(authData.user, { accessToken: authData.accessToken, refreshToken: authData.refreshToken })
-                      try {
-                        const profile = await onboardingApi.getProfile()
-                        navigate(profile?.displayName || profile?.id ? from : '/onboarding')
-                      } catch {
-                        navigate(from)
-                      }
-                    } catch (err) {
-                      setError(err.message)
-                    } finally {
-                      setIsSubmitting(false)
-                    }
-                  }}
+                  onSubmit={(e) => { e.preventDefault(); handleVerifyOtp() }}
                 >
                   <div className="auth-field">
                     <label className="auth-field__label">Verification code</label>
