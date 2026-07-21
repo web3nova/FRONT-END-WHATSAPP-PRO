@@ -106,6 +106,12 @@ export function AuthProvider({ children }) {
   }, [])
 
   const isActive = subscription?.isActive === true
+  // MVP/onboarding phase: the backend tells us whether trial/subscription
+  // expiry is actually meant to lock tenants out (gatingEnabled). While
+  // that's off, any tenant who has at least gotten as far as having a
+  // subscription record (even an expired trial) keeps dashboard access —
+  // only tenants with no subscription at all still go through /subscribe.
+  const hasSubscription = isActive || (!!subscription && subscription.gatingEnabled === false)
 
   return (
     <AuthContext.Provider
@@ -123,7 +129,7 @@ export function AuthProvider({ children }) {
         refreshSubscription,
 
         isAuthenticated: !!user,
-        hasSubscription: isActive,
+        hasSubscription,
       }}
     >
       {children}
