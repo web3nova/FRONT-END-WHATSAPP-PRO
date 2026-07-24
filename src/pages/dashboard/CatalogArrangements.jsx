@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 import {
-  Package, Plus, Settings, Trash2, ArrowUp, ArrowDown,
+  Package, Plus, Trash2,
   Loader2, CheckCircle2, AlertCircle, X, ChevronRight,
-  Globe, ShoppingBag, ExternalLink, RefreshCw, Edit3,
+  Globe, ShoppingBag, RefreshCw,
   Search, Star, Tag,
 } from 'lucide-react'
 import {
-  getCommerceStatus, detectCommerce, setupCommerce, enableCommerce, syncArrangement,
+  getCommerceStatus, detectCommerce, enableCommerce, syncArrangement,
   listArrangements, getArrangement, createArrangement, updateArrangement,
   deleteArrangement, setDefaultArrangement,
   createSection, updateSection, deleteSection,
@@ -92,169 +92,95 @@ export default function CatalogArrangementsPage() {
 // ── Commerce Setup ──────────────────────────────────────────
 
 function CommerceSetup({ onComplete }) {
-  const [mode, setMode] = useState('choose') // 'choose' | 'auto' | 'manual'
   const [detecting, setDetecting] = useState(false)
-  const [detectErr, setDetectErr] = useState('')
-
-  const [bmId, setBmId] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [step, setStep] = useState('business_manager')
-  const [err, setErr] = useState('')
+  const [error, setError] = useState('')
 
   const handleDetect = async () => {
     setDetecting(true)
-    setDetectErr('')
+    setError('')
     try {
       const result = await detectCommerce()
       if (result.detected) {
         onComplete()
       } else {
-        setDetectErr('No existing catalog found. Enter your Business Manager ID to create one, or set one up in Meta Business Settings first.')
-        setMode('manual')
+        setError('not_found')
       }
     } catch (e) {
-      setDetectErr(e.message)
-      setMode('manual')
+      setError(e.message)
     } finally {
       setDetecting(false)
     }
   }
 
-  const handleSetup = async () => {
-    if (!bmId.trim()) { setErr('Business Manager ID is required'); return }
-    setErr('')
-    setBusy(true)
-    setStep('creating_catalog')
-    try {
-      await setupCommerce(bmId.trim())
-      setStep('connecting')
-      await enableCommerce()
-      setStep('done')
-      setTimeout(onComplete, 1500)
-    } catch (e) {
-      setErr(e.message)
-      setStep('business_manager')
-    } finally {
-      setBusy(false)
-    }
+  // Auto-detect on mount (backend getCommerceStatus already tried, but
+  // this is an explicit user-triggered re-check)
+  useEffect(() => { handleDetect() }, [])
+
+  if (detecting) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+        <Loader2 size={24} className="animate-spin text-gray-300" />
+        <span className="text-sm text-gray-400">Checking your Facebook account for an existing catalog…</span>
+      </div>
+    )
   }
 
-  if (mode === 'choose') {
+  if (error === 'not_found') {
     return (
       <div className="max-w-lg mx-auto mt-10">
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: '#dce5fd' }}>
             <ShoppingBag size={26} style={{ color: PRIMARY }} />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">WhatsApp Product Catalog</h2>
-          <p className="text-sm text-gray-500">Show your products on your WhatsApp Business profile so customers can browse and buy directly.</p>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">No Catalog Found</h2>
+          <p className="text-sm text-gray-500">We checked your WhatsApp Business account but couldn't find a Facebook catalog linked to it.</p>
         </div>
         <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
-          <button
-            onClick={handleDetect}
-            disabled={detecting}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition disabled:opacity-60"
-            style={{ background: PRIMARY }}
-          >
-            {detecting ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-            {detecting ? 'Checking for existing catalog…' : 'Auto-detect existing catalog'}
-          </button>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-xs text-gray-400">or</span>
-            <div className="flex-1 h-px bg-gray-200" />
+          <div className="text-sm text-gray-700 leading-relaxed">
+            <p className="mb-2">To get started:</p>
+            <ol className="list-decimal pl-4 space-y-1.5 text-gray-600">
+              <li>Go to <strong>Meta Business Settings</strong> → Commerce Manager</li>
+              <li>Create a catalog (or use an existing one)</li>
+              <li>Connect it to your WhatsApp Business number</li>
+              <li>Come back here and click <strong>Check Again</strong></li>
+            </ol>
           </div>
           <button
-            onClick={() => setMode('manual')}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition"
+            onClick={handleDetect}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition"
+            style={{ background: PRIMARY }}
           >
-            <Settings size={16} />
-            Set up manually
+            <RefreshCw size={16} />
+            Check Again
           </button>
         </div>
       </div>
     )
   }
 
-  return (
-    <div className="max-w-lg mx-auto mt-10">
-      <div className="text-center mb-8">
-        <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: '#dce5fd' }}>
-          <ShoppingBag size={26} style={{ color: PRIMARY }} />
+  if (error) {
+    return (
+      <div className="max-w-lg mx-auto mt-10">
+        <div className="text-center mb-8">
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: '#fee2e2' }}>
+            <AlertCircle size={26} className="text-red-500" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Something went wrong</h2>
+          <p className="text-sm text-gray-500">{error}</p>
         </div>
-        <h2 className="text-xl font-bold text-gray-900 mb-2">WhatsApp Product Catalog</h2>
-        <p className="text-sm text-gray-500">Show your products on your WhatsApp Business profile so customers can browse and buy directly.</p>
+        <button
+          onClick={handleDetect}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition"
+          style={{ background: PRIMARY }}
+        >
+          <RefreshCw size={16} />
+          Try Again
+        </button>
       </div>
+    )
+  }
 
-      <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-5">
-        {detectErr && (
-          <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2 rounded-xl">{detectErr}</div>
-        )}
-
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: step === 'done' ? '#16a34a' : PRIMARY }}>
-              {step === 'done' ? <CheckCircle2 size={16} /> : 1}
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-gray-900">Business Manager ID</div>
-              <div className="text-xs text-gray-400">Found in Meta Business Settings &gt; Business Info</div>
-            </div>
-          </div>
-          {step === 'business_manager' && (
-            <div className="ml-11 space-y-3">
-              <input
-                value={bmId}
-                onChange={e => setBmId(e.target.value)}
-                placeholder="e.g. 123456789012345"
-                className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-300"
-              />
-              {err && <div className="text-xs text-red-500">{err}</div>}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setMode('choose')}
-                  className="px-4 py-2.5 text-sm font-semibold text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 transition"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleSetup}
-                  disabled={busy}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition disabled:opacity-60"
-                  style={{ background: PRIMARY }}
-                >
-                  {busy ? <Loader2 size={15} className="animate-spin" /> : <Globe size={15} />}
-                  Create Catalog & Enable
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3 opacity-50">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: step === 'done' ? '#16a34a' : '#9ca3af' }}>
-            {step === 'done' ? <CheckCircle2 size={16} /> : 2}
-          </div>
-          <div>
-            <div className="text-sm font-semibold text-gray-900">Connect to WhatsApp</div>
-            <div className="text-xs text-gray-400">Links your catalog to your WhatsApp Business number</div>
-          </div>
-          {step === 'creating_catalog' && <Loader2 size={16} className="animate-spin text-gray-400" />}
-        </div>
-
-        <div className="flex items-center gap-3 opacity-50">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: step === 'done' ? '#16a34a' : '#9ca3af' }}>
-            {step === 'done' ? <CheckCircle2 size={16} /> : 3}
-          </div>
-          <div>
-            <div className="text-sm font-semibold text-gray-900">Enable Shopping</div>
-            <div className="text-xs text-gray-400">Turns on the catalog on your WhatsApp profile</div>
-          </div>
-          {step === 'connecting' && <Loader2 size={16} className="animate-spin text-gray-400" />}
-        </div>
-      </div>
-    </div>
-  )
+  return null
 }
 
 // ── Arrangements List ───────────────────────────────────────
