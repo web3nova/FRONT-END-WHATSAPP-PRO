@@ -4,12 +4,14 @@ import {
   Search, Send, Bot, UserCheck, Phone, MoreHorizontal,
   Zap, CheckCheck, AlertCircle, FileText, ShoppingBag, ChevronLeft, X,
   Link2, Loader2, CheckCircle2, Paperclip, MapPin, User,
+  MessageCircle, ShoppingCart,
 } from 'lucide-react'
 import { fetchWhatsappAccount, connectWhatsapp } from '../../api/whatsappApi'
 import { listConversations, getConversationMessages, takeOverConversation, releaseConversation, sendStaffMessage, sendStaffMedia, subscribeToEvents } from '../../api/conversationsApi'
 import { createOrder } from '../../api/ordersApi'
 import { createQuote } from '../../api/quotesApi'
 import { resolveImageUrl } from '../../lib/utils'
+import CatalogArrangements from './CatalogArrangements'
 
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
@@ -206,6 +208,9 @@ function ConnectedBadge({ account }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function WhatsAppPage() {
+  // Tab state: 'inbox' | 'catalog'
+  const [whatsappTab, setWhatsappTab] = useState('inbox')
+
   // WhatsApp account connection
   const [account, setAccount] = useState(undefined) // undefined = loading, null = not connected
   const [accountLoading, setAccountLoading] = useState(true)
@@ -599,6 +604,39 @@ export default function WhatsAppPage() {
       )}
 
       <div className="flex flex-col h-[calc(100vh-64px-32px)] lg:h-[calc(100vh-64px-48px)] rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-sm">
+
+        {/* Tab bar */}
+        <div className="flex items-center border-b border-gray-100 bg-white flex-shrink-0">
+          <button
+            onClick={() => setWhatsappTab('inbox')}
+            className={`flex items-center gap-1.5 px-5 py-3 text-sm font-semibold transition border-b-2 ${
+              whatsappTab === 'inbox'
+                ? 'text-gray-900 border-gray-900'
+                : 'text-gray-400 border-transparent hover:text-gray-600'
+            }`}
+          >
+            <MessageCircle size={15} />
+            Inbox
+          </button>
+          <button
+            onClick={() => setWhatsappTab('catalog')}
+            className={`flex items-center gap-1.5 px-5 py-3 text-sm font-semibold transition border-b-2 ${
+              whatsappTab === 'catalog'
+                ? 'text-gray-900 border-gray-900'
+                : 'text-gray-400 border-transparent hover:text-gray-600'
+            }`}
+          >
+            <ShoppingCart size={15} />
+            Catalog
+          </button>
+        </div>
+
+        {whatsappTab === 'catalog' ? (
+          <div className="flex-1 overflow-y-auto p-4 lg:p-6">
+            <CatalogArrangements />
+          </div>
+        ) : (
+        <>
 
         <ConnectedBadge account={account} />
 
@@ -1037,6 +1075,8 @@ export default function WhatsAppPage() {
           </div>
 
         </div>
+        </>
+      )}
       </div>
 
       {/* Generate Quotation Modal */}
