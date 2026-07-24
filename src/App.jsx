@@ -33,6 +33,7 @@ import PaymentSettings from './pages/dashboard/PaymentSettings';
 import Coupons from './pages/dashboard/Coupons';
 import Reviews from './pages/dashboard/Reviews';
 import Quotes from './pages/dashboard/Quotes';
+import CatalogArrangements from './pages/dashboard/CatalogArrangements';
 
 import LandingPage from './pages/LandingPage';
 import StorefrontPage from './pages/StorefrontPage';
@@ -282,6 +283,11 @@ export default function App() {
                 <Route
                   path="whatsapp"
                   element={<WhatsAppPage />}
+                />
+
+                <Route
+                  path="catalog"
+                  element={<CatalogArrangements />}
                 />
 
                 <Route
