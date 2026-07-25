@@ -6,7 +6,7 @@ import {
   Search, Star, Tag,
 } from 'lucide-react'
 import {
-  getCommerceStatus, detectCommerce, enableCommerce, syncArrangement,
+  getCommerceStatus, detectCommerce, setupCommerce, enableCommerce, syncArrangement,
   listArrangements, getArrangement, createArrangement, updateArrangement,
   deleteArrangement, setDefaultArrangement,
   createSection, updateSection, deleteSection,
@@ -94,6 +94,9 @@ export default function CatalogArrangementsPage() {
 function CommerceSetup({ onComplete }) {
   const [detecting, setDetecting] = useState(false)
   const [error, setError] = useState('')
+  const [businessManagerId, setBusinessManagerId] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState('')
 
   const handleDetect = async () => {
     setDetecting(true)
@@ -109,6 +112,21 @@ function CommerceSetup({ onComplete }) {
       setError(e.message)
     } finally {
       setDetecting(false)
+    }
+  }
+
+  const handleCreateCatalog = async () => {
+    if (!businessManagerId.trim()) return
+    setCreating(true)
+    setCreateError('')
+    try {
+      await setupCommerce(businessManagerId.trim())
+      await enableCommerce()
+      onComplete()
+    } catch (e) {
+      setCreateError(e.message)
+    } finally {
+      setCreating(false)
     }
   }
 
@@ -152,6 +170,48 @@ function CommerceSetup({ onComplete }) {
           >
             <RefreshCw size={16} />
             Check Again
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3 my-6">
+          <div className="flex-1 h-px bg-gray-200" />
+          <span className="text-xs text-gray-400">OR</span>
+          <div className="flex-1 h-px bg-gray-200" />
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
+          <div>
+            <h3 className="text-sm font-bold text-gray-900 mb-1">Create a catalog from here</h3>
+            <p className="text-sm text-gray-500">
+              We normally pick up your Business Manager automatically when you connect WhatsApp. If it wasn't detected, paste the ID below and we'll create and connect a catalog for you.
+            </p>
+            <a
+              href="https://business.facebook.com/settings/info"
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs font-semibold mt-1 inline-block"
+              style={{ color: PRIMARY }}
+            >
+              Find your Business Manager ID in Meta Business Settings →
+            </a>
+          </div>
+          <input
+            value={businessManagerId}
+            onChange={e => setBusinessManagerId(e.target.value)}
+            placeholder="Business Manager ID"
+            className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none"
+          />
+          {createError && (
+            <div className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg">{createError}</div>
+          )}
+          <button
+            onClick={handleCreateCatalog}
+            disabled={creating || !businessManagerId.trim()}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition disabled:opacity-50"
+            style={{ background: PRIMARY }}
+          >
+            {creating ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+            {creating ? 'Creating…' : 'Create Catalog'}
           </button>
         </div>
       </div>

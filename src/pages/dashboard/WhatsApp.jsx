@@ -119,6 +119,7 @@ function ConnectBanner({ onConnected }) {
           redirectUri: '',
           wabaId: sessionInfo.waba_id ?? '',
           phoneNumberId: sessionInfo.phone_number_id ?? '',
+          businessManagerId: sessionInfo.business_id ?? '',
         })
         onConnected()
       })
