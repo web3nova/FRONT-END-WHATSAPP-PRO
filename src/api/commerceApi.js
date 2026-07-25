@@ -33,6 +33,9 @@ export const enableCommerce = () =>
 export const syncArrangement = (arrangementId) =>
   api('/whatsapp/commerce/sync', { method: 'POST', body: JSON.stringify({ arrangementId }) })
 
+export const syncAllProducts = () =>
+  api('/whatsapp/commerce/sync-all', { method: 'POST' })
+
 // ── Arrangements ──
 export const listArrangements = () => api('/whatsapp/catalog/arrangements')
 

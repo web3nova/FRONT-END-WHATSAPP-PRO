@@ -6,7 +6,7 @@ import {
   Search, Star, Tag,
 } from 'lucide-react'
 import {
-  getCommerceStatus, detectCommerce, autoSetupCommerce, setupCommerce, enableCommerce, syncArrangement,
+  getCommerceStatus, detectCommerce, autoSetupCommerce, setupCommerce, enableCommerce, syncArrangement, syncAllProducts,
   listArrangements, getArrangement, createArrangement, updateArrangement,
   deleteArrangement, setDefaultArrangement,
   createSection, updateSection, deleteSection,
@@ -260,6 +260,19 @@ function ArrangementsList({ arrangements, status, onSelect, onRefresh }) {
   const [newDesc, setNewDesc] = useState('')
   const [newSegment, setNewSegment] = useState('')
   const [creating, setCreating] = useState(false)
+  const [syncingAll, setSyncingAll] = useState(false)
+
+  const handleSyncAll = async () => {
+    setSyncingAll(true)
+    try {
+      const res = await syncAllProducts()
+      toast(res.synced ? `Synced ${res.synced} product(s) to WhatsApp` : (res.message || 'Nothing to sync'))
+    } catch (e) {
+      toast(e.message, 'error')
+    } finally {
+      setSyncingAll(false)
+    }
+  }
 
   const handleCreate = async () => {
     if (!newName.trim()) return
@@ -320,6 +333,15 @@ function ArrangementsList({ arrangements, status, onSelect, onRefresh }) {
               <Globe size={13} /> Enable Shopping
             </button>
           )}
+          <button
+            onClick={handleSyncAll}
+            disabled={syncingAll}
+            title="Push every active product straight to your WhatsApp catalog — no arrangement needed"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition disabled:opacity-50"
+          >
+            {syncingAll ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+            {syncingAll ? 'Syncing…' : 'Sync all products'}
+          </button>
           <button
             onClick={() => setShowCreate(true)}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl text-white hover:opacity-90 transition"
