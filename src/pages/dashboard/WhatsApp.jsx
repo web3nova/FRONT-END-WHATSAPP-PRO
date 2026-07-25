@@ -120,6 +120,9 @@ function ConnectBanner({ onConnected }) {
           wabaId: sessionInfo.waba_id ?? '',
           phoneNumberId: sessionInfo.phone_number_id ?? '',
           businessManagerId: sessionInfo.business_id ?? '',
+          catalogId: Array.isArray(sessionInfo.catalog_ids) && sessionInfo.catalog_ids.length
+            ? sessionInfo.catalog_ids[0]
+            : '',
         })
         onConnected()
       })

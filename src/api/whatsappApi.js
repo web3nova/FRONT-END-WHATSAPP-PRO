@@ -76,11 +76,11 @@ export async function requestWhatsappDisplayNameChange(displayName) {
 }
 
 /** POST /whatsapp/connect — exchange OAuth code for long-lived token */
-export async function connectWhatsapp({ code, redirectUri, wabaId, phoneNumberId, businessManagerId }) {
+export async function connectWhatsapp({ code, redirectUri, wabaId, phoneNumberId, businessManagerId, catalogId }) {
   const res = await fetch(`${API_BASE}/whatsapp/connect`, {
     method: 'POST',
     headers: { accept: 'application/json', 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ code, redirectUri, wabaId, phoneNumberId, businessManagerId }),
+    body: JSON.stringify({ code, redirectUri, wabaId, phoneNumberId, businessManagerId, catalogId }),
   })
   const body = await res.json().catch(() => null)
   if (!res.ok) throw new Error(body?.message || 'Failed to connect WhatsApp')
