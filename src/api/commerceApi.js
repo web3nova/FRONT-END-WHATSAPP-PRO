@@ -21,6 +21,9 @@ export const getCommerceStatus = () => api('/whatsapp/commerce')
 export const detectCommerce = () =>
   api('/whatsapp/commerce/detect', { method: 'POST' })
 
+export const autoSetupCommerce = () =>
+  api('/whatsapp/commerce/auto-setup', { method: 'POST' })
+
 export const setupCommerce = (businessManagerId) =>
   api('/whatsapp/commerce/setup', { method: 'POST', body: JSON.stringify({ businessManagerId }) })
 

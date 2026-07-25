@@ -6,7 +6,7 @@ import {
   Search, Star, Tag,
 } from 'lucide-react'
 import {
-  getCommerceStatus, detectCommerce, setupCommerce, enableCommerce, syncArrangement,
+  getCommerceStatus, detectCommerce, autoSetupCommerce, setupCommerce, enableCommerce, syncArrangement,
   listArrangements, getArrangement, createArrangement, updateArrangement,
   deleteArrangement, setDefaultArrangement,
   createSection, updateSection, deleteSection,
@@ -94,19 +94,25 @@ export default function CatalogArrangementsPage() {
 function CommerceSetup({ onComplete }) {
   const [detecting, setDetecting] = useState(false)
   const [error, setError] = useState('')
+  const [reasonMessage, setReasonMessage] = useState('')
   const [businessManagerId, setBusinessManagerId] = useState('')
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState('')
 
-  const handleDetect = async () => {
+  // Try to set the catalog up end-to-end automatically: reuse an existing
+  // catalog if the WABA already has one, otherwise resolve the owning Business
+  // Manager and create + enable one — no manual ID entry unless we truly can't.
+  const handleAutoSetup = async () => {
     setDetecting(true)
     setError('')
+    setReasonMessage('')
     try {
-      const result = await detectCommerce()
-      if (result.detected) {
+      const result = await autoSetupCommerce()
+      if (result.status === 'active' || result.status === 'partial' || result.hasCatalog) {
         onComplete()
       } else {
         setError('not_found')
+        if (result.reason === 'create_failed' && result.message) setReasonMessage(result.message)
       }
     } catch (e) {
       setError(e.message)
@@ -130,15 +136,15 @@ function CommerceSetup({ onComplete }) {
     }
   }
 
-  // Auto-detect on mount (backend getCommerceStatus already tried, but
-  // this is an explicit user-triggered re-check)
-  useEffect(() => { handleDetect() }, [])
+  // Attempt full auto-setup on mount — creates the catalog automatically for
+  // businesses that connected WhatsApp through us, without any manual step.
+  useEffect(() => { handleAutoSetup() }, [])
 
   if (detecting) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
         <Loader2 size={24} className="animate-spin text-gray-300" />
-        <span className="text-sm text-gray-400">Checking your Facebook account for an existing catalog…</span>
+        <span className="text-sm text-gray-400">Setting up your WhatsApp catalog…</span>
       </div>
     )
   }
@@ -150,8 +156,11 @@ function CommerceSetup({ onComplete }) {
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: '#dce5fd' }}>
             <ShoppingBag size={26} style={{ color: PRIMARY }} />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">No Catalog Found</h2>
-          <p className="text-sm text-gray-500">We checked your WhatsApp Business account but couldn't find a Facebook catalog linked to it.</p>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Couldn't set up your catalog automatically</h2>
+          <p className="text-sm text-gray-500">We tried to create and connect a catalog to your WhatsApp Business account, but couldn't finish it on our own{reasonMessage ? ':' : '.'}</p>
+          {reasonMessage && (
+            <p className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg mt-3 inline-block">{reasonMessage}</p>
+          )}
         </div>
         <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
           <div className="text-sm text-gray-700 leading-relaxed">
@@ -164,12 +173,12 @@ function CommerceSetup({ onComplete }) {
             </ol>
           </div>
           <button
-            onClick={handleDetect}
+            onClick={handleAutoSetup}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition"
             style={{ background: PRIMARY }}
           >
             <RefreshCw size={16} />
-            Check Again
+            Try Again
           </button>
         </div>
 
@@ -229,7 +238,7 @@ function CommerceSetup({ onComplete }) {
           <p className="text-sm text-gray-500">{error}</p>
         </div>
         <button
-          onClick={handleDetect}
+          onClick={handleAutoSetup}
           className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition"
           style={{ background: PRIMARY }}
         >
