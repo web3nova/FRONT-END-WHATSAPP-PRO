@@ -17,9 +17,51 @@ import {
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
 
+// Plain function (not a hook) so every component in this file can call
+// toast(msg, type) directly without prop-drilling a callback down through
+// arrangement -> section -> item. Dispatches a DOM event that <ToastHost/>
+// (mounted once, below) picks up and renders as a real non-blocking toast —
+// previously this used alert(), which blocks the entire tab on every sync/
+// save action and looks like a browser error dialog, not part of the app.
+let toastId = 0
 function toast(msg, type = 'success') {
-  // Placeholder: a real toast could be passed via context
-  alert(`${type.toUpperCase()}: ${msg}`)
+  window.dispatchEvent(new CustomEvent('biziq:toast', { detail: { id: ++toastId, msg, type } }))
+}
+
+function ToastHost() {
+  const [toasts, setToasts] = useState([])
+
+  useEffect(() => {
+    const handler = (e) => {
+      const item = e.detail
+      setToasts((prev) => [...prev, item])
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== item.id))
+      }, 4000)
+    }
+    window.addEventListener('biziq:toast', handler)
+    return () => window.removeEventListener('biziq:toast', handler)
+  }, [])
+
+  if (!toasts.length) return null
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
+      {toasts.map((t) => (
+        <div
+          key={t.id}
+          className="flex items-start gap-2 px-4 py-3 rounded-xl shadow-lg text-sm text-white animate-[fadeIn_0.15s_ease-out]"
+          style={{ background: t.type === 'error' ? '#DC2626' : PRIMARY }}
+        >
+          {t.type === 'error' ? <AlertCircle size={16} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={16} className="mt-0.5 shrink-0" />}
+          <span className="flex-1">{t.msg}</span>
+          <button onClick={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))} className="opacity-70 hover:opacity-100">
+            <X size={14} />
+          </button>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 export default function CatalogArrangementsPage() {
@@ -48,44 +90,46 @@ export default function CatalogArrangementsPage() {
 
   useEffect(() => { loadStatus() }, [])
 
+  let content
   if (loading) {
-    return (
+    content = (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
         <Loader2 size={24} className="animate-spin text-gray-300" />
         <span className="text-sm text-gray-400">Checking for existing catalog…</span>
       </div>
     )
-  }
-
-  if (error) {
-    return (
+  } else if (error) {
+    content = (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-sm text-red-500 bg-red-50 px-4 py-3 rounded-xl">{error}</div>
       </div>
     )
-  }
-
-  if (!status || status.status === 'not_setup') {
-    return <CommerceSetup onComplete={loadStatus} />
-  }
-
-  if (selectedArrangement) {
-    return (
+  } else if (!status || status.status === 'not_setup') {
+    content = <CommerceSetup onComplete={loadStatus} />
+  } else if (selectedArrangement) {
+    content = (
       <ArrangementDetail
         arrangementId={selectedArrangement}
         onBack={() => setSelectedArrangement(null)}
         onUpdate={loadStatus}
       />
     )
+  } else {
+    content = (
+      <ArrangementsList
+        arrangements={arrangements}
+        status={status}
+        onSelect={setSelectedArrangement}
+        onRefresh={loadStatus}
+      />
+    )
   }
 
   return (
-    <ArrangementsList
-      arrangements={arrangements}
-      status={status}
-      onSelect={setSelectedArrangement}
-      onRefresh={loadStatus}
-    />
+    <>
+      {content}
+      <ToastHost />
+    </>
   )
 }
 
