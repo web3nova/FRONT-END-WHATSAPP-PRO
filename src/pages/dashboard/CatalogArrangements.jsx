@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Package, Plus, Trash2,
   Loader2, CheckCircle2, AlertCircle, X, ChevronRight,
@@ -664,6 +665,7 @@ function ArrangementDetail({ arrangementId, onBack, onUpdate }) {
 // ── Section Card ────────────────────────────────────────────
 
 function SectionCard({ section, arrangementId, onDelete, onRefresh, isFirst, isLast }) {
+  const navigate = useNavigate()
   const [showAddProduct, setShowAddProduct] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
@@ -730,7 +732,12 @@ function SectionCard({ section, arrangementId, onDelete, onRefresh, isFirst, isL
       {section.items?.length > 0 ? (
         <div className="divide-y divide-gray-50">
           {section.items.map((item, ii) => (
-            <div key={item.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition">
+            <div
+              key={item.id}
+              onClick={() => item.product?.id && navigate(`/dashboard/products/${item.product.id}/edit`)}
+              className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition cursor-pointer"
+              title="View product details"
+            >
               <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {item.product?.imageUrl ? (
                   <img src={resolveImageUrl(item.product.imageUrl)} alt="" className="w-full h-full object-cover" />
@@ -746,7 +753,7 @@ function SectionCard({ section, arrangementId, onDelete, onRefresh, isFirst, isL
                 </div>
               </div>
               <button
-                onClick={() => handleRemoveItem(item.id)}
+                onClick={(e) => { e.stopPropagation(); handleRemoveItem(item.id) }}
                 className="p-1 text-gray-300 hover:text-red-400 rounded-lg hover:bg-red-50 transition"
                 title="Remove from section"
               >

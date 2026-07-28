@@ -44,6 +44,7 @@ export default function ProductForm({ initialData, onSubmit, loading, error }) {
   const [name, setName] = useState('')
   const [price, setPrice] = useState('')
   const [category, setCategory] = useState('regular')
+  const [label, setLabel] = useState('')
   const [stock, setStock] = useState(0)
   const [trackStock, setTrackStock] = useState(false)
   const [description, setDescription] = useState('')
@@ -70,6 +71,7 @@ export default function ProductForm({ initialData, onSubmit, loading, error }) {
       setName(initialData.name || '')
       setPrice(initialData.priceMinor != null ? String(initialData.priceMinor / 100) : '')
       setCategory(initialData.category || 'regular')
+      setLabel(initialData.label || '')
       setStock(initialData.stock ?? 0)
       setTrackStock(initialData.trackStock ?? false)
       setDescription(initialData.description || '')
@@ -89,6 +91,7 @@ export default function ProductForm({ initialData, onSubmit, loading, error }) {
     setName('')
     setPrice('')
     setCategory('regular')
+    setLabel('')
     setStock(0)
     setTrackStock(false)
     setDescription('')
@@ -116,6 +119,7 @@ export default function ProductForm({ initialData, onSubmit, loading, error }) {
       name: name.trim(),
       price: Number(price) || 0,
       category,
+      label: label.trim() || undefined,
       stock: Number(stock) || 0,
       trackStock,
       description: description.trim() || undefined,
@@ -240,6 +244,19 @@ export default function ProductForm({ initialData, onSubmit, loading, error }) {
               ))}
             </select>
           </div>
+        </div>
+
+        <div>
+          <label className={labelClass}>Label</label>
+          <input
+            type="text"
+            value={label}
+            onChange={e => setLabel(e.target.value)}
+            placeholder="e.g. Acrylic, Gel, Nail Art — how you actually group your products"
+            maxLength={60}
+            className={inputClass}
+          />
+          <p className="text-xs text-gray-400 mt-1">Used to organize your WhatsApp catalog into real sections. Products with no label are grouped by Category instead.</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
