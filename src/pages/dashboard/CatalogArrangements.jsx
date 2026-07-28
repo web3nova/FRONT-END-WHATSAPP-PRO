@@ -13,6 +13,7 @@ import {
   addItemToSection, removeItemFromSection,
   listProducts,
 } from '../../api/commerceApi'
+import { resolveImageUrl } from '../../lib/utils'
 
 const PRIMARY = '#4166F5'
 const CREAM = '#F8F4E8'
@@ -310,7 +311,10 @@ function ArrangementsList({ arrangements, status, onSelect, onRefresh }) {
     setSyncingAll(true)
     try {
       const res = await syncAllProducts()
-      toast(res.synced ? `Synced ${res.synced} product(s) to WhatsApp` : (res.message || 'Nothing to sync'))
+      const parts = []
+      if (res.synced) parts.push(`Synced ${res.synced} product(s) to WhatsApp`)
+      if (res.removed) parts.push(`removed ${res.removed} stale item(s) no longer in your catalog`)
+      toast(parts.length ? parts.join(', ') : (res.message || 'Nothing to sync'))
     } catch (e) {
       toast(e.message, 'error')
     } finally {
@@ -729,7 +733,7 @@ function SectionCard({ section, arrangementId, onDelete, onRefresh, isFirst, isL
             <div key={item.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition">
               <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {item.product?.imageUrl ? (
-                  <img src={item.product.imageUrl} alt="" className="w-full h-full object-cover" />
+                  <img src={resolveImageUrl(item.product.imageUrl)} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <Package size={14} className="text-gray-400" />
                 )}
