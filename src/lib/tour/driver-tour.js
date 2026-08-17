@@ -164,7 +164,11 @@ export function runTour({ steps, startIndex = 0, navigate, currentPath, onChapte
           showButtons: isFirst ? ['next', 'close'] : ['next', 'previous', 'close'],
           nextBtnText: isLast ? 'Done' : 'Next',
           prevBtnText: 'Back',
+          closeBtnText: 'Skip',
           progressText: `${i + 1} of ${steps.length}`,
+          onNextClick: () => advance(1),
+          onPrevClick: () => advance(-1),
+          onCloseClick: () => skip(),
         },
       });
       // Double rAF: give driver.js a paint cycle to finish positioning the
@@ -193,6 +197,12 @@ export function runTour({ steps, startIndex = 0, navigate, currentPath, onChapte
 
   const finish = () => { clearStepListeners(); onChapterComplete?.(steps[steps.length - 1]?.chapterEnd); d?.destroy(); onExit?.(); release('finished'); };
 
+  // Ends the tour outright — never advances to another step. Defined once and
+  // wired both at construction and on every per-step highlight() call below so
+  // it can never resolve to the Next handler by falling through driver.js's
+  // per-step-config-then-global-config lookup.
+  const skip = () => { clearStepListeners(); d.destroy(); onExit?.(); release('closed'); };
+
   d = driver({
     showProgress: true,
     showButtons: ['next', 'previous', 'close'],
@@ -206,9 +216,10 @@ export function runTour({ steps, startIndex = 0, navigate, currentPath, onChapte
     nextBtnText: 'Next',
     prevBtnText: 'Back',
     doneBtnText: 'Done',
+    closeBtnText: 'Skip',
     onNextClick: () => advance(1),
     onPrevClick: () => advance(-1),
-    onCloseClick: () => { clearStepListeners(); d.destroy(); onExit?.(); release('closed'); },
+    onCloseClick: () => skip(),
   });
   // NOTE: we drive stepping ourselves (highlight per step) rather than handing
   // driver.js a fixed steps array — because our steps change route/tab between
