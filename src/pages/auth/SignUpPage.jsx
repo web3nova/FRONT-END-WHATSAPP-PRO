@@ -106,6 +106,7 @@ export default function SignUpPage() {
     tenantName: '',
     email: '',
     password: '',
+    confirmPassword: '',
   })
 
   const [fieldErrors, setFieldErrors] = useState({})
@@ -140,6 +141,12 @@ export default function SignUpPage() {
       errors.password = 'Password is required.'
     } else if (form.password.length < 8) {
       errors.password = 'Password must be at least 8 characters.'
+    }
+
+    if (!form.confirmPassword) {
+      errors.confirmPassword = 'Please confirm your password.'
+    } else if (form.password && form.confirmPassword !== form.password) {
+      errors.confirmPassword = 'Passwords do not match.'
     }
 
     return errors
@@ -311,6 +318,24 @@ export default function SignUpPage() {
                   />
                   {fieldErrors.password && (
                     <p id="password-error" className="auth-field__error">{fieldErrors.password}</p>
+                  )}
+                </div>
+
+                <div className={`auth-field${fieldErrors.confirmPassword ? ' auth-field--error' : ''}`}>
+                  <label className="auth-field__label" htmlFor="confirmPassword">Confirm Password</label>
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    value={form.confirmPassword}
+                    onChange={handleChange}
+                    className="auth-field__input"
+                    aria-describedby={fieldErrors.confirmPassword ? 'confirmPassword-error' : undefined}
+                    disabled={loading}
+                  />
+                  {fieldErrors.confirmPassword && (
+                    <p id="confirmPassword-error" className="auth-field__error">{fieldErrors.confirmPassword}</p>
                   )}
                 </div>
 
